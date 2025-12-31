@@ -1,0 +1,127 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="padding: 20px; direction: rtl;">
+    <h1 style="color: var(--gold-primary); margin-bottom: 30px;">
+        <i class="fa-solid fa-building-columns"></i> {{ title }}
+    </h1>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+        <!-- Assets Section -->
+        <div
+            style="background: rgba(20,20,20,0.6); border-radius: 15px; padding: 25px; border: 1px solid var(--glass-border);">
+            <h2
+                style="color: #4CAF50; margin-bottom: 20px; border-bottom: 1px solid rgba(76,175,80,0.3); padding-bottom: 10px;">
+                <i class="fa-solid fa-coins"></i> الأصول
+            </h2>
+            <table style="width: 100%;">
+                {% for item in assets_data %}
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 10px; color: #fff;">{{ item.account.name }}</td>
+                    <td style="padding: 10px; text-align: left; color: #4CAF50;">{{ item.balance|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td style="color: #666; padding: 20px;">لا توجد أصول</td>
+                </tr>
+                {% endfor %}
+            </table>
+            <div style="margin-top: 20px; padding-top: 15px; border-top: 2px solid #4CAF50;">
+                <strong style="color: #4CAF50;">إجمالي الأصول: {{ total_assets|floatformat:2 }}</strong>
+            </div>
+        </div>
+
+        <!-- Liabilities & Equity Section -->
+        <div>
+            <!-- Liabilities -->
+            <div
+                style="background: rgba(20,20,20,0.6); border-radius: 15px; padding: 25px; border: 1px solid var(--glass-border); margin-bottom: 20px;">
+                <h2
+                    style="color: #f44336; margin-bottom: 20px; border-bottom: 1px solid rgba(244,67,54,0.3); padding-bottom: 10px;">
+                    <i class="fa-solid fa-hand-holding-dollar"></i> الخصوم (الالتزامات)
+                </h2>
+                <table style="width: 100%;">
+                    {% for item in liabilities_data %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 10px; color: #fff;">{{ item.account.name }}</td>
+                        <td style="padding: 10px; text-align: left; color: #f44336;">{{ item.balance|floatformat:2 }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td style="color: #666; padding: 20px;">لا توجد خصوم</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(244,67,54,0.3);">
+                    <strong style="color: #f44336;">إجمالي الخصوم: {{ total_liabilities|floatformat:2 }}</strong>
+                </div>
+            </div>
+
+            <!-- Equity -->
+            <div
+                style="background: rgba(20,20,20,0.6); border-radius: 15px; padding: 25px; border: 1px solid var(--glass-border);">
+                <h2
+                    style="color: var(--gold-primary); margin-bottom: 20px; border-bottom: 1px solid rgba(212,175,55,0.3); padding-bottom: 10px;">
+                    <i class="fa-solid fa-landmark"></i> حقوق الملكية
+                </h2>
+                <table style="width: 100%;">
+                    {% for item in equity_data %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 10px; color: #fff;">{{ item.account.name }}</td>
+                        <td style="padding: 10px; text-align: left; color: var(--gold-primary);">{{
+                            item.balance|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td style="color: #666; padding: 20px;">لا توجد حقوق ملكية</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(212,175,55,0.3);">
+                    <strong style="color: var(--gold-primary);">إجمالي حقوق الملكية: {{ total_equity|floatformat:2
+                        }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div
+        style="margin-top: 30px; background: rgba(212,175,55,0.1); border-radius: 15px; padding: 25px; border: 1px solid var(--gold-primary);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 style="color: #4CAF50; margin: 0;">إجمالي الأصول: {{ total_assets|floatformat:2 }}</h3>
+            </div>
+            <div style="font-size: 2rem; color: var(--gold-primary);">=</div>
+            <div>
+                <h3 style="color: #f44336; margin: 0;">الخصوم + حقوق الملكية: {{ total_liabilities_equity|floatformat:2
+                    }}</h3>
+            </div>
+            <div>
+                {% if is_balanced %}
+                <span
+                    style="background: #4CAF50; color: #fff; padding: 10px 25px; border-radius: 25px; font-weight: bold;">
+                    <i class="fa-solid fa-check"></i> الميزانية متوازنة
+                </span>
+                {% else %}
+                <span
+                    style="background: #f44336; color: #fff; padding: 10px 25px; border-radius: 25px; font-weight: bold;">
+                    <i class="fa-solid fa-times"></i> غير متوازنة!
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div style="margin-top: 20px; text-align: left;">
+        <button onclick="window.print()"
+            style="background: var(--gold-primary); color: #000; padding: 12px 30px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold;">
+            <i class="fa-solid fa-print"></i> طباعة التقرير
+        </button>
+    </div>
+</div>
+{% endblock %}

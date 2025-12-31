@@ -1,0 +1,242 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<div style="direction: rtl; padding: 20px;">
+    <div style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+        <h1 style="color: var(--gold-primary); margin: 0;">
+            <i class="fa-solid fa-chart-line"></i> تحليلات الإنتاج والجودة (Manufacturing Analytics)
+        </h1>
+        <div style="font-size: 1.2rem; color: #888;">
+            إجمالي الورش النشطة: <b style="color: white;">{{ total_workshops }}</b> |
+            الأوامر الجارية: <b style="color: var(--gold-primary);">{{ total_active }}</b>
+        </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; margin-bottom: 30px;">
+
+        <!-- 1. Pipeline Status -->
+        <div class="glass-card" style="padding: 20px;">
+            <h3 style="margin-top:0; color: var(--gold-soft); font-size: 1rem;">
+                <i class="fa-solid fa-bars-progress"></i> توزيع الأوامر على المراحل (Pipeline)
+            </h3>
+            <div style="height: 300px;">
+                <canvas id="pipelineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 2. Daily Output -->
+        <div class="glass-card" style="padding: 20px;">
+            <h3 style="margin-top:0; color: #4CAF50; font-size: 1rem;">
+                <i class="fa-solid fa-arrow-trend-up"></i> الإنتاجية اليومية (آخر 7 أيام - جرام)
+            </h3>
+            <div style="height: 300px;">
+                <canvas id="outputChart"></canvas>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 3. Workshop Performance & Outliers -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-bottom: 30px;">
+
+        <!-- Scrap Chart -->
+        <div class="glass-card" style="padding: 20px;">
+            <h3 style="margin-top:0; color: #ff4b2b; font-size: 1rem;">
+                <i class="fa-solid fa-triangle-exclamation"></i> تحليل جودة الورش (متوسط نسبة الهالك %)
+            </h3>
+            <div style="height: 350px;">
+                <canvas id="scrapChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Best Workshops Ranking -->
+        <div class="glass-card" style="padding: 20px;">
+            <h3 style="margin-top:0; color: #D4AF37; font-size: 1rem;">
+                <i class="fa-solid fa-trophy"></i> أفضل الورش (الأقل هالكاً)
+            </h3>
+            <div style="max-height: 350px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #444; text-align: right; color: #888;">
+                            <th style="padding: 10px;">الورشة</th>
+                            <th style="padding: 10px;">النسبة %</th>
+                            <th style="padding: 10px;">الأوامر</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in workshop_stats %}
+                        <tr style="border-bottom: 1px dotted #333;">
+                            <td style="padding: 10px;">{{ item.workshop__name }}</td>
+                            <td
+                                class="scrap-value {% if item.avg_scrap_pct > 1 %}scrap-high{% else %}scrap-low{% endif %}">
+                                {{ item.avg_scrap_pct|floatformat:2 }}%
+                            </td>
+                            <td style="padding: 10px; color: #888;">{{ item.order_count }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 4. High Scrap Outliers -->
+    {% if outliers %}
+    <div class="glass-card" style="padding: 20px; border-color: rgba(255, 75, 43, 0.4);">
+        <h3 style="margin-top:0; color: #ff4b2b; font-size: 1rem;">
+            <i class="fa-solid fa-radiation"></i> تنبيه: أوامر هالك مرتفع (> 1.0%)
+        </h3>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                    <tr style="background: rgba(255,75,43,0.1); color: #ff4b2b; text-align: right;">
+                        <th style="padding: 12px;">رقم الأمر</th>
+                        <th style="padding: 12px;">الورشة</th>
+                        <th style="padding: 12px;">الوزن الداخل</th>
+                        <th style="padding: 12px;">الوزن المفقود</th>
+                        <th style="padding: 12px;">النسبة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in outliers %}
+                    <tr style="border-bottom: 1px solid #333;">
+                        <td style="padding: 12px; font-family: monospace;">{{ order.order_number }}</td>
+                        <td style="padding: 12px;">{{ order.workshop.name }}</td>
+                        <td style="padding: 12px;">{{ order.input_weight }} ج</td>
+                        <td style="padding: 12px; color: #ff4b2b;">{{ order.scrap_weight }} ج</td>
+                        <td style="padding: 12px; background: rgba(255,75,43,0.1); color: #ff4b2b; font-weight: bold;">
+                            {{ order.scrap_pct|floatformat:2 }}%
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- DATA INJECTION -->
+{{ pipeline_labels|json_script:"pipeline-labels" }}
+{{ pipeline_values|json_script:"pipeline-values" }}
+{{ ws_labels|json_script:"ws-labels" }}
+{{ ws_scrap_values|json_script:"ws-scrap-values" }}
+{{ output_dates|json_script:"output-dates" }}
+{{ output_values|json_script:"output-values" }}
+
+<style>
+    .glass-card {
+        background: rgba(30, 30, 30, 0.6);
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+    }
+
+    .scrap-value {
+        padding: 10px;
+        font-weight: bold;
+    }
+
+    .scrap-high {
+        color: #ff4b2b;
+    }
+
+    .scrap-low {
+        color: #4CAF50;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const goldPrimary = '#D4AF37';
+        const goldSoft = 'rgba(212, 175, 55, 0.4)';
+
+        // 1. Pipeline Chart
+        new Chart(document.getElementById('pipelineChart'), {
+            type: 'bar',
+            data: {
+                labels: JSON.parse(document.getElementById('pipeline-labels').textContent),
+                datasets: [{
+                    label: 'عدد الأوامر',
+                    data: JSON.parse(document.getElementById('pipeline-values').textContent),
+                    backgroundColor: goldSoft,
+                    borderColor: goldPrimary,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', // Horizontal Bar
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { beginAtZero: true } }
+            }
+        });
+
+        // 2. Output Chart (Line)
+        new Chart(document.getElementById('outputChart'), {
+            type: 'line',
+            data: {
+                labels: JSON.parse(document.getElementById('output-dates').textContent),
+                datasets: [{
+                    label: 'الوزن المنتج (جم)',
+                    data: JSON.parse(document.getElementById('output-values').textContent),
+                    borderColor: '#4CAF50',
+                    backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false
+            }
+        });
+
+        // 3. Scrap Chart (Bar)
+        new Chart(document.getElementById('scrapChart'), {
+            type: 'bar',
+            data: {
+                labels: JSON.parse(document.getElementById('ws-labels').textContent),
+                datasets: [{
+                    label: 'متوسط نسبة الهالك (%)',
+                    data: JSON.parse(document.getElementById('ws-scrap-values').textContent),
+                    backgroundColor: 'rgba(255, 75, 43, 0.5)',
+                    borderColor: '#ff4b2b',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'النسبة المئوية %' }
+                    }
+                },
+                plugins: {
+                    annotation: {
+                        annotations: {
+                            line1: {
+                                type: 'line',
+                                yMin: 1,
+                                yMax: 1,
+                                borderColor: 'red',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                label: { content: 'المعيار المسموح (1%)', enabled: true }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

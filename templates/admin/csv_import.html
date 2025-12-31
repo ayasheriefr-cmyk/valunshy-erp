@@ -1,0 +1,41 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block content %}
+<div class="glass-card"
+    style="padding: 40px; max-width: 600px; margin: 0 auto; background: #fff; color: #333; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);">
+    <h2 style="color: var(--gold-primary); text-align: center; margin-bottom: 30px;">
+        <i class="fa-solid fa-file-excel"></i> استيراد بيانات {{ opts.verbose_name }}
+    </h2>
+
+    <p style="text-align: center; color: #666; margin-bottom: 20px;">
+        يرجى رفع ملف Excel (CSV) يحتوي على الأعمدة المطلوبة. يمكنك تحميل القالب الفارغ أولاً لضمان صحة البيانات.
+    </p>
+
+    <div style="text-align: center; margin-bottom: 30px;">
+        <a href="../download-template/" class="btn-primary"
+            style="background: #2196F3; padding: 10px 20px; text-decoration: none; border-radius: 5px; color: white;">
+            <i class="fa-solid fa-download"></i> تحميل القالب الفارغ
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data"
+        style="background: #f9f9f9; padding: 20px; border-radius: 10px; border: 2px dashed #ccc;">
+        {% csrf_token %}
+        <div style="margin-bottom: 20px;">
+            {{ form.as_p }}
+        </div>
+
+        <div style="text-align: center;">
+            <button type="submit" class="btn-primary"
+                style="background: var(--gold-primary); color: #000; font-weight: bold; padding: 12px 30px; border: none; cursor: pointer; border-radius: 5px;">
+                <i class="fa-solid fa-upload"></i> بدء الاستيراد
+            </button>
+        </div>
+    </form>
+
+    <div style="margin-top: 20px; text-align: center;">
+        <a href=".." style="color: #666;">إلغاء وعودة للخلف</a>
+    </div>
+</div>
+{% endblock %}

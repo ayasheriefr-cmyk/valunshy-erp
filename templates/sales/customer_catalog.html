@@ -1,0 +1,548 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>متجر الذهب | Gold Store</title>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold-primary: #D4AF37;
+            --gold-light: #F5E6B8;
+            --gold-dark: #A67C00;
+            --bg-dark: #1a1a2e;
+            --bg-card: #16213e;
+            --text-light: #eee;
+            --text-muted: #aaa;
+            --success: #4CAF50;
+            --danger: #f44336;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #0f0f23 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            padding-bottom: 80px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(90deg, var(--gold-dark), var(--gold-primary));
+            padding: 20px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            color: #fff;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.8);
+            margin-top: 5px;
+        }
+
+        /* Search Bar */
+        .search-container {
+            padding: 15px 20px;
+            background: var(--bg-card);
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: 2px solid var(--gold-primary);
+            background: var(--bg-dark);
+            color: var(--text-light);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-box:focus {
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .search-box::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* Categories */
+        .categories {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .categories::-webkit-scrollbar {
+            display: none;
+        }
+
+        .category-btn {
+            padding: 10px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--gold-dark);
+            border-radius: 20px;
+            color: var(--gold-light);
+            font-size: 0.9rem;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .category-btn.active, .category-btn:hover {
+            background: var(--gold-primary);
+            color: #000;
+        }
+
+        /* Product Grid */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            padding: 15px;
+        }
+
+        @media (min-width: 768px) {
+            .products-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .products-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        /* Product Card */
+        .product-card {
+            background: var(--bg-card);
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.2);
+        }
+
+        .product-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            background: linear-gradient(45deg, #2a2a4a, #1a1a2e);
+        }
+
+        .product-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--gold-primary);
+            color: #000;
+            padding: 5px 10px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .product-info {
+            padding: 15px;
+        }
+
+        .product-name {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-light);
+        }
+
+        .product-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .product-weight {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .product-carat {
+            background: rgba(212, 175, 55, 0.2);
+            color: var(--gold-light);
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 0.75rem;
+        }
+
+        .product-price {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--gold-primary);
+            margin-bottom: 10px;
+        }
+
+        .order-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, var(--gold-dark), var(--gold-primary));
+            border: none;
+            border-radius: 10px;
+            color: #000;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .order-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .order-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-card);
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            border-top: 1px solid var(--gold-dark);
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.8rem;
+            transition: color 0.3s;
+        }
+
+        .nav-item.active, .nav-item:hover {
+            color: var(--gold-primary);
+        }
+
+        .nav-icon {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--success);
+            color: #fff;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 200;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+
+        /* Loading Spinner */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 50px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--bg-card);
+            border-top-color: var(--gold-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Gold Price Ticker */
+        .price-ticker {
+            background: var(--bg-card);
+            padding: 10px 20px;
+            display: flex;
+            gap: 20px;
+            overflow-x: auto;
+            font-size: 0.85rem;
+        }
+
+        .ticker-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            white-space: nowrap;
+        }
+
+        .ticker-label {
+            color: var(--text-muted);
+        }
+
+        .ticker-value {
+            color: var(--gold-primary);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <h1>💎 متجر الذهب</h1>
+        <p class="subtitle">اختر قطعتك المفضلة واطلبها الآن</p>
+    </header>
+
+    <!-- Gold Price Ticker -->
+    <div class="price-ticker" id="priceTicker">
+        <!-- Filled by JS -->
+    </div>
+
+    <!-- Search -->
+    <div class="search-container">
+        <input type="text" class="search-box" id="searchBox" placeholder="🔍 ابحث عن المنتجات...">
+    </div>
+
+    <!-- Categories -->
+    <div class="categories" id="categories">
+        <button class="category-btn active" data-category="all">الكل</button>
+        <button class="category-btn" data-category="ring">خواتم</button>
+        <button class="category-btn" data-category="necklace">سلاسل</button>
+        <button class="category-btn" data-category="bracelet">أساور</button>
+        <button class="category-btn" data-category="earring">حلق</button>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="products-grid" id="productsGrid">
+        <div class="loading">
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active">
+            <span class="nav-icon">🏠</span>
+            الرئيسية
+        </a>
+        <a href="#" class="nav-item">
+            <span class="nav-icon">🛒</span>
+            طلباتي
+        </a>
+        <a href="#" class="nav-item">
+            <span class="nav-icon">❤️</span>
+            المفضلة
+        </a>
+        <a href="#" class="nav-item">
+            <span class="nav-icon">👤</span>
+            حسابي
+        </a>
+    </nav>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // Demo Products (Will be fetched from API in production)
+        const demoProducts = [
+            {
+                id: 1,
+                name: "خاتم ألماس فاخر",
+                barcode: "RING-001",
+                carat_name: "21K",
+                gross_weight: 8.5,
+                net_gold_weight: 7.2,
+                image_url: "{% static 'products/ring.png' %}",
+                estimated_price: 28500
+            },
+            {
+                id: 2,
+                name: "سلسلة ذهب أنيقة",
+                barcode: "NECK-002",
+                carat_name: "18K",
+                gross_weight: 12.0,
+                net_gold_weight: 11.5,
+                image_url: "{% static 'products/necklace.png' %}",
+                estimated_price: 38200
+            },
+            {
+                id: 3,
+                name: "إسوارة مميزة",
+                barcode: "BRAC-003",
+                carat_name: "21K",
+                gross_weight: 15.0,
+                net_gold_weight: 14.8,
+                image_url: "{% static 'products/bracelet.png' %}",
+                estimated_price: 52300
+            },
+            {
+                id: 4,
+                name: "حلق ذهب رائع",
+                barcode: "EAR-004",
+                carat_name: "18K",
+                gross_weight: 4.0,
+                net_gold_weight: 3.8,
+                image_url: "{% static 'products/earrings.png' %}",
+                estimated_price: 12800
+            },
+            {
+                id: 5,
+                name: "خاتم زفاف كلاسيك",
+                barcode: "RING-005",
+                carat_name: "24K",
+                gross_weight: 6.0,
+                net_gold_weight: 6.0,
+                image_url: "{% static 'products/ring.png' %}",
+                estimated_price: 24000
+            },
+            {
+                id: 6,
+                name: "سلسلة قلب ذهبي",
+                barcode: "NECK-006",
+                carat_name: "21K",
+                gross_weight: 9.5,
+                net_gold_weight: 9.0,
+                image_url: "{% static 'products/necklace.png' %}",
+                estimated_price: 31500
+            }
+        ];
+
+        const goldPrices = [
+            { carat: "24K", price: 4000 },
+            { carat: "21K", price: 3500 },
+            { carat: "18K", price: 3000 }
+        ];
+
+        // Render Products
+        function renderProducts(products) {
+            const grid = document.getElementById('productsGrid');
+            grid.innerHTML = products.map(product => `
+                <div class="product-card" data-id="${product.id}">
+                    <span class="product-badge">${product.carat_name}</span>
+                    <img src="${product.image_url}" alt="${product.name}" class="product-image">
+                    <div class="product-info">
+                        <h3 class="product-name">${product.name}</h3>
+                        <div class="product-details">
+                            <span class="product-weight">${product.net_gold_weight} جم</span>
+                            <span class="product-carat">${product.carat_name}</span>
+                        </div>
+                        <div class="product-price">${product.estimated_price.toLocaleString()} ج.م</div>
+                        <button class="order-btn" onclick="orderProduct(${product.id}, '${product.name}')">
+                            🛒 اطلب الآن
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Gold Prices
+        function renderPrices() {
+            const ticker = document.getElementById('priceTicker');
+            ticker.innerHTML = goldPrices.map(p => `
+                <div class="ticker-item">
+                    <span class="ticker-label">${p.carat}:</span>
+                    <span class="ticker-value">${p.price.toLocaleString()} ج.م/جم</span>
+                </div>
+            `).join('');
+        }
+
+        // Show Toast
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show' + (isError ? ' error' : '');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Order Product (Will send to API)
+        async function orderProduct(productId, productName) {
+            // In production, this will call the API
+            // const response = await fetch('/sales/api/order/create/', {
+            //     method: 'POST',
+            //     headers: {'Content-Type': 'application/json', 'Authorization': 'Token xxx'},
+            //     body: JSON.stringify({ item_id: productId })
+            // });
+            
+            // Demo behavior
+            showToast(`✅ تم طلب "${productName}" بنجاح!`);
+        }
+
+        // Search
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = demoProducts.filter(p => 
+                p.name.toLowerCase().includes(query) || 
+                p.barcode.toLowerCase().includes(query)
+            );
+            renderProducts(filtered);
+        });
+
+        // Category Filter
+        document.getElementById('categories').addEventListener('click', (e) => {
+            if (e.target.classList.contains('category-btn')) {
+                document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const category = e.target.dataset.category;
+                if (category === 'all') {
+                    renderProducts(demoProducts);
+                } else {
+                    const filtered = demoProducts.filter(p => p.barcode.toLowerCase().includes(category));
+                    renderProducts(filtered);
+                }
+            }
+        });
+
+        // Initialize
+        renderProducts(demoProducts);
+        renderPrices();
+    </script>
+</body>
+</html>

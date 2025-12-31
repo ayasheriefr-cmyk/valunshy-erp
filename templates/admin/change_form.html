@@ -1,0 +1,236 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_modify %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/forms.css' %}">
+<style>
+    /* Premium Admin Form Styling (Add/Edit Screens) */
+    #content-main {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    form[id$="_form"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 25px !important;
+    }
+
+    fieldset.module {
+        background: rgba(255, 255, 255, 0.03) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 15px !important;
+        padding: 25px !important;
+        margin: 0 !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    fieldset.module h2 {
+        background: transparent !important;
+        color: var(--gold-primary) !important;
+        font-size: 1.1rem !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        margin-bottom: 20px !important;
+        padding-bottom: 10px !important;
+    }
+
+    .form-row {
+        padding: 15px 0 !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+    }
+
+    .form-row:last-child {
+        border-bottom: none !important;
+    }
+
+    .form-row label {
+        color: #aaa !important;
+        font-weight: 600 !important;
+        font-size: 0.9rem !important;
+        width: 200px !important;
+        margin-bottom: 0 !important;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="email"],
+    input[type="url"],
+    input[type="number"],
+    input[type="date"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #fff !important;
+        border-radius: 8px !important;
+        padding: 10px 15px !important;
+        font-size: 0.95rem !important;
+        transition: all 0.3s ease !important;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+        border-color: var(--gold-primary) !important;
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15) !important;
+        outline: none !important;
+    }
+
+    .submit-row {
+        background: rgba(20, 20, 20, 0.4) !important;
+        backdrop-filter: blur(15px) !important;
+        border: 1px solid var(--glass-border) !important;
+        padding: 20px 30px !important;
+        border-radius: 15px !important;
+        display: flex !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
+        gap: 15px !important;
+        margin: 30px 0 !important;
+        float: none !important;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    [dir="rtl"] .submit-row {
+        flex-direction: row-reverse;
+    }
+
+    .submit-row input {
+        height: 45px !important;
+        border-radius: 12px !important;
+        padding: 0 30px !important;
+        font-weight: 800 !important;
+        font-size: 0.9rem !important;
+        cursor: pointer !important;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        border: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+    }
+
+    .submit-row input[name="_save"] {
+        background: linear-gradient(135deg, var(--gold-primary), var(--gold-deep)) !important;
+        color: #000 !important;
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important;
+    }
+
+    .submit-row input[name="_addanother"],
+    .submit-row input[name="_continue"] {
+        background: linear-gradient(135deg, #2196F3, #1565C0) !important;
+        color: #fff !important;
+        box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3) !important;
+    }
+
+    .submit-row input:hover {
+        transform: translateY(-3px) !important;
+        filter: brightness(1.2) !important;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    .inline-group {
+        background: rgba(0, 0, 0, 0.1) !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 15px !important;
+        overflow: hidden !important;
+    }
+
+    .inline-group h2 {
+        background: rgba(212, 175, 55, 0.05) !important;
+        color: var(--gold-primary) !important;
+        margin: 0 !important;
+        padding: 15px 25px !important;
+        font-weight: 800 !important;
+        border-bottom: 1px solid var(--glass-border) !important;
+    }
+
+    .inline-related table thead th {
+        background: transparent !important;
+        color: var(--gold-primary) !important;
+        font-weight: 700 !important;
+        border-bottom: 2px solid var(--glass-border) !important;
+    }
+
+    .inline-related table td {
+        background: transparent !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03) !important;
+    }
+
+    .errorlist li {
+        color: #f44336 !important;
+        background: rgba(244, 67, 54, 0.1) !important;
+        border: 1px solid #f44336 !important;
+        padding: 5px 10px !important;
+        border-radius: 4px !important;
+        list-style: none !important;
+        margin-bottom: 5px !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    {% block object-tools %}
+    {% if change %}{% if not is_popup %}
+    <ul class="object-tools">
+        {% block object-tools-items %}
+        {% change_form_object_tools %}
+        {% endblock %}
+    </ul>
+    {% endif %}{% endif %}
+    {% endblock %}
+
+    <form {% if has_file_field %}enctype="multipart/form-data" {% endif %}{% if errors %}class="errors" {% endif %}
+        method="post" id="{{ opts.model_name }}_form" novalidate>
+        {% csrf_token %}
+        {% block form_top %}{% endblock %}
+
+        {% if errors %}
+        <p class="errornote"
+            style="background:#f44336; color:white; padding:10px 20px; border-radius:8px; margin-bottom:20px;">
+            {% if errors|length == 1 %}{% translate "Please correct the error below." %}{% else %}{% translate "Please
+            correct the errors below." %}{% endif %}
+        </p>
+        {{ adminform.form.non_field_errors }}
+        {% endif %}
+
+        {% block field_sets %}
+        {% for fieldset in adminform %}
+        {% include "admin/includes/fieldset.html" %}
+        {% endfor %}
+        {% endblock %}
+
+        {% block after_field_sets %}{% endblock %}
+
+        {% block inline_field_sets %}
+        {% for inline_admin_formset in inline_admin_formsets %}
+        {% include inline_admin_formset.opts.template %}
+        {% endfor %}
+        {% endblock %}
+
+        {% block after_related_objects %}{% endblock %}
+
+        {% block submit_buttons_bottom %}{% submit_row %}{% endblock %}
+
+        {% block admin_change_form_document_ready %}
+        {% if adminform and add %}
+        <script id="django-admin-form-add-constants" src="{% static 'admin/js/change_form.js' %}"
+            data-model-name="{{ opts.model_name }}" async></script>
+        {% else %}
+        <script id="django-admin-form-add-constants" src="{% static 'admin/js/change_form.js' %}" async></script>
+        {% endif %}
+        {% endblock %}
+
+        {% prepopulated_fields_js %}
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="help-container" style="padding: 2rem; direction: rtl; text-align: right;">
+    <h1 style="color: var(--gold-primary); margin-bottom: 2rem;">📘 دليل استخدام نظام فالونشي (Valunshy ERP)</h1>
+
+    <div class="help-section"
+        style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--glass-border);">
+        <h2 style="color: #fff; border-bottom: 1px solid var(--gold-primary); padding-bottom: 10px;">1. قسم المالية
+            والخزينة 💰</h2>
+        <ul style="list-style: none; padding: 10px;">
+            <li style="margin-bottom: 10px;">✅ <strong>إضافة خزينة جديدة:</strong> اذهب إلى "الخزينة" -> "أضف خزينة".
+                حدد النوع (رئيسية/فرعية) والمسؤول.</li>
+            <li style="margin-bottom: 10px;">✅ <strong>تسجيل حركة (إيداع/صرف):</strong> اذهب إلى "حركات الخزينة". اختر
+                "نوع الحركة" (إيداع نقدية/صرف ذهب/تحويل...).</li>
+            <li style="margin-bottom: 10px;">✅ <strong>العهد:</strong> لتسليم عهدة لموظف، اذهب إلى "العهد" وسجل المبلغ
+                أو الوزن، وسيظهر في ذمة الموظف.</li>
+        </ul>
+    </div>
+
+    <div class="help-section"
+        style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--glass-border);">
+        <h2 style="color: #fff; border-bottom: 1px solid var(--gold-primary); padding-bottom: 10px;">2. قسم التصنيع
+            والورش 🔨</h2>
+        <ul style="list-style: none; padding: 10px;">
+            <li style="margin-bottom: 10px;">✅ <strong>أمر التصنيع:</strong> يبدأ بإنشاء "أمر تصنيع" جديد، وتحديد الورشة
+                والمسؤول.</li>
+            <li style="margin-bottom: 10px;">✅ <strong>صرف الخامات:</strong> داخل أمر التصنيع، استخدم جدول "الخامات
+                المصروفة" لتحديد الذهب والأحجار التي ستخرج من المخزن للورشة.</li>
+            <li style="margin-bottom: 10px;">✅ <strong>استلام المنتج:</strong> عند الانتهاء، سجل "المنتجات المستلمة"
+                ليتم إضافتها للمخزون تلقائياً وحساب الهالك (Loss).</li>
+        </ul>
+    </div>
+
+    <div class="help-section"
+        style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--glass-border);">
+        <h2 style="color: #fff; border-bottom: 1px solid var(--gold-primary); padding-bottom: 10px;">3. المخزون
+            والمبيعات 💎</h2>
+        <ul style="list-style: none; padding: 10px;">
+            <li style="margin-bottom: 10px;">✅ <strong>تكويد الأصناف:</strong> قبل البيع، تأكد من وجود الأصناف في
+                "المخزون". استخدم الباركود لسهولة البحث.</li>
+            <li style="margin-bottom: 10px;">✅ <strong>فاتورة البيع:</strong> اختر العميل، ثم امسح الباركود أو اختر
+                الصنف. السيستم سيحسب السعر بناءً على سعر الذهب وقت البيع والمصنعية.</li>
+        </ul>
+    </div>
+
+    <div class="help-tip"
+        style="margin-top: 30px; padding: 15px; background: rgba(212, 175, 55, 0.1); border-radius: 8px; color: var(--gold-primary); text-align: center;">
+        💡 <strong>نصيحة:</strong> استخدم زر <code>Ctrl + F</code> للبحث السريع داخل أي صفحة، وتأكد من تحديث الصفحة
+        <code>Ctrl + Shift + R</code> عند وجود تحديثات في النظام.
+    </div>
+</div>
+{% endblock %}

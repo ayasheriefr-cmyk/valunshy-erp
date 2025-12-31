@@ -1,0 +1,66 @@
+/* Custom Jewelry ERP Admin Theme */
+:root {
+    --primary: #c5a059; /* Gold color */
+    --secondary: #2c3e50;
+    --accent: #f39c12;
+    --header-bg: #fff;
+    --header-color: #2c3e50;
+    --body-bg: #f8f9fa;
+}
+
+body {
+    background-color: var(--body-bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+#header {
+    background: var(--header-bg) !important;
+    color: var(--header-color) !important;
+    border-bottom: 2px solid var(--primary);
+}
+
+#header a {
+    color: var(--header-color) !important;
+}
+
+.module h2, .module caption, .inline-group h2 {
+    background: var(--primary) !important;
+    color: white !important;
+}
+
+#content h1 {
+    color: var(--secondary);
+    font-weight: 700;
+}
+
+.button, input[type=submit], input[type=button], .submit-row input, a.button {
+    background: var(--primary) !important;
+    border-radius: 4px;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.button:hover, input[type=submit]:hover {
+    background: #b38d45 !important;
+}
+
+/* Sidebar Styling */
+#content-main {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+/* Fieldsets */
+fieldset {
+    border: 1px solid #eee;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+legend {
+    color: var(--primary);
+    font-weight: bold;
+    padding: 0 10px;
+}

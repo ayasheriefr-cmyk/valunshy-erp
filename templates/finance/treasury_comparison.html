@@ -1,0 +1,315 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{% block title %}{{ title }} | جولد{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    .report-container {
+        background: white;
+        padding: 40px;
+        margin: 20px auto;
+        max-width: 1100px;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        color: #333;
+        direction: rtl;
+    }
+
+    .report-header {
+        text-align: center;
+        border-bottom: 2px solid #b8860b;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+    }
+
+    .report-header h1 {
+        color: #b8860b;
+        margin: 0;
+        font-size: 28px;
+    }
+
+    .comparison-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .treasury-card {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        background: #fdfaf3;
+    }
+
+    .treasury-card h3 {
+        margin-top: 0;
+        color: #b8860b;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+    }
+
+    .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 5px 0;
+        border-bottom: 1px dashed #eee;
+    }
+
+    .stat-label {
+        color: #666;
+        font-weight: bold;
+    }
+
+    .stat-value {
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: bold;
+        font-size: 1.1em;
+    }
+
+    .section-title {
+        background: #fdf6e3;
+        padding: 10px;
+        border-right: 4px solid #b8860b;
+        margin: 25px 0 15px;
+        font-weight: bold;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 30px;
+    }
+
+    th,
+    td {
+        border: 1px solid #ddd;
+        padding: 12px;
+        text-align: right;
+    }
+
+    th {
+        background-color: #f8f9fa;
+        color: #b8860b;
+    }
+
+    .total-row {
+        background-color: #f8f9fa;
+        font-weight: bold;
+    }
+
+    .gap-highlight {
+        background-color: #fff9db;
+        border: 2px solid #fab005;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        margin: 20px 0;
+    }
+
+    .gap-value {
+        font-size: 24px;
+        color: #e67700;
+        font-weight: bold;
+    }
+
+    @media print {
+        .no-print {
+            display: none;
+        }
+
+        .report-container {
+            box-shadow: none;
+            margin: 0;
+            width: 100%;
+        }
+    }
+
+    .btn-print {
+        background: #b8860b;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 20px;
+    }
+
+    .date-filter {
+        background: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="no-print"
+    style="max-width: 1100px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+        <form method="get" class="date-filter">
+            <label>التاريخ:</label>
+            <input type="date" name="date" value="{{ report_date|date:'Y-m-d' }}" class="vTextField">
+            <button type="submit" class="button">عرض التقرير</button>
+        </form>
+    </div>
+    <button onclick="window.print()" class="btn-print"><i class="fas fa-print"></i> طباعة التقرير</button>
+</div>
+
+<div class="report-container">
+    {% if error %}
+    <div class="gap-highlight" style="border-color: red; color: red;">
+        {{ error }}
+    </div>
+    {% else %}
+    <div class="report-header">
+        <h1>تقرير مطابقة حركة الذهب (عيار 18)</h1>
+        <p>مقارنة بين {{ main_treasury.name }} و {{ prod_treasury.name }}</p>
+    </div>
+
+    <div class="comparison-grid">
+        <!-- Main Treasury Card -->
+        <div class="treasury-card">
+            <h3>{{ main_treasury.name }}</h3>
+            <div class="stat-row">
+                <span class="stat-label">رصيد أول اليوم (دفتري):</span>
+                <span class="stat-value">{{ main_opening|floatformat:3 }} جم</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">إجمالي المرسل للإنتاج:</span>
+                <span class="stat-value" style="color: #d9534f;">- {{ total_main_to_prod|floatformat:3 }} جم</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">إجمالي المستلم من الإنتاج:</span>
+                <span class="stat-value" style="color: #5cb85c;">+ {{ total_prod_to_main|floatformat:3 }} جم</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">الرصيد الدفتري الحالي:</span>
+                <span class="stat-value">{{ main_current|floatformat:3 }} جم</span>
+            </div>
+        </div>
+
+        <!-- Production Treasury Card -->
+        <div class="treasury-card">
+            <h3>{{ prod_treasury.name }}</h3>
+            <div class="stat-row">
+                <span class="stat-label">رصيد أول اليوم (دفتري):</span>
+                <span class="stat-value">{{ prod_opening|floatformat:3 }} جم</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">إجمالي المستلم من الرئيسي:</span>
+                <span class="stat-value" style="color: #5cb85c;">+ {{ total_main_to_prod|floatformat:3 }} جم</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">إجمالي المرسل للرئيسي:</span>
+                <span class="stat-value" style="color: #d9534f;">- {{ total_prod_to_main|floatformat:3 }} جم</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">الرصيد الدفتري الحالي:</span>
+                <span class="stat-value">{{ prod_current|floatformat:3 }} جم</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">تفاصيل التحويلات البينية (الرئيسية ↔ الإنتاج)</div>
+    <table>
+        <thead>
+            <tr>
+                <th>رقم التحويل</th>
+                <th>من</th>
+                <th>إلى</th>
+                <th>الوزن (جم)</th>
+                <th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tr in transfers_main_to_prod %}
+            <tr style="background-color: #fff3f3;">
+                <td>{{ tr.transfer_number }}</td>
+                <td>{{ main_treasury.name }}</td>
+                <td>{{ prod_treasury.name }}</td>
+                <td>{{ tr.gold_weight|floatformat:3 }}</td>
+                <td>{{ tr.get_status_display }}</td>
+            </tr>
+            {% endfor %}
+            {% for tr in transfers_prod_to_main %}
+            <tr style="background-color: #f3fff3;">
+                <td>{{ tr.transfer_number }}</td>
+                <td>{{ prod_treasury.name }}</td>
+                <td>{{ main_treasury.name }}</td>
+                <td>{{ tr.gold_weight|floatformat:3 }}</td>
+                <td>{{ tr.get_status_display }}</td>
+            </tr>
+            {% endfor %}
+            {% if not transfers_main_to_prod and not transfers_prod_to_main %}
+            <tr>
+                <td colspan="5" style="text-align: center;">لا توجد تحويلات بين الخزينتين في هذا التاريخ.</td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+
+    <div class="gap-highlight">
+        <div class="stat-label">صافي الفرق في عيار 18 بين الخزينتين لليوم</div>
+        <div class="gap-value">
+            {% with diff=total_main_to_prod|add:total_prod_to_main %}
+            {{ total_main_to_prod|floatformat:3 }} مرسل / {{ total_prod_to_main|floatformat:3 }} مسترد
+            {% endwith %}
+        </div>
+    </div>
+
+    <div class="section-title">حركات أخرى لليوم (عيار 18)</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div>
+            <h4 style="color: #b8860b;">{{ main_treasury.name }}</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>البيان</th>
+                        <th>الوزن</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in main_txs %}
+                    <tr>
+                        <td>{{ tx.description }}</td>
+                        <td>{{ tx.gold_weight|floatformat:3 }}</td>
+                    </tr>
+                    {% empty %}<tr>
+                        <td colspan="2">لا حركات أخرى</td>
+                    </tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h4 style="color: #b8860b;">{{ prod_treasury.name }}</h4>
+            <table>
+                <thead>
+                    <tr>
+                        <th>البيان</th>
+                        <th>الوزن</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in prod_txs %}
+                    <tr>
+                        <td>{{ tx.description }}</td>
+                        <td>{{ tx.gold_weight|floatformat:3 }}</td>
+                    </tr>
+                    {% empty %}<tr>
+                        <td colspan="2">لا حركات أخرى</td>
+                    </tr>{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block content %}
+<div style="direction: rtl; padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1 style="color: var(--gold-primary); margin: 0;">
+            <i class="fa-solid fa-boxes-stacked"></i> لوحة تحكم المخزون
+        </h1>
+        <a href="/admin/inventory/item/add/" class="btn-primary"
+            style="padding: 10px 20px; text-decoration: none; border-radius: 8px;">
+            <i class="fa-solid fa-plus"></i> إضافة قطعة جديدة
+        </a>
+    </div>
+
+    <!-- Quick Stats Row -->
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 40px;">
+        <div class="glass-card stat-card" style="border-right: 4px solid var(--gold-primary);">
+            <div class="stat-icon"><i class="fa-solid fa-gem"></i></div>
+            <div class="stat-info">
+                <h3>إجمالي القطع</h3>
+                <div class="stat-value">{{ total_items }}</div>
+            </div>
+        </div>
+        <div class="glass-card stat-card" style="border-right: 4px solid #4CAF50;">
+            <div class="stat-icon"><i class="fa-solid fa-weight-hanging"></i></div>
+            <div class="stat-info">
+                <h3>إجمالي الوزن (جاهز)</h3>
+                <div class="stat-value">{{ total_gold_weight|floatformat:2 }} <small>جم</small></div>
+            </div>
+        </div>
+        <div class="glass-card stat-card" style="border-right: 4px solid #2196F3;">
+            <div class="stat-icon"><i class="fa-solid fa-coins"></i></div>
+            <div class="stat-info">
+                <h3>المواد الخام</h3>
+                <div class="stat-value">{{ total_raw_weight|floatformat:2 }} <small>جم</small></div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+        <!-- Recent Items -->
+        <div class="glass-card" style="padding: 25px;">
+            <h3 style="color: var(--gold-primary); margin-bottom: 20px;">آخر القطع المضافة</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid rgba(212,175,55,0.2);">
+                        <th style="padding: 12px; text-align: right;">الباركود</th>
+                        <th style="padding: 12px; text-align: right;">الاسم</th>
+                        <th style="padding: 12px; text-align: center;">الوزن</th>
+                        <th style="padding: 12px; text-align: center;">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in recent_items %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 12px; font-family: monospace;">{{ item.barcode }}</td>
+                        <td style="padding: 12px;">{{ item.name }}</td>
+                        <td style="padding: 12px; text-align: center;">{{ item.net_gold_weight }} جم</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span
+                                style="padding: 4px 10px; border-radius: 10px; background: rgba(212,175,55,0.1); color: var(--gold-bright); font-size: 0.8rem;">
+                                {{ item.get_status_display }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div style="margin-top: 20px; text-align: center;">
+                <a href="/admin/inventory/item/" style="color: var(--gold-primary); text-decoration: none;">عرض مخزون كل
+                    القطع ←</a>
+            </div>
+        </div>
+
+        <!-- Carat Distribution -->
+        <div class="glass-card" style="padding: 25px;">
+            <h3 style="color: var(--gold-primary); margin-bottom: 20px;">توزيع العيارات</h3>
+            {% for stat in carat_stats %}
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span>عيار {{ stat.carat__name }}</span>
+                    <span style="color: var(--gold-primary);">{{ stat.weight|floatformat:2 }} جم</span>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); height: 8px; border-radius: 4px;">
+                    <div class="progress-bar" data-percent="70"
+                        style="background: var(--gold-primary); height: 100%; border-radius: 4px; width: 0%; transition: width 1s;">
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 25px 0;">
+
+            <h3 style="color: var(--gold-primary); margin-bottom: 20px;">إدارة الورش</h3>
+            <a href="/admin/manufacturing/workshop/" class="btn-primary"
+                style="display: block; text-align: center; padding: 12px; text-decoration: none; border-radius: 8px; margin-bottom: 10px;">
+                عارض عهد الورش
+            </a>
+            <a href="/finance/reports/gold-position/"
+                style="display: block; text-align: center; padding: 12px; color: var(--gold-primary); border: 1px solid var(--gold-soft); text-decoration: none; border-radius: 8px;">
+                تقرير موقف الذهب الشامل
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    .stat-card {
+        display: flex;
+        align-items: center;
+        padding: 25px;
+        gap: 20px;
+    }
+
+    .stat-icon {
+        width: 60px;
+        height: 60px;
+        background: rgba(212, 175, 55, 0.1);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--gold-primary);
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        margin-top: 5px;
+    }
+
+    .btn-primary {
+        background: var(--gold-primary);
+        color: #000;
+        font-weight: bold;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+            document.querySelectorAll('.progress-bar').forEach(bar => {
+                const percent = bar.getAttribute('data-percent');
+                bar.style.width = percent + '%';
+            });
+        }, 100);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="padding: 20px; direction: rtl;">
+    <h1 style="color: var(--gold-primary); margin-bottom: 30px;">
+        <i class="fa-solid fa-scale-balanced"></i> {{ title }}
+    </h1>
+
+    <div
+        style="background: rgba(20,20,20,0.6); border-radius: 15px; padding: 25px; border: 1px solid var(--glass-border);">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--gold-primary);">
+                    <th style="padding: 15px; text-align: right; color: var(--gold-primary);">كود الحساب</th>
+                    <th style="padding: 15px; text-align: right; color: var(--gold-primary);">اسم الحساب</th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">مدين</th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">دائن</th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">الرصيد</th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">الطبيعة</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in data %}
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <td style="padding: 12px; color: #888;">{{ item.account.code }}</td>
+                    <td style="padding: 12px; color: #fff;">{{ item.account.name }}</td>
+                    <td style="padding: 12px; text-align: center; color: #4CAF50;">{{ item.debit|floatformat:2 }}</td>
+                    <td style="padding: 12px; text-align: center; color: #f44336;">{{ item.credit|floatformat:2 }}</td>
+                    <td style="padding: 12px; text-align: center; color: var(--gold-primary); font-weight: bold;">{{
+                        item.balance|floatformat:2 }}</td>
+                    <td style="padding: 12px; text-align: center;">
+                        {% if item.balance_type == 'مدين' %}
+                        <span
+                            style="padding: 5px 15px; border-radius: 20px; background: rgba(76,175,80,0.2); color: #4CAF50;">مدين</span>
+                        {% elif item.balance_type == 'دائن' %}
+                        <span
+                            style="padding: 5px 15px; border-radius: 20px; background: rgba(244,67,54,0.2); color: #f44336;">دائن</span>
+                        {% else %}
+                        <span
+                            style="padding: 5px 15px; border-radius: 20px; background: rgba(128,128,128,0.2); color: #888;">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 30px; color: #888;">لا توجد بيانات</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr style="border-top: 2px solid var(--gold-primary); background: rgba(212,175,55,0.1);">
+                    <td colspan="2" style="padding: 15px; font-weight: bold; color: var(--gold-primary);">الإجمالي</td>
+                    <td style="padding: 15px; text-align: center; font-weight: bold; color: #4CAF50;">{{
+                        total_debit|floatformat:2 }}</td>
+                    <td style="padding: 15px; text-align: center; font-weight: bold; color: #f44336;">{{
+                        total_credit|floatformat:2 }}</td>
+                    <td colspan="2" style="padding: 15px; text-align: center;">
+                        {% if is_balanced %}
+                        <span style="color: #4CAF50; font-weight: bold;">
+                            <i class="fa-solid fa-check-circle"></i> ميزان متوازن ✓
+                        </span>
+                        {% else %}
+                        <span style="color: #f44336; font-weight: bold;">
+                            <i class="fa-solid fa-exclamation-triangle"></i> غير متوازن!
+                        </span>
+                        {% endif %}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div style="margin-top: 20px; text-align: left;">
+        <button onclick="window.print()"
+            style="background: var(--gold-primary); color: #000; padding: 12px 30px; border: none; border-radius: 25px; cursor: pointer; font-weight: bold;">
+            <i class="fa-solid fa-print"></i> طباعة التقرير
+        </button>
+    </div>
+</div>
+{% endblock %}

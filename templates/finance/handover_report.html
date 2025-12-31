@@ -1,0 +1,517 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static humanize %}
+
+{% block title %}{{ title }} | جولد{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    :root {
+        --primary-gold: #D4AF37;
+        --secondary-gold: #AA8C2C;
+        --dark-bg: #1e1e1e;
+        --light-bg: #f8f9fa;
+        --border-color: #e0e0e0;
+    }
+
+    /* Print Styles */
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+
+        body {
+            background: white !important;
+            color: black !important;
+        }
+
+        .main-wrapper {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .page-header {
+            display: none !important;
+        }
+
+        aside,
+        .sidebar,
+        header {
+            display: none !important;
+        }
+
+        .report-card {
+            box-shadow: none !important;
+            border: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+        }
+
+        .report-section {
+            page-break-inside: avoid;
+        }
+
+        table {
+            width: 100% !important;
+            border: 1px solid #000 !important;
+        }
+
+        th,
+        td {
+            border: 1px solid #000 !important;
+            color: black !important;
+        }
+    }
+
+    /* Screen Styles */
+    .report-card {
+        background: white;
+        color: #000;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        padding: 40px;
+        margin: 20px auto;
+        max-width: 1100px;
+        direction: rtl;
+        font-family: 'Cairo', system-ui, sans-serif;
+    }
+
+    .report-header {
+        text-align: center;
+        margin-bottom: 40px;
+        border-bottom: 3px solid var(--primary-gold);
+        padding-bottom: 20px;
+    }
+
+    .report-title {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #000;
+        margin: 0;
+    }
+
+    .report-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        background: #fff;
+        border: 1px solid #000;
+        padding: 20px;
+        border: 1px solid #000;
+    }
+
+    .meta-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .meta-label {
+        font-size: 0.85rem;
+        color: #000;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .meta-value {
+        font-weight: bold;
+        font-size: 1.1rem;
+        color: #000;
+    }
+
+    .section-header {
+        background: #f0f0f0;
+        color: #000;
+        border: 1px solid #000;
+        padding: 10px 20px;
+        border-radius: 4px;
+        margin: 30px 0 20px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 0.95rem;
+    }
+
+    .data-table th {
+        background: #e0e0e0;
+        color: #000;
+        font-weight: 800;
+        padding: 12px;
+        border: 1px solid #000;
+        text-align: right;
+    }
+
+    .data-table td {
+        padding: 12px;
+        border: 1px solid #000;
+        color: #000;
+    }
+
+    .data-table tr:nth-child(even) {
+        background: #fafafa;
+    }
+
+    .amount-cell {
+        font-family: monospace;
+        font-weight: 600;
+        direction: ltr;
+        text-align: left;
+    }
+
+    .total-row {
+        background: #fff8e1 !important;
+        font-weight: bold;
+    }
+
+    .gold-text {
+        color: #d6a400;
+    }
+
+    .green-text {
+        color: #2e7d32;
+    }
+
+    .red-text {
+        color: #c62828;
+    }
+
+    /* Action Buttons */
+    .action-bar {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 20px;
+        justify-content: flex-end;
+    }
+
+    .btn-action {
+        padding: 10px 20px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: bold;
+        transition: transform 0.2s;
+    }
+
+    .btn-print {
+        background: var(--dark-bg);
+        color: white;
+    }
+
+    .btn-print:hover {
+        background: #333;
+    }
+
+    .signature-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 50px;
+        margin-top: 60px;
+        page-break-inside: avoid;
+    }
+
+    .signature-box {
+        text-align: center;
+        border-top: 2px dashed #ccc;
+        padding-top: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="no-print action-bar">
+    <button onclick="window.print()" class="btn-action btn-print">
+        <i class="fa-solid fa-print"></i> طباعة التقرير
+    </button>
+</div>
+
+<div class="report-card">
+    <!-- Header -->
+    <header class="report-header">
+        <div style="font-size: 3rem; margin-bottom: 10px;">💎</div>
+        <h1 class="report-title">كشف استلام وتسليم الخزينة اليومي</h1>
+        <p style="color: #666; margin-top: 5px;">Daily Treasury Handover Report</p>
+    </header>
+
+    <!-- Meta Info -->
+    <div class="report-meta-grid">
+        <div class="meta-item">
+            <span class="meta-label">الخزينة (Treasury)</span>
+            <span class="meta-value">{{ treasury.name }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">التاريخ (Date)</span>
+            <span class="meta-value">{{ report_date|date:"l, d F Y" }}</span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">المسؤول (Responsible)</span>
+            <span class="meta-value">
+                {% if treasury.responsible_user %}
+                {{ treasury.responsible_user.get_full_name|default:treasury.responsible_user.username }}
+                {% else %}
+                -
+                {% endif %}
+            </span>
+        </div>
+        <div class="meta-item">
+            <span class="meta-label">حالة الإغلاق (Status)</span>
+            <span class="meta-value">
+                {% if report and report.is_closed %}
+                <span class="green-text"><i class="fa-solid fa-check-circle"></i> مغلقة</span>
+                {% else %}
+                <span class="gold-text"><i class="fa-solid fa-clock"></i> مفتوحة</span>
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    <!-- 1. Opening Balance -->
+    <div class="report-section">
+        <div class="section-header">
+            <i class="fa-solid fa-box-open"></i> أولاً: رصيد بداية اليوم (Opening Balance)
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>البيان</th>
+                    <th>ذهب 18 (Gold 18k)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>رصيد الاستلام صباحاً (المدور)</td>
+                    <td class="amount-cell">{{ opening_gold_18|floatformat:3 }} جم</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 2. Transactions -->
+    <div class="report-section">
+        <div class="section-header">
+            <i class="fa-solid fa-right-left"></i> ثانياً: حركة اليوم (Transactions)
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 10%;">المرجع</th>
+                    <th>الوصف / البيان</th>
+                    <th>ذهب (Gold)</th>
+                    <th>النوع</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tx in txs %}
+                <tr>
+                    <td>{{ tx.reference|default:"-" }}</td>
+                    <td>{{ tx.description }}</td>
+                    <td class="amount-cell" style="direction: ltr;">
+                        {% if tx.gold_weight > 0 %}
+                        {% if tx.transaction_type == 'gold_in' or tx.transaction_type == 'transfer_in' %}
+                        <span class="green-text">+{{ tx.gold_weight|floatformat:3 }}</span>
+                        {% else %}
+                        <span class="red-text">-{{ tx.gold_weight|floatformat:3 }}</span>
+                        {% endif %}
+                        {% else %} - {% endif %}
+                    </td>
+                    <td style="font-size: 0.85rem; color: #666;">{{ tx.get_transaction_type_display }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 20px; color: #999;">لا توجد حركات مالية مسجلة
+                        اليوم</td>
+                </tr>
+                {% endfor %}
+                <tr class="total-row">
+                    <td colspan="2">الإجمالي (Total)</td>
+                    <td class="amount-cell">{{ gold_movement|floatformat:3 }}</td>
+                    <td></td>
+                </tr>
+                <tr style="background: #e3f2fd; font-weight: bold;">
+                    <td colspan="2">صافي حركة اليوم (Net Movement)</td>
+                    <td class="amount-cell">{{ gold_movement|floatformat:3 }} جم</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- 3. Transfers and Inter-Workshop -->
+    <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
+        <!-- Treasury Transfers -->
+        <div class="report-section">
+            <div class="section-header">
+                <i class="fa-solid fa-money-bill-transfer"></i> ثالثاً: تحويلات الخزائن (Treasury Transfers)
+            </div>
+            {% if received_transfers or sent_transfers %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>رقم التحويل</th>
+                        <th>التفاصيل</th>
+                        <th>ذهب</th>
+                        <th>أحجار</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tr in received_transfers %}
+                    <tr style="border-right: 4px solid var(--green);">
+                        <td>#{{ tr.transfer_number }}</td>
+                        <td><i class="fa-solid fa-arrow-down green-text"></i> استلام من {{ tr.from_treasury.name }}</td>
+                        <td class="amount-cell">{{ tr.gold_weight|floatformat:3 }}</td>
+                        <td class="amount-cell">{{ tr.stones_weight|floatformat:3 }}</td>
+                    </tr>
+                    {% endfor %}
+                    {% for tr in sent_transfers %}
+                    <tr style="border-right: 4px solid var(--red);">
+                        <td>#{{ tr.transfer_number }}</td>
+                        <td><i class="fa-solid fa-arrow-up red-text"></i> إرسال إلى {{ tr.to_treasury.name }}</td>
+                        <td class="amount-cell">{{ tr.gold_weight|floatformat:3 }}</td>
+                        <td class="amount-cell">{{ tr.stones_weight|floatformat:3 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align: center; color: #888; border: 1px dashed #ccc; padding: 15px; border-radius: 6px;">لا
+                توجد تحويلات خارجية</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 4. Scrap Analysis -->
+    {% if scrap_data %}
+    <div class="report-section">
+        <div class="section-header" style="background: linear-gradient(90deg, #d32f2f, transparent);">
+            <i class="fa-solid fa-fire"></i> رابعاً: تحليل تشغيل الورش ونسبة الهالك (Production & Scrap)
+        </div>
+        {% for ws_data in scrap_data %}
+        <div style="margin-bottom: 20px;">
+            <h3
+                style="margin: 0 0 10px; color: #444; font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 5px;">
+                <i class="fa-solid fa-hammer"></i> ورشة: {{ ws_data.workshop.name }}
+            </h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>الأمر</th>
+                        <th>العيار</th>
+                        <th>وزن داخل (Input)</th>
+                        <th>أحجار (Stones)</th>
+                        <th>هالك (Scrap)</th>
+                        <th>صافي (Net Gold)</th>
+                        <th>النسبة %</th>
+                        <th>تفاصيل المراحل</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in ws_data.items %}
+                    <tr>
+                        <td>{{ item.order_number }}</td>
+                        <td>{{ item.carat }}</td>
+                        <td class="amount-cell">{{ item.input_weight|floatformat:3 }}</td>
+                        <td class="amount-cell blue-text">{{ item.stones_weight|floatformat:3 }}</td>
+                        <td class="amount-cell red-text">{{ item.scrap_weight|floatformat:3 }}</td>
+                        <td class="amount-cell">{{ item.net_weight|floatformat:3 }}</td>
+                        <td
+                            class="amount-cell {% if item.scrap_percent > 1.0 %}red-text{% else %}green-text{% endif %}">
+                            {{ item.scrap_percent|floatformat:2 }}%</td>
+                        <td>
+                            <ul style="margin:0; padding:0 20px; font-size: 0.8rem; color: #555;">
+                                {% for stage in item.stages %}
+                                <li>
+                                    {% if stage.stage_name == 'casting' %}السبك / Casting
+                                    {% elif stage.stage_name == 'filing' %}البرد والتجهيز / Filing
+                                    {% elif stage.stage_name == 'polishing' %}الجلي والتلميع / Polishing
+                                    {% else %}{{ stage.get_stage_name_display }}{% endif %}:
+                                    {{ stage.input_weight|floatformat:3 }}g ➡️
+                                    {{ stage.output_weight|floatformat:3 }}g
+                                    ({{ stage.technician }})
+                                </li>
+                                {% empty %}
+                                <li>مرحلة واحدة مباشرة</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="total-row">
+                        <td colspan="2">إجمالي الورشة</td>
+                        <td class="amount-cell">{{ ws_data.input_total|floatformat:3 }}</td>
+                        <td class="amount-cell">{{ ws_data.scrap_total|floatformat:3 }}</td>
+                        <td class="amount-cell">{{ ws_data.net_total|floatformat:3 }}</td>
+                        <td class="amount-cell">{{ ws_data.scrap_percent_avg|floatformat:2 }}%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- 5. Final Reconciliation -->
+    <div class="report-section" style="break-inside: avoid;">
+        <div class="section-header" style="background: linear-gradient(90deg, #2e7d32, transparent);">
+            <i class="fa-solid fa-scale-balanced"></i> خامساً: مطابقة الأرصدة الختامية (Final Reconciliation)
+        </div>
+        <table class="data-table" style="font-size: 1.05rem;">
+            <thead>
+                <tr>
+                    <th style="background: #e8f5e9;">البيان</th>
+                    <th>رصيد دفتري (المتوقع)</th>
+                    <th>الرصيد الفعلي (الجرد)</th>
+                    <th>العجز / الزيادة</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="font-weight: bold;">ذهب عيار 18 (Gold 18)</td>
+                    <td class="amount-cell" style="font-size: 1.2rem;">{{ gold_current_18|floatformat:3 }}</td>
+                    <td class="amount-cell">
+                        {% if report %}
+                        {{ report.actual_gold_18|default:report.actual_gold_21|default:"-" }}
+                        {% else %}-{% endif %}
+                    </td>
+                    <td
+                        class="amount-cell {% if report and report.gold_difference != 0 %}red-text{% else %}green-text{% endif %}">
+                        {{ report.gold_difference|default:"-" }}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Signatures -->
+    <div class="signature-grid">
+        <div class="signature-box">
+            <h4>أمين الخزينة (المسلم)</h4>
+            <p>
+                {% if treasury.responsible_user %}
+                {{ treasury.responsible_user.get_full_name|default:treasury.responsible_user.username }}
+                {% else %}
+                ........................
+                {% endif %}
+            </p>
+        </div>
+        <div class="signature-box">
+            <h4>المدير المالي / المستلم</h4>
+            <p>........................</p>
+        </div>
+    </div>
+
+    <div style="text-align: center; margin-top: 40px; font-size: 0.8rem; color: #999;">
+        تم استخراج هذا التقرير آلياً من نظام فالينشي في {{ report_date }} | Valunshy System
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>طباعة باركود الذهب</title>
+    <style>
+        @page {
+            size: auto;
+            margin: 0mm;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 10px;
+            background: #fff;
+        }
+
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .gold-tag {
+            width: 80mm;
+            /* Standard Jewelry Tag Size */
+            height: 30mm;
+            border: 1px solid #ddd;
+            display: flex;
+            padding: 5px;
+            box-sizing: border-box;
+            background: #fff;
+            page-break-inside: avoid;
+        }
+
+        .tag-left {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            border-left: 1px dashed #ccc;
+            padding-left: 5px;
+        }
+
+        .tag-right {
+            width: 30mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .item-name {
+            font-size: 10pt;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+
+        .item-details {
+            font-size: 8pt;
+            color: #333;
+        }
+
+        .barcode-area {
+            text-align: center;
+        }
+
+        .barcode-svg {
+            width: 100%;
+            height: auto;
+            max-height: 15mm;
+        }
+
+        .barcode-num {
+            font-size: 7pt;
+            margin-top: -5px;
+        }
+
+        .weight-box {
+            background: #000;
+            color: #fff;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 9pt;
+            font-weight: bold;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+
+            .gold-tag {
+                border: none;
+                margin-bottom: 5mm;
+            }
+        }
+    </style>
+    <!-- Barcode Support: Code 128 is industry standard for inventory -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+</head>
+
+<body>
+    <div class="no-print"
+        style="background: #f8f9fa; padding: 15px; border-bottom: 1px solid #ddd; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin:0;">معاينة طباعة الباركود (Jewelry Tags)</h2>
+        <button onclick="window.print()"
+            style="background: #D4AF37; color: #000; border: none; padding: 10px 25px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+            تأكيد الطباعة الآن
+        </button>
+    </div>
+
+    <div class="tag-container">
+        {% for item in items %}
+        <div class="gold-tag">
+            <div class="tag-left">
+                <div class="item-name">{{ item.name }}</div>
+                <div class="item-details">
+                    <div>العيار: {{ item.carat.name }}</div>
+                    <div>المصنعية: {{ item.labor_fee_per_gram }}</div>
+                </div>
+                <div class="weight-box">
+                    W: {{ item.net_gold_weight }} g
+                </div>
+            </div>
+            <div class="tag-right">
+                <div class="barcode-area">
+                    <svg class="barcode" data-value="{{ item.barcode }}"></svg>
+                </div>
+                <div style="font-size: 7pt; margin-top: 5px; font-weight: bold;">VALUNSHY JEWELRY</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        // Generate barcodes on load
+        window.onload = function () {
+            var barcodeElements = document.querySelectorAll('.barcode');
+            barcodeElements.forEach(function (el) {
+                JsBarcode(el, el.getAttribute('data-value'), {
+                    format: "CODE128",
+                    displayValue: true,
+                    fontSize: 14,
+                    height: 40,
+                    margin: 0
+                });
+            });
+        };
+    </script>
+</body>
+
+</html>

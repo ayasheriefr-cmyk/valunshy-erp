@@ -1,0 +1,100 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div style="padding: 20px; direction: rtl;">
+    <h1 style="color: var(--gold-primary); margin-bottom: 30px;">
+        <i class="fa-solid fa-chart-pie"></i> {{ title }}
+    </h1>
+
+    <div class="glass-card" style="padding: 25px;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--gold-primary);">
+                    <th style="padding: 15px; text-align: right; color: var(--gold-primary);">العيار</th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">المخزون (قطع جاهزة)</th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">المواد الخام (سبائك/كسر)
+                    </th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">بعهدة الورش (ذهب)</th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">بعهدة الورش (براده)</th>
+                    <th style="padding: 15px; text-align: center; color: var(--gold-primary);">إجمالي الوزن الحالي</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in position_data %}
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <td style="padding: 15px; color: #fff; font-weight: bold;">عيار {{ item.carat.name }}</td>
+                    <td style="padding: 15px; text-align: center; color: #fff;">{{ item.inventory|floatformat:3 }} جم
+                    </td>
+                    <td style="padding: 15px; text-align: center; color: #fff;">{{ item.raw|floatformat:3 }} جم</td>
+                    <td style="padding: 15px; text-align: center; color: #fff;">{{ item.workshops|floatformat:3 }} جم
+                    </td>
+                    <td style="padding: 15px; text-align: center; color: #fff;">{{ item.filings|floatformat:3 }} جم
+                    </td>
+                    <td
+                        style="padding: 15px; text-align: center; color: var(--gold-bright); font-size: 1.1rem; font-weight: 900;">
+                        {{ item.total|floatformat:3 }} جم
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 30px; color: #888;">لا توجد أرصدة ذهب حالياً
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div
+        style="margin-top: 30px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); display: grid; gap: 20px;">
+        <div class="glass-card" style="padding: 20px; border-right: 4px solid #4CAF50;">
+            <h3 style="color: #4CAF50;">نصيحة الموقف</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 10px;">
+                يتم حساب هذا الموقف بناءً على الأوزان الفعلية المسجلة في النظام.
+                تأكد من تسوية عهد الورش دورياً للحصول على نتائج دقيقة.
+            </p>
+        </div>
+        <div class="glass-card" style="padding: 20px; border-right: 4px solid var(--gold-primary);">
+            <h3 style="color: var(--gold-primary);">ملخص الأوزان</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 10px;">
+                إجمالي الوزن المتاح يساعدك في اتخاذ قرارات البيع والشراء والتحوط من تقلبات الأسعار.
+            </p>
+        </div>
+    </div>
+
+    <div style="margin-top: 30px; text-align: left;">
+        <button onclick="window.print()" class="btn-primary" style="padding: 12px 30px;">
+            <i class="fa-solid fa-print"></i> طباعة موقف الذهب
+        </button>
+    </div>
+</div>
+
+<style>
+    .glass-card {
+        background: rgba(20, 20, 20, 0.6);
+        border-radius: 15px;
+        border: 1px solid var(--glass_border);
+    }
+
+    [data-theme="light"] .glass-card {
+        background: #fff;
+        border: 1px solid #ddd;
+    }
+
+    [data-theme="light"] td {
+        color: #333 !important;
+    }
+
+    .btn-primary {
+        background: var(--gold-primary);
+        color: #000;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}

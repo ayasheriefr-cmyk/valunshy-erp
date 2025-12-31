@@ -1,0 +1,133 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* Premium Delete Confirmation Styling */
+
+    #content-main {
+        width: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        padding-top: 50px !important;
+    }
+
+    .glass-card-warning {
+        max-width: 600px !important;
+        width: 100% !important;
+        background: rgba(244, 67, 54, 0.05) !important;
+        border: 1px solid rgba(244, 67, 54, 0.2) !important;
+        border-radius: 20px !important;
+        padding: 40px !important;
+        text-align: center !important;
+        box-shadow: 0 15px 45px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .warning-icon {
+        font-size: 4rem !important;
+        color: #f44336 !important;
+        margin-bottom: 25px !important;
+    }
+
+    h1 {
+        color: #fff !important;
+        font-weight: 800 !important;
+        margin-bottom: 15px !important;
+    }
+
+    p {
+        color: #aaa !important;
+        font-size: 1.1rem !important;
+        line-height: 1.6 !important;
+        margin-bottom: 30px !important;
+    }
+
+    ul.delete-list {
+        background: rgba(0, 0, 0, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        text-align: right !important;
+        margin-bottom: 30px !important;
+        list-style: none !important;
+    }
+
+    [dir="ltr"] ul.delete-list {
+        text-align: left !important;
+    }
+
+    ul.delete-list li {
+        color: #ddd !important;
+        margin-bottom: 8px !important;
+        font-family: monospace !important;
+    }
+
+    .buttons-row {
+        display: flex !important;
+        gap: 15px !important;
+        justify-content: center !important;
+    }
+
+    input[type="submit"],
+    .button.cancel-link {
+        padding: 0 35px !important;
+        height: 48px !important;
+        border-radius: 12px !important;
+        font-weight: 800 !important;
+        cursor: pointer !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        text-decoration: none !important;
+        font-size: 1rem !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+    }
+
+    input[type="submit"] {
+        background: linear-gradient(135deg, #f44336, #d32f2f) !important;
+        color: #fff !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(244, 67, 54, 0.4) !important;
+    }
+
+    .button.cancel-link {
+        background: linear-gradient(135deg, #2196F3, #1565C0) !important;
+        color: #fff !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3) !important;
+    }
+
+    input[type="submit"]:hover,
+    .button.cancel-link:hover {
+        transform: translateY(-3px) !important;
+        filter: brightness(1.2) !important;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    <div class="glass-card-warning">
+        <div class="warning-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <h1>{% translate "Are you sure?" %}</h1>
+        <p>
+            {% blocktranslate with escaped_object=object %}Are you sure you want to delete the {{ object_name }} "{{ escaped_object }}"? All of the following objects and their related items will be deleted:{% endblocktranslate %}
+        </p>
+
+        <ul class="delete-list">{{ deleted_objects|unordered_list }}</ul>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="buttons-row">
+                <input type="submit" value="{% translate 'Yes, I’m sure' %}">
+                <a href="#" onclick="window.history.back(); return false;" class="button cancel-link">{% translate "No, take me back" %}</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>دليل إنشاء الحزمة - Valunshy ERP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #ffffff;
+            padding: 40px 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+            padding: 40px;
+            background: linear-gradient(135deg, #d4af37 0%, #f4e5b1 100%);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(212, 175, 55, 0.3);
+        }
+
+        .header h1 {
+            color: #1a1a2e;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .header p {
+            color: #533b1a;
+            font-size: 1.2em;
+        }
+
+        .options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .option-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 15px;
+            padding: 30px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .option-card:hover {
+            transform: translateY(-5px);
+            border-color: #d4af37;
+            box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+        }
+
+        .option-card.recommended {
+            border-color: #d4af37;
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .option-card.recommended::before {
+            content: "⭐ الأفضل";
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background: #d4af37;
+            color: #1a1a2e;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .option-number {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            background: #d4af37;
+            color: #1a1a2e;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 50px;
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .option-card h2 {
+            color: #d4af37;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .file-name {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            color: #4ade80;
+            font-size: 0.95em;
+        }
+
+        .features {
+            list-style: none;
+            margin: 20px 0;
+        }
+
+        .features li {
+            padding: 8px 0;
+            padding-right: 25px;
+            position: relative;
+        }
+
+        .features li::before {
+            content: "✅";
+            position: absolute;
+            right: 0;
+        }
+
+        .features.cons li::before {
+            content: "⚠️";
+        }
+
+        .steps {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .steps h3 {
+            color: #d4af37;
+            margin-bottom: 10px;
+        }
+
+        .steps ol {
+            padding-right: 20px;
+        }
+
+        .steps li {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+
+        .info-box {
+            background: rgba(74, 222, 128, 0.1);
+            border: 2px solid #4ade80;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 30px 0;
+        }
+
+        .info-box h3 {
+            color: #4ade80;
+            margin-bottom: 10px;
+        }
+
+        .credentials {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .credentials p {
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 30px;
+            border-top: 2px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .footer p {
+            color: #d4af37;
+            margin: 10px 0;
+        }
+
+        .button {
+            display: inline-block;
+            background: #d4af37;
+            color: #1a1a2e;
+            padding: 12px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+
+        .button:hover {
+            background: #f4e5b1;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏆 نظام إدارة ورش الصياغة</h1>
+            <p>Valunshy Jewelry ERP - دليل إنشاء الحزمة</p>
+        </div>
+
+        <div class="options">
+            <!-- Option 1 -->
+            <div class="option-card">
+                <div class="option-number">1</div>
+                <h2>▶️ التشغيل المباشر</h2>
+                <div class="file-name">START_HERE.bat</div>
+
+                <ul class="features">
+                    <li>تشغيل فوري على هذا الجهاز</li>
+                    <li>يفتح المتصفح تلقائياً</li>
+                    <li>مثالي للاختبار والتطوير</li>
+                </ul>
+
+                <div class="steps">
+                    <h3>الاستخدام:</h3>
+                    <ol>
+                        <li>انقر مرتين على الملف</li>
+                        <li>انتظر فتح المتصفح</li>
+                        <li>سجّل دخولك للنظام</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Option 2 -->
+            <div class="option-card">
+                <div class="option-number">2</div>
+                <h2>📦 الحزمة البسيطة</h2>
+                <div class="file-name">package_for_distribution.bat</div>
+
+                <ul class="features">
+                    <li>حجم صغير (~50 ميجا)</li>
+                    <li>إنشاء ملف ZIP للتوزيع</li>
+                    <li>سريع وسهل</li>
+                </ul>
+
+                <ul class="features cons">
+                    <li>يحتاج Python على الجهاز الهدف</li>
+                </ul>
+
+                <div class="steps">
+                    <h3>الخطوات:</h3>
+                    <ol>
+                        <li>شغّل الملف</li>
+                        <li>انتظر إنشاء المجلد والملف المضغوط</li>
+                        <li>أرسل الحزمة للعميل</li>
+                        <li>العميل يشغّل START_HERE.bat</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Option 3 - Recommended -->
+            <div class="option-card recommended">
+                <div class="option-number">3</div>
+                <h2>💎 التطبيق التنفيذي</h2>
+                <div class="file-name">build_executable.bat</div>
+
+                <ul class="features">
+                    <li>لا يحتاج Python!</li>
+                    <li>يعمل على أي جهاز Windows</li>
+                    <li>احترافي وجاهز للإنتاج</li>
+                    <li>الأفضل للعملاء النهائيين</li>
+                </ul>
+
+                <ul class="features cons">
+                    <li>حجم أكبر (~200 ميجا)</li>
+                    <li>يستغرق 5-10 دقائق للبناء</li>
+                </ul>
+
+                <div class="steps">
+                    <h3>الخطوات:</h3>
+                    <ol>
+                        <li>شغّل الملف</li>
+                        <li>انتظر حتى ينتهي البناء (5-10 دقائق)</li>
+                        <li>انسخ مجلد dist\ValunshyERP</li>
+                        <li>وزّعه على أي جهاز</li>
+                        <li>شغّل شغّل_النظام.bat</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <h3>🔑 بيانات الدخول الافتراضية</h3>
+            <div class="credentials">
+                <p>📧 اسم المستخدم: <strong>admin</strong></p>
+                <p>🔒 كلمة المرور: <strong>admin</strong></p>
+            </div>
+            <p style="margin-top: 15px; color: #fbbf24;">⚠️ تنبيه: يُنصح بتغيير كلمة المرور بعد التشغيل الأول!</p>
+        </div>
+
+        <div class="info-box" style="border-color: #60a5fa; background: rgba(96, 165, 250, 0.1);">
+            <h3 style="color: #60a5fa;">💡 التوصية للعملاء</h3>
+            <p style="font-size: 1.1em; line-height: 1.8;">
+                للتوزيع الاحترافي على العملاء، استخدم <strong>التطبيق التنفيذي (الخيار 3)</strong>
+                لأنه لا يحتاج لأي تثبيتات إضافية ويعمل مباشرة على أي جهاز Windows.
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>📚 للمزيد من التفاصيل</p>
+            <a href="README_PACKAGING.md" class="button">دليل التوزيع الكامل</a>
+            <a href="دليل_المستخدم.md" class="button">دليل المستخدم</a>
+            <p style="margin-top: 30px; opacity: 0.7;">
+                Made with ❤️ for Gold Workshops Management<br>
+                Valunshy ERP v1.0 - December 2025
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

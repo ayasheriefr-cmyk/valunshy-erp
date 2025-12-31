@@ -1,0 +1,38 @@
+Code: 1 | Name: الخزينة الرئيسية
+Code: CAST-001 | Name: خزينه السبك
+Code: DEP-1 | Name: تحت التشغيل
+Code: DEP-10 | Name: برادة تزجة قاسم
+Code: DEP-11 | Name: براده تزجه بابلو
+Code: DEP-12 | Name: بودر جلاه انور
+Code: DEP-13 | Name: مونترات
+Code: DEP-14 | Name: مونترات عملاء
+Code: DEP-15 | Name: مرمات مصنع
+Code: DEP-16 | Name: مرمات عملاء
+Code: DEP-17 | Name: انتاج تام
+Code: DEP-18 | Name: قسم الخزينه الرئيسيه
+Code: DEP-19 | Name: مخزن الاحجار
+Code: DEP-2 | Name: ذهب كسر
+Code: DEP-20 | Name: براده تركيب سونيل
+Code: DEP-21 | Name: براده التركيب مونموي
+Code: DEP-22 | Name: براده التركيب اربان
+Code: DEP-23 | Name: خزنه الليزر
+Code: DEP-24 | Name: بودر ليزر
+Code: DEP-25 | Name: بودر الترا بولش
+Code: DEP-26 | Name: دهب سبك
+Code: DEP-27 | Name: الترا بولش تحت التشغيل
+Code: DEP-28 | Name: بودر تركيب فيم
+Code: DEP-29 | Name: احجار تحت التشغيل
+Code: DEP-3 | Name: تزجه قاسم
+Code: DEP-30 | Name: بودر سبك
+Code: DEP-4 | Name: تزجه بابلو
+Code: DEP-5 | Name: جلاه انور تحت التشغيل
+Code: DEP-6 | Name: تركيب مونموى
+Code: DEP-7 | Name: تركيب سونيل
+Code: DEP-8 | Name: تركيب اربان
+Code: DEP-9 | Name: تركيب فيم
+Code: LSR01 | Name: خزينه الليزر
+Code: MAIN | Name: الخزينة الرئيسية
+Code: MAIN_TEST | Name: الخزينة الرئيسية - اختبار
+Code: PROD-001 | Name: خزينة قسم الإنتاج
+Code: PROD_TREASURY | Name: خزينة الإنتاج
+Code: STONE-01 | Name: خزينه احجار

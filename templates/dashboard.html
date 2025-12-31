@@ -1,0 +1,801 @@
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Valunshy Jewelry | {% translate "Deser Jewelry" %}</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Outfit:wght@400;700;900&display=swap">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    {% block extrastyle %}{% endblock %}
+</head>
+
+<body>
+    <!-- Bloomberg Style Ticker -->
+    <div class="bloomberg-ticker">
+        <div class="ticker-wrap">
+            {% for price in live_gold_prices %}
+            <div class="ticker-item-premium">
+                <span class="label">{{ price.carat.name }}</span>
+                <span class="price">{{ price.price_per_gram }} <small>EGP</small></span>
+                <span class="change change-up"><i class="fa-solid fa-caret-up"></i> +0.4%</span>
+            </div>
+            {% empty %}
+            <div class="ticker-item-premium">
+                <span class="label">GOLD MARKETS</span>
+                <span class="price">WAITING FOR DATA...</span>
+            </div>
+            {% endfor %}
+            <!-- Duplicate for infinite scroll feel if needed, but the animation handles it -->
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-gem"></i></div>
+            <div class="logo-text">VALUNSHY</div>
+        </div>
+
+        <nav>
+            <ul class="nav-links">
+                <li>
+                    <a href="/" class="nav-item active">
+                        <i class="fa-solid fa-house"></i>
+                        <span>
+                            {% if LANGUAGE_CODE == 'ar' %}الرئيسية{% else %}Dashboard{% endif %}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/inventory/item/" class="nav-item">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}المخزون{% else %}Inventory{% endif %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/sales/invoice/" class="nav-item">
+                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}المبيعات{% else %}Sales{% endif %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/manufacturing/manufacturingorder/" class="nav-item">
+                        <i class="fa-solid fa-hammer"></i>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}التصنيع{% else %}Manufacturing{% endif %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/crm/customer/" class="nav-item">
+                        <i class="fa-solid fa-users"></i>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}العملاء{% else %}Customers{% endif %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/finance/account/" class="nav-item">
+                        <i class="fa-solid fa-vault"></i>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}لوحة الحسابات{% else %}Accounting{% endif %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/" class="nav-item">
+                        <i class="fa-solid fa-gear"></i>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}الإعدادات{% else %}Settings{% endif %}</span>
+                    </a>
+                </li>
+                {% if user.salesrepresentative %}
+                <li>
+                    <a href="/sales/mobile/" class="nav-item"
+                        style="color: var(--gold-primary); border: 1px solid var(--gold-soft); background: rgba(212,175,55,0.05); margin-top: 10px; border-radius: 12px;">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}تطبيق المندوب{% else %}Delegate App{% endif %}</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+
+        <div
+            style="margin-top: auto; padding: 20px; border-top: 1px solid var(--glass-border); display: flex; flex-direction: column; gap: 1rem;">
+            <div class="controls-row">
+                <div class="ui-btn" id="theme-btn" title="Toggle Theme"><i class="fa-solid fa-moon"></i></div>
+                <form action="{% url 'set_language' %}" method="post" style="display:inline;">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <input name="language" type="hidden"
+                        value="{% if LANGUAGE_CODE == 'ar' %}en{% else %}ar{% endif %}">
+                    <button type="submit" class="ui-btn" style="width: auto; padding: 0 15px;">
+                        {% if LANGUAGE_CODE == 'ar' %}EN{% else %}AR{% endif %}
+                    </button>
+                </form>
+            </div>
+            <a href="/admin/logout/" class="nav-item"
+                style="color: #ff4b2b; padding: 0.8rem; border: 1px solid rgba(255, 75, 43, 0.2);">
+                <i class="fa-solid fa-power-off"></i>
+                <span>{% if LANGUAGE_CODE == 'ar' %}خروج{% else %}Logout{% endif %}</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-wrapper" style="padding: 2.5rem; flex: 1; display: flex; flex-direction: column; gap: 2.5rem;">
+
+        <div class="dashboard-header"
+            style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem;">
+            <div class="welcome-text">
+                <h1
+                    style="font-size: 2.5rem; font-weight: 900; margin-bottom: 0.5rem; background: linear-gradient(to right, #FFF, var(--gold-primary)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                    {% if LANGUAGE_CODE == 'ar' %}أهلاً بك،{% else %}Welcome back,{% endif %}
+                    {{ user.first_name|default:user.username }}
+                </h1>
+                <p style="color: var(--text-muted); font-size: 1.1rem; letter-spacing: 0.5px;">
+                    {% if LANGUAGE_CODE == 'ar' %}
+                    نظام إدارة المجوهرات المتطور
+                    {% else %}
+                    Premium Jewelry Management System
+                    {% endif %}
+                </p>
+            </div>
+
+            <div class="live-status glass-card"
+                style="padding: 0.6rem 1.2rem; display: flex; align-items: center; gap: 12px; border-radius: 50px;">
+                <span
+                    style="width: 8px; height: 8px; background: #4CAF50; border-radius: 50%; box-shadow: 0 0 10px #4CAF50; animation: pulse 2s infinite;"></span>
+                <span
+                    style="font-size: 0.85rem; font-weight: 800; letter-spacing: 1px; color: var(--gold-primary);">LIVE
+                    SYSTEM</span>
+            </div>
+        </div>
+
+        <!-- POS Quick Action -->
+        <a href="/admin/sales/invoice/add/" class="pos-big-button"
+            style="display: flex; align-items: center; gap: 2.5rem; background: linear-gradient(135deg, #151515 0%, #0a0a0a 100%); border: 1px solid var(--gold-primary); padding: 2rem 3rem; border-radius: 2.5rem; text-decoration: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 10px 30px rgba(0,0,0,0.5); position: relative; overflow: hidden;">
+            <div
+                style="position: absolute; top: 0; right: 0; width: 200px; height: 100%; background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.05));">
+            </div>
+            <div
+                style="background: linear-gradient(135deg, var(--gold-primary), var(--gold-deep)); width: 5.5rem; height: 5.5rem; border-radius: 1.8rem; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #000; box-shadow: 0 10px 20px rgba(212, 175, 55, 0.2);">
+                <i class="fa-solid fa-cash-register"></i>
+            </div>
+            <div style="flex: 1;">
+                <div style="font-size: 2.2rem; font-weight: 900; line-height: 1.1; color: var(--gold-primary);">
+                    {% if LANGUAGE_CODE == 'ar' %}
+                    نقطة بيع سريعة (POS)
+                    {% else %}
+                    Quick Sale Terminal
+                    {% endif %}
+                </div>
+                <div style="font-size: 1.1rem; color: var(--text-muted); margin-top: 0.6rem; font-weight: 500;">
+                    {% if LANGUAGE_CODE == 'ar' %}
+                    ابدأ عملية بيع جديدة وتلقائية فوراً
+                    {% else %}
+                    Launch a new seamless transaction instantly
+                    {% endif %}
+                </div>
+            </div>
+            <div
+                style="width: 4rem; height: 4rem; border: 1px solid var(--gold-soft); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--gold-primary); transition: all 0.3s;">
+                <i class="fa-solid fa-arrow-right" style="font-size: 1.5rem;"></i>
+            </div>
+        </a>
+
+        <!-- Stats Grid -->
+        <section class="stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+
+            <div class="stat-card glass-card"
+                style="padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div
+                        style="width: 3.5rem; height: 3.5rem; background: rgba(212, 175, 55, 0.1); color: var(--gold-primary); border-radius: 1.2rem; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <div
+                        style="background: rgba(76, 175, 80, 0.1); color: #4CAF50; padding: 4px 10px; border-radius: 10px; font-size: 0.8rem; font-weight: 800;">
+                        +{{ sales_increase_pct }}%
+                    </div>
+                </div>
+                <div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <span style="font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; color: #FFF;">
+                            {{ total_sales_today|floatformat:0 }}
+                        </span>
+                        <small style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">EGP</small>
+                    </div>
+                    <div
+                        style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                        {% if LANGUAGE_CODE == 'ar' %}مبيعات اليوم{% else %}Today's Sales{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card glass-card"
+                style="padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                <div
+                    style="width: 3.5rem; height: 3.5rem; background: rgba(76, 175, 80, 0.1); color: #4CAF50; border-radius: 1.2rem; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
+                    <i class="fa-solid fa-vault"></i>
+                </div>
+                <div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <span style="font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; color: #FFF;">
+                            {{ total_cash_in_vault|floatformat:0 }}
+                        </span>
+                        <small style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">EGP</small>
+                    </div>
+                    <div
+                        style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                        {% if LANGUAGE_CODE == 'ar' %}السيولة النقدية{% else %}Cash in Vaults{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card glass-card"
+                style="padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                <div
+                    style="width: 3.5rem; height: 3.5rem; background: rgba(212, 175, 55, 0.1); color: var(--gold-primary); border-radius: 1.2rem; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
+                    <i class="fa-solid fa-gem"></i>
+                </div>
+                <div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <span style="font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; color: #FFF;">
+                            {{ estimated_inventory_value|floatformat:0 }}
+                        </span>
+                        <small style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">EGP</small>
+                    </div>
+                    <div
+                        style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                        {% if LANGUAGE_CODE == 'ar' %}قيمة المخزون{% else %}Inventory value{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="stat-card glass-card"
+                style="padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                <div
+                    style="width: 3.5rem; height: 3.5rem; background: rgba(33, 150, 243, 0.1); color: #2196F3; border-radius: 1.2rem; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
+                    <i class="fa-solid fa-weight-hanging"></i>
+                </div>
+                <div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <span style="font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; color: #FFF;">
+                            {{ total_inventory_weight|floatformat:2 }}
+                        </span>
+                        <small style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">g</small>
+                    </div>
+                    <div
+                        style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                        {% if LANGUAGE_CODE == 'ar' %}وزن الذهب الكلي{% else %}Total Gold Weight{% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CSS for new elements -->
+        <style>
+            .gold-price-bar {
+                background: linear-gradient(90deg, #1a1a1a 0%, #111 50%, #1a1a1a 100%);
+                border: 1px solid var(--glass-border);
+                border-radius: 12px;
+                padding: 15px 20px;
+                margin-bottom: 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            }
+
+            .ticker-item {
+                background: rgba(212, 175, 55, 0.1);
+                border: 1px solid rgba(212, 175, 55, 0.3);
+                padding: 5px 15px;
+                border-radius: 20px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .ticker-item .carat {
+                color: #aaa;
+                font-size: 0.9rem;
+            }
+
+            .ticker-item .price {
+                color: var(--gold-bright);
+                font-weight: bold;
+                font-size: 1.1rem;
+            }
+
+            .pos-big-button {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 20px;
+                background: linear-gradient(135deg, var(--gold-primary) 0%, #b8860b 100%);
+                color: #000;
+                padding: 25px;
+                border-radius: 16px;
+                text-decoration: none;
+                transition: transform 0.2s, box-shadow 0.2s;
+                box-shadow: 0 10px 30px rgba(212, 175, 55, 0.2);
+            }
+
+            .pos-big-button:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 15px 40px rgba(212, 175, 55, 0.4);
+            }
+
+            .pos-big-button i {
+                font-size: 2.5rem;
+                background: rgba(0, 0, 0, 0.1);
+                padding: 15px;
+                border-radius: 50%;
+            }
+
+            .button-small {
+                background: #333;
+                color: #fff;
+                padding: 8px 15px;
+                border-radius: 6px;
+                text-decoration: none;
+                font-size: 0.85rem;
+            }
+        </style>
+
+        <!-- Charts Section -->
+        <section class="dashboard-sections" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+            <div class="section-card glass-card" style="padding: 2rem;">
+                <div class="section-header"
+                    style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--gold-primary);">
+                        {% if LANGUAGE_CODE == 'ar' %}تحليل تدفق المبيعات{% else %}Sales Flow Analysis{% endif %}
+                    </h2>
+                    <div style="display: flex; gap: 10px;">
+                        <span
+                            style="display: flex; align-items: center; gap: 5px; font-size: 0.8rem; color: var(--text-muted);">
+                            <span
+                                style="width: 8px; height: 8px; background: var(--gold-primary); border-radius: 50%;"></span>
+                            الأرباح
+                        </span>
+                    </div>
+                </div>
+                <div style="height: 300px;"><canvas id="salesChart"></canvas></div>
+            </div>
+
+            <div class="section-card glass-card"
+                style="padding: 2rem; display: flex; flex-direction: column; gap: 2rem;">
+                <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--gold-primary);">
+                    {% if LANGUAGE_CODE == 'ar' %}
+                    توزيع المخزون
+                    {% else %}
+                    Inventory Split
+                    {% endif %}
+                </h2>
+                <div style="height: 200px; position: relative;">
+                    <canvas id="inventoryChart"></canvas>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    {% if inventory_breakdown %}
+                    {% for item in inventory_breakdown %}
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: rgba(255,255,255,0.02); border-radius: 10px;">
+                        <span style="font-size: 0.9rem; color: var(--text-muted);">{{ item.carat }}</span>
+                        <span style="font-weight: 800; color: #D4AF37;">{{ item.pct }}%</span>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <!-- Empty State -->
+                    <div style="text-align: center; color: var(--text-muted); padding: 20px; font-size: 0.9rem;">
+                        {% if LANGUAGE_CODE == 'ar' %}المخزون فارغ{% else %}Inventory is Empty{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+
+        <!-- Gold Position Terminal -->
+        <section class="section-card glass-card"
+            style="padding: 2.5rem; margin-bottom: 2.5rem; position: relative; overflow: hidden; border: 1px solid var(--glass-border);">
+            <div
+                style="position: absolute; top: 0; right: 0; padding: 10px 24px; background: var(--gold-soft); border-bottom-left-radius: 20px; font-size: 0.75rem; font-weight: 900; letter-spacing: 2px; color: var(--gold-primary); text-transform: uppercase; border-left: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border);">
+                رقم الجهاز: VAL-001
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2.5rem;">
+                <h2
+                    style="font-size: 1.6rem; font-weight: 950; display: flex; align-items: center; gap: 15px; letter-spacing: -0.5px;">
+                    <i class="fa-solid fa-microchip" style="color: var(--gold-primary); font-size: 2rem;"></i>
+                    {% if LANGUAGE_CODE == 'ar' %}
+                    مركز مراقبة الذهب الذكي
+                    {% else %}
+                    Smart Gold Intelligence Hub
+                    {% endif %}
+                </h2>
+                <div style="display: flex; gap: 12px;">
+                    <div
+                        style="width: 10px; height: 10px; background: #4CAF50; border-radius: 50%; box-shadow: 0 0 10px #4CAF50;">
+                    </div>
+                    <div
+                        style="width: 10px; height: 10px; background: #2196F3; border-radius: 50%; box-shadow: 0 0 10px #2196F3;">
+                    </div>
+                    <div
+                        style="width: 10px; height: 10px; background: var(--gold-primary); border-radius: 50%; box-shadow: 0 0 10px var(--gold-primary);">
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+                <div
+                    style="background: rgba(255,255,255,0.02); padding: 1.8rem; border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.05); transition: transform 0.3s; cursor: default;">
+                    <div
+                        style="font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px;">
+                        مكافئ الذهب عيار 24</div>
+                    <div
+                        style="font-size: 2.22rem; font-weight: 950; color: var(--gold-primary); margin-top: 0.8rem; font-family: 'Inter', sans-serif;">
+                        {{ total_inventory_weight|floatformat:2 }} <small
+                            style="font-size: 1rem; font-weight: 700;">g</small>
+                    </div>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.02); padding: 1.8rem; border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <div
+                        style="font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px;">
+                        القيمة السوقية</div>
+                    <div
+                        style="font-size: 2.22rem; font-weight: 950; color: #FFF; margin-top: 0.8rem; font-family: 'Inter', sans-serif;">
+                        {{ estimated_inventory_value|floatformat:0 }} <small
+                            style="font-size: 1rem; opacity: 0.6; font-weight: 700;">EGP</small>
+                    </div>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.02); padding: 1.8rem; border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <div
+                        style="font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px;">
+                        العمليات النشطة</div>
+                    <div
+                        style="font-size: 2.22rem; font-weight: 950; color: #4CAF50; margin-top: 0.8rem; font-family: 'Inter', sans-serif;">
+                        {{ active_job_orders }} <small
+                            style="font-size: 1rem; opacity: 0.6; font-weight: 700;">طلب</small>
+                    </div>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.02); padding: 1.8rem; border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                    <div
+                        style="font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; font-weight: 800; letter-spacing: 1.5px;">
+                        عملاء اليوم</div>
+                    <div
+                        style="font-size: 2.22rem; font-weight: 950; color: #2196F3; margin-top: 0.8rem; font-family: 'Inter', sans-serif;">
+                        {{ new_customers_today }} <small
+                            style="font-size: 1rem; opacity: 0.6; font-weight: 700;">جديد</small>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lower Section -->
+        <section class="dashboard-sections" style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem;">
+            <div class="section-card glass-card" style="padding: 2rem; border: 1px solid rgba(255,255,255,0.05);">
+                <div class="section-header"
+                    style="margin-bottom: 2.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="font-size: 1.3rem; font-weight: 900; display: flex; align-items: center; gap: 12px;">
+                        <span
+                            style="width: 4px; height: 24px; background: var(--gold-primary); border-radius: 2px;"></span>
+                        {% if LANGUAGE_CODE == 'ar' %}
+                        أحدث القطع المضافة
+                        {% else %}
+                        Recent Collection Items
+                        {% endif %}
+                    </h2>
+                    <a href="/admin/inventory/item/" class="ui-btn"
+                        style="width: auto; padding: 0.6rem 1.5rem; font-size: 0.8rem; border-radius: 50px; font-weight: 800; background: var(--gold-dust); color: var(--gold-primary); border: 1px solid var(--gold-soft);">
+                        عرض المخزون
+                    </a>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="jewelry-table"
+                        style="width: 100%; border-collapse: separate; border-spacing: 0 10px;">
+                        <thead>
+                            <tr
+                                style="text-align: left; color: var(--text-dim); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1.5px;">
+                                <th style="padding: 0 1rem;">
+                                    {% if LANGUAGE_CODE == 'ar' %}الباركود{% else %}Barcode{% endif %}
+                                </th>
+                                <th style="padding: 0 1rem;">
+                                    {% if LANGUAGE_CODE == 'ar' %}الاسم{% else %}Name{% endif %}
+                                </th>
+                                <th style="padding: 0 1rem;">
+                                    {% if LANGUAGE_CODE == 'ar' %}العيار{% else %}Carat{% endif %}
+                                </th>
+                                <th style="padding: 0 1rem; text-align: right;">
+                                    {% if LANGUAGE_CODE == 'ar' %}الوزن{% else %}Weight{% endif %}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recent_items %}
+                            <tr
+                                style="background: rgba(255,255,255,0.02); transition: all 0.3s; border-radius: 12px; overflow: hidden;">
+                                <td
+                                    style="padding: 1.2rem 1rem; font-family: 'Inter', monospace; color: var(--gold-primary); font-weight: 600; border-radius: 12px 0 0 12px;">
+                                    {{ item.barcode }}
+                                </td>
+                                <td style="padding: 1.2rem 1rem; font-weight: 700;">{{ item.name }}</td>
+                                <td style="padding: 1.2rem 1rem;">
+                                    <span
+                                        style="background: var(--gold-dust); color: var(--gold-primary); padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 900; border: 1px solid var(--gold-soft);">
+                                        {{ item.carat.name }}
+                                    </span>
+                                </td>
+                                <td
+                                    style="padding: 1.2rem 1rem; font-weight: 800; text-align: right; border-radius: 0 12px 12px 0; color: #FFF;">
+                                    {{ item.net_gold_weight }}g
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="section-card glass-card" style="padding: 2rem; border: 1px solid rgba(255,255,255,0.05);">
+                <div class="section-header" style="margin-bottom: 2rem; display: flex; align-items: center; gap: 12px;">
+                    <span style="width: 4px; height: 24px; background: var(--gold-primary); border-radius: 2px;"></span>
+                    <h2 style="font-size: 1.35rem; font-weight: 900; letter-spacing: -0.5px;">
+                        {% if LANGUAGE_CODE == 'ar' %}تنبيهات فورية{% else %}Live Notifications{% endif %}
+                    </h2>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Notification 1 -->
+                    <div
+                        style="display: flex; gap: 1.2rem; padding: 1.2rem; background: rgba(255,255,255,0.02); border-radius: 1.5rem; border-inline-start: 4px solid var(--gold-primary); align-items: flex-start; transition: all 0.3s;">
+                        <div
+                            style="width: 48px; height: 48px; min-width: 48px; background: var(--gold-dust); color: var(--gold-primary); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; border: 1px solid var(--gold-soft);">
+                            <i class="fa-solid fa-receipt"></i>
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 5px;">
+                                <span
+                                    style="font-size: 1rem; font-weight: 800; color: #FFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    {% if LANGUAGE_CODE == 'ar' %}فاتورة جديدة{% else %}New Invoice{% endif %}
+                                </span>
+                                <span
+                                    style="font-size: 0.65rem; font-weight: 900; color: var(--gold-primary); background: rgba(212,175,55,0.12); padding: 3px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; border: 1px solid var(--gold-soft); letter-spacing: 0.5px;">
+                                    {% if LANGUAGE_CODE == 'ar' %}منذ دقيقتين{% else %}2M AGO{% endif %}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
+                                {% if LANGUAGE_CODE == 'ar' %}تم إصدار فاتورة مبيعات جديدة بنجاح في النظام.{% else %}New
+                                sales invoice has been successfully issued in the system.{% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification 2 -->
+                    <div
+                        style="display: flex; gap: 1.2rem; padding: 1.2rem; background: rgba(255,255,255,0.02); border-radius: 1.5rem; opacity: 0.7; align-items: flex-start; border-inline-start: 4px solid transparent;">
+                        <div
+                            style="width: 48px; height: 48px; min-width: 48px; background: rgba(255,255,255,0.05); color: #888; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                            <i class="fa-solid fa-boxes-packing"></i>
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 5px;">
+                                <span
+                                    style="font-size: 1rem; font-weight: 800; color: #FFF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    {% if LANGUAGE_CODE == 'ar' %}تحديث المخزون{% else %}Stock Update{% endif %}
+                                </span>
+                                <span
+                                    style="font-size: 0.65rem; font-weight: 900; color: #777; background: rgba(255,255,255,0.05); padding: 3px 10px; border-radius: 6px; white-space: nowrap; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.05);">
+                                    {% if LANGUAGE_CODE == 'ar' %}منذ ساعة{% else %}1H AGO{% endif %}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.6;">
+                                {% if LANGUAGE_CODE == 'ar' %}تم إضافة ٢٠ قطعة ذهبية جديدة إلى مخزن الفرع.{% else %}20
+                                new gold items added to branch inventory.{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="ui-btn"
+                    style="width: 100%; margin-top: 1.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); color: var(--text-dim); font-size: 0.8rem; font-weight: 800; letter-spacing: 1px; border-radius: 12px; height: 45px; transition: all 0.3s;">
+                    {% if LANGUAGE_CODE == 'ar' %}مسح جميع التنبيهات{% else %}CLEAR ALL NOTIFICATIONS{% endif %}
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <!-- AI Assistant UI -->
+    <div class="ai-assistant-btn" id="ai-btn">
+        <i class="fa-solid fa-robot"></i>
+    </div>
+
+    <div class="ai-chat-window" id="ai-chat">
+        <div class="ai-chat-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 10px; height: 10px; background: #4CAF50; border-radius: 50%;"></div>
+                <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--gold-primary);">VALUNSHY AI</h3>
+            </div>
+            <i class="fa-solid fa-times" id="close-ai" style="cursor: pointer; opacity: 0.5;"></i>
+        </div>
+        <div class="ai-chat-messages" id="chat-messages">
+            <div class="message ai">
+                Hello! I am your AI assistant. How can I help you today?
+            </div>
+        </div>
+        <div class="ai-chat-input">
+            <input type="text" id="ai-input" placeholder="Type your message...">
+            <button id="send-ai"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    {{ chart_dates|json_script:"chart-dates-data" }}
+    {{ chart_sales|json_script:"chart-sales-data" }}
+    {{ chart_carat_labels|json_script:"chart-labels-data" }}
+    {{ chart_carat_values|json_script:"chart-values-data" }}
+    <script>
+        const themeBtn = document.getElementById('theme-btn');
+        const html = document.documentElement;
+
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        html.setAttribute('data-theme', savedTheme);
+        updateIcon(savedTheme);
+
+        themeBtn.addEventListener('click', () => {
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            const icon = themeBtn.querySelector('i');
+            icon.className = theme === 'dark' ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+        }
+
+        // Charts initialization
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    titleColor: '#D4AF37',
+                    bodyColor: '#FFF',
+                    padding: 12,
+                    displayColors: false
+                }
+            },
+            scales: {
+                y: {
+                    grid: { color: 'rgba(212,175,55,0.05)', drawBorder: false },
+                    ticks: { color: '#666', font: { size: 10, weight: 'bold' } }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#666', font: { size: 10, weight: 'bold' } }
+                }
+            }
+        };
+
+
+        const salesCtx = document.getElementById('salesChart').getContext('2d');
+        const gradient = salesCtx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(212, 175, 55, 0.2)');
+        gradient.addColorStop(1, 'rgba(212, 175, 55, 0)');
+
+        const chartDates = JSON.parse(document.getElementById('chart-dates-data').textContent);
+        const chartSales = JSON.parse(document.getElementById('chart-sales-data').textContent);
+        const chartLabels = JSON.parse(document.getElementById('chart-labels-data').textContent);
+        const chartValues = JSON.parse(document.getElementById('chart-values-data').textContent);
+
+        new Chart(salesCtx, {
+            type: 'line',
+            data: {
+                labels: chartDates,
+                datasets: [{
+                    data: chartSales,
+                    borderColor: '#D4AF37',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#D4AF37',
+                    pointBorderColor: 'rgba(255,255,255,0.1)',
+                    pointHoverRadius: 6,
+                    fill: true,
+                    backgroundColor: gradient,
+                    tension: 0.4
+                }]
+            },
+            options: chartOptions
+        });
+
+        const invCtx = document.getElementById('inventoryChart').getContext('2d');
+        new Chart(invCtx, {
+            type: 'doughnut',
+            data: {
+                labels: chartLabels,
+                datasets: [{
+                    data: chartValues,
+                    backgroundColor: ['#996515', '#D4AF37', '#F1D36E'],
+                    hoverOffset: 10,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        // AI Assistant Logic
+        const aiBtn = document.getElementById('ai-btn');
+        const aiChat = document.getElementById('ai-chat');
+        const closeAi = document.getElementById('close-ai');
+        const sendBtn = document.getElementById('send-ai');
+        const aiInput = document.getElementById('ai-input');
+        const chatMessages = document.getElementById('chat-messages');
+
+        aiBtn.addEventListener('click', () => aiChat.classList.toggle('active'));
+        closeAi.addEventListener('click', () => aiChat.classList.remove('active'));
+
+        function showTyping() {
+            const div = document.createElement('div');
+            div.className = 'message ai typing-indicator';
+            div.id = 'typing';
+            div.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function hideTyping() {
+            const typing = document.getElementById('typing');
+            if (typing) typing.remove();
+        }
+
+        async function sendMessage() {
+            const query = aiInput.value.trim();
+            if (!query) return;
+
+            addMessage(query, 'user');
+            aiInput.value = '';
+            showTyping();
+
+            try {
+                const response = await fetch('/ai-assistant/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+                const data = await response.json();
+                hideTyping();
+                addMessage(data.response || data.error, 'ai');
+            } catch (error) {
+                hideTyping();
+                addMessage('Error connecting to AI service.', 'ai');
+            }
+        }
+
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            div.innerHTML = text; // Now supports HTML for bold, colors, etc.
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        aiInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+
+</html>

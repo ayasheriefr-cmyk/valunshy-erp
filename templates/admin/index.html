@@ -1,0 +1,240 @@
+﻿{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div id="content-main">
+    <!-- Quick Actions Section -->
+    <div class="glass-card" style="margin-bottom: 2rem; padding: 1.5rem;">
+        <h2
+            style="color: var(--gold-bright); margin-top: 0; margin-bottom: 1.5rem; font-size: 1.2rem; display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-bolt"></i>
+            {% if LANGUAGE_CODE == 'ar' %}
+            إجراءات سريعة
+            {% else %}
+            Quick Actions
+            {% endif %}
+        </h2>
+        <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <a href="/admin/sales/invoice/add/" class="button btn-green">
+                <i class="fa-solid fa-cart-plus"></i>
+                {% if LANGUAGE_CODE == 'ar' %}
+                فاتورة جديدة
+                {% else %}
+                New Invoice
+                {% endif %}
+            </a>
+            <a href="/admin/finance/receiptvoucher/add/" class="button btn-blue">
+                <i class="fa-solid fa-file-invoice-dollar"></i>
+                {% if LANGUAGE_CODE == 'ar' %}
+                إذن قبض
+                {% else %}
+                Receipt Voucher
+                {% endif %}
+            </a>
+            <a href="/admin/finance/expensevoucher/add/" class="button btn-red">
+                <i class="fa-solid fa-file-invoice"></i>
+                {% if LANGUAGE_CODE == 'ar' %}
+                إذن صرف
+                {% else %}
+                Expense Voucher
+                {% endif %}
+            </a>
+            <a href="/admin/manufacturing/manufacturingorder/add/" class="button btn-purple">
+                <i class="fa-solid fa-hammer"></i>
+                {% if LANGUAGE_CODE == 'ar' %}
+                أمر تصنيع
+                {% else %}
+                Manufacturing Order
+                {% endif %}
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-grid" style="margin-bottom:3rem;">
+        <div class="glass-card" style="text-align:center;">
+            <div class="stat-icon" style="margin:0 auto 1.5rem;"><i class="fa-solid fa-boxes-packing"></i></div>
+            <h3 style="color:var(--gold-bright);margin-bottom:1rem;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                المخزون
+                {% else %}
+                Inventory
+                {% endif %}
+            </h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                إدارة القطع والأوزان والباركود
+                {% else %}
+                Manage items, weights, and barcodes
+                {% endif %}
+            </p>
+            <a href="/admin/inventory/item/" class="button" style="display:block;width:100%;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                فتح المخزن
+                {% else %}
+                Open Inventory
+                {% endif %}
+            </a>
+        </div>
+        <div class="glass-card" style="text-align:center;">
+            <div class="stat-icon" style="margin:0 auto 1.5rem;background:rgba(76,175,80,0.1);color:#4CAF50;"><i
+                    class="fa-solid fa-cash-register"></i></div>
+            <h3 style="color:#4CAF50;margin-bottom:1rem;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                المبيعات
+                {% else %}
+                Sales
+                {% endif %}
+            </h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                نقطة البيع وفواتير العملاء
+                {% else %}
+                POS and customer invoices
+                {% endif %}
+            </p>
+            <a href="/admin/sales/invoice/" class="button btn-green" style="display:flex; width:100%;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                نقطة بيع جديدة
+                {% else %}
+                New POS
+                {% endif %}
+            </a>
+        </div>
+        <div class="glass-card" style="text-align:center;">
+            <div class="stat-icon" style="margin:0 auto 1.5rem;background:rgba(106,17,203,0.1);color:#B8860B;"><i
+                    class="fa-solid fa-industry"></i></div>
+            <h3 style="color:var(--gold-primary);margin-bottom:0.5rem;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                التصنيع
+                {% else %}
+                Manufacturing
+                {% endif %}
+            </h3>
+
+            <div style="margin-bottom: 1rem;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #fff;">{{ global_mfg_stats.count }} <small
+                        style="font-size: 0.8rem; color: #888;">أمر</small></div>
+                <div style="font-size: 0.9rem; color: #D4AF37;">{{ global_mfg_stats.weight|floatformat:1 }}
+                    <small>جم</small>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 1.5rem; font-size: 0.75rem;">
+                <span title="سبك" style="background: rgba(255,255,255,0.05); padding: 3px 6px; border-radius: 4px;">🔥
+                    {{ global_mfg_stats.casting }}</span>
+                <span title="تشكيل" style="background: rgba(255,255,255,0.05); padding: 3px 6px; border-radius: 4px;">🔨
+                    {{ global_mfg_stats.crafting }}</span>
+                <span title="تلميع" style="background: rgba(255,255,255,0.05); padding: 3px 6px; border-radius: 4px;">✨
+                    {{ global_mfg_stats.polishing }}</span>
+            </div>
+
+            <a href="/admin/manufacturing/manufacturingorder/" class="button" style="display:block;width:100%;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                لوحة التشغيل
+                {% else %}
+                Production Line
+                {% endif %}
+            </a>
+        </div>
+        <div class="glass-card" style="text-align:center;">
+            <div class="stat-icon" style="margin:0 auto 1.5rem;background:rgba(33,150,243,0.1);color:#2196F3;"><i
+                    class="fa-solid fa-file-invoice-dollar"></i></div>
+            <h3 style="color:#2196F3;margin-bottom:1rem;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                الحسابات
+                {% else %}
+                Accounting
+                {% endif %}
+            </h3>
+            <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                دفاتر الحسابات وميزان المراجعة
+                {% else %}
+                General ledger and trial balance
+                {% endif %}
+            </p>
+            <a href="/admin/finance/account/" class="button btn-blue" style="display:flex; width:100%;">
+                {% if LANGUAGE_CODE == 'ar' %}
+                الدفاتر المالية
+                {% else %}
+                Financial Books
+                {% endif %}
+            </a>
+        </div>
+    </div>
+
+    <div class="dashboard-sections"
+        style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:2rem;">
+        {% if app_list %}
+        {% for app in app_list %}
+        <div class="glass-card"
+            style="padding:1.8rem; border: 1px solid rgba(212, 175, 55, 0.1); transition: all 0.3s ease;">
+            <div class="section-header"
+                style="border-bottom:1px solid rgba(212, 175, 55, 0.2);padding-bottom:1.2rem;margin-bottom:1.8rem; display: flex; align-items: center; justify-content: space-between;">
+                <h2 style="font-size:1.3rem;color:var(--gold-bright); font-weight: 800; margin: 0;">{{ app.name }}</h2>
+                <i class="fa-solid fa-folder-open" style="color: rgba(212, 175, 55, 0.3); font-size: 1.5rem;"></i>
+            </div>
+            <table style="width:100%;border-collapse:separate;border-spacing:0 10px;">
+                {% for model in app.models %}
+                <tr class="model-row" style="transition: all 0.2s ease;">
+                    <td class="model-name-td"
+                        style="padding:14px;background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-inline-end: none;">
+                        <a href="{{ model.admin_url }}"
+                            style="color:#eee;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:12px; transition: color 0.2s;">
+                            <i class="fa-solid fa-circle" style="font-size:0.4rem;color:var(--gold-primary);"></i>
+                            {{ model.name }}
+                        </a>
+                    </td>
+                    <td class="model-add-td"
+                        style="padding:14px;background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-inline-start: none;">
+                        {% if model.add_url %}
+                        <a href="{{ model.add_url }}" class="tiny-add-btn"
+                            style="color:var(--gold-bright);text-decoration:none;font-size:0.75rem;font-weight:bold;padding:6px 14px;border-radius:6px;border:1px solid rgba(212,175,55,0.3);background:rgba(212,175,55,0.05);white-space:nowrap; transition: all 0.2s;">
+                            <i class="fa-solid fa-plus" style="font-size: 0.7rem;"></i>
+                            {% if LANGUAGE_CODE == 'ar' %}
+                            إضافة
+                            {% else %}
+                            Add
+                            {% endif %}
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="glass-card" style="grid-column:1/-1;text-align:center;padding:4rem;">
+            <p style="color:var(--text-muted);">
+                {% if LANGUAGE_CODE == 'ar' %}
+                ليس لديك صلاحية لعرض أو تعديل أي شيء.
+                {% else %}
+                You don't have permission to view or edit anything.
+                {% endif %}
+            </p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    [dir="rtl"] .model-name-td {
+        border-radius: 0 12px 12px 0;
+    }
+
+    [dir="rtl"] .model-add-td {
+        border-radius: 12px 0 0 12px;
+        text-align: left;
+    }
+
+    [dir="ltr"] .model-name-td {
+        border-radius: 12px 0 0 12px;
+    }
+
+    [dir="ltr"] .model-add-td {
+        border-radius: 0 12px 12px 0;
+        text-align: right;
+    }
+</style>
+{% endblock %}

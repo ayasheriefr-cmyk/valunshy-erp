@@ -1,0 +1,109 @@
+{% extends "admin/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="daily-close-container" style="direction: rtl; text-align: right; color: #fff;">
+
+    <!-- Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>🔒 إغلاق الوردية / اليومية</h1>
+        <div
+            style="background: rgba(212,175,55,0.1); padding: 10px 20px; border-radius: 8px; display: flex; gap: 20px; align-items: center;">
+            <span>التاريخ: <strong>{{ today }}</strong></span>
+            {% if selected_treasury %}
+            <a href="{% url 'finance:treasury_handover_report' %}?treasury_id={{ selected_treasury.id }}&date={{ today|date:'Y-m-d' }}"
+                class="btn-secondary"
+                style="background: #333; color: var(--gold-primary); padding: 5px 15px; border-radius: 5px; text-decoration: none; border: 1px solid var(--gold-primary);">
+                📄 عرض كشف التسليم
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Treasury Selector -->
+    <div style="margin-bottom: 2rem; background: #1a1a1a; padding: 15px; border-radius: 10px;">
+        <label>اختر الخزينة:</label>
+        <select onchange="window.location.href='?treasury_id='+this.value"
+            style="padding: 10px; border-radius: 5px; background: #000; color: #fff; border: 1px solid #333;">
+            {% for t in treasuries %}
+            <option {% if t.is_selected %}selected{% endif %} value="{{ t.id }}">{{ t.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    {% if selected_treasury %}
+    <form method="POST">
+        {% csrf_token %}
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+
+            <!-- Cash Section -->
+            <div class="card" style="background: #111; padding: 20px; border-radius: 12px; border: 1px solid #333;">
+                <h3 style="color: var(--gold-primary); margin-bottom: 15px;">💰 النقدية (CASH)</h3>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>الوارد اليوم:</span>
+                    <span style="color: #4CAF50;">+{{ cash_in }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <span>الصادر اليوم:</span>
+                    <span style="color: #F44336;">-{{ cash_out }}</span>
+                </div>
+
+                <div style="padding: 15px; background: #000; border-radius: 8px; margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.9rem; color: #aaa;">الرصيد الدفتري المتوقع</label>
+                    <strong style="font-size: 1.5rem;">{{ expected_cash }}</strong> ج.م
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">الجرد الفعلي (ماذا يوجد في
+                        الدرج؟)</label>
+                    <input type="number" step="0.01" name="actual_cash" required
+                        style="width: 100%; padding: 15px; font-size: 1.2rem; background: #222; border: 1px solid var(--gold-primary); color: #fff; border-radius: 8px;">
+                </div>
+            </div>
+
+            <!-- Gold Section -->
+            <div class="card" style="background: #111; padding: 20px; border-radius: 12px; border: 1px solid #333;">
+                <h3 style="color: var(--gold-primary); margin-bottom: 15px;">✨ الذهب 21 (GOLD)</h3>
+
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span>وارد:</span>
+                    <span style="color: #4CAF50;">+{{ gold_in }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <span>صادر:</span>
+                    <span style="color: #F44336;">-{{ gold_out }}</span>
+                </div>
+
+                <div style="padding: 15px; background: #000; border-radius: 8px; margin-bottom: 20px;">
+                    <label style="display: block; font-size: 0.9rem; color: #aaa;">الرصيد الدفتري المتوقع</label>
+                    <strong style="font-size: 1.5rem;">{{ expected_gold }}</strong> جرام
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">الوزن الفعلي
+                        (بالميزان)</label>
+                    <input type="number" step="0.001" name="actual_gold_21" required
+                        style="width: 100%; padding: 15px; font-size: 1.2rem; background: #222; border: 1px solid var(--gold-primary); color: #fff; border-radius: 8px;">
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Submit -->
+        <div style="margin-top: 30px; text-align: center;">
+            <p style="color: #F44336; margin-bottom: 10px;">⚠️ تحذير: إغلاق الوردية سيقوم بترحيل الفروق ولن يمكنك تعديل
+                حركات اليوم.</p>
+            <button type="submit" class="btn-primary"
+                style="background: var(--gold-primary); color: #000; padding: 15px 40px; font-size: 1.2rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer;">
+                تأكيد وإغلاق اليومية
+            </button>
+        </div>
+    </form>
+    {% else %}
+    <p>لا توجد خزائن متاحة لك.</p>
+    {% endif %}
+
+</div>
+{% endblock %}

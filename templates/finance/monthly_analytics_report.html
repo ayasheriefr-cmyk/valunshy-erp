@@ -1,0 +1,509 @@
+{% extends "admin/base.html" %}
+{% load static %}
+{% block extrahead %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .metric-card {
+        padding: 2rem;
+        text-align: center;
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 15px;
+        transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+        transform: translateY(-5px);
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .metric-card i {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        display: block;
+    }
+
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 900;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+        text-transform: uppercase;
+        font-weight: 700;
+    }
+
+    .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+
+    .chart-header {
+        margin-bottom: 20px;
+        font-weight: 700;
+        border-bottom: 1px solid var(--glass-border);
+        padding-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .recommendation-item {
+        background: rgba(212, 175, 55, 0.05);
+        border-right: 4px solid var(--gold-primary);
+        padding: 1.2rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        color: #fff;
+    }
+
+    .rec-icon {
+        width: 35px;
+        height: 35px;
+        background: var(--gold-soft);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gold-primary);
+        flex-shrink: 0;
+    }
+
+    .stat-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+    }
+
+    .trend-up {
+        color: #4CAF50 !important;
+    }
+
+    .trend-down {
+        color: #ff5252 !important;
+    }
+
+    .grid-2col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: #fff;
+        margin-top: 10px;
+    }
+
+    .custom-table th {
+        text-align: right;
+        padding: 12px;
+        background: rgba(212, 175, 55, 0.1);
+        color: var(--gold-primary);
+    }
+
+    .custom-table td {
+        padding: 12px;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .text-green {
+        color: #4CAF50;
+        font-weight: 700;
+    }
+
+    .text-red {
+        color: #ff5252;
+        font-weight: 700;
+    }
+
+    .gold-text {
+        color: var(--gold-primary) !important;
+    }
+
+    .btn-calculate {
+        background: var(--gold-primary);
+        color: #000;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 700;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+
+    .btn-calculate:hover {
+        background: var(--gold-bright);
+        transform: scale(1.05);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container" style="padding: 20px;">
+    <div class="dashboard-header"
+        style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+        <h1 class="dashboard-title" style="color: #ffffff; margin: 0;">
+            <i class="fa-solid fa-chart-line"></i> {{ title }}
+        </h1>
+        <form method="get"
+            style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 12px;">
+            <div>
+                <label style="color: var(--gold-primary); font-size: 0.8rem; display: block;">النوع:</label>
+                <select name="report_type" class="form-control"
+                    style="background: #1a1a1a; color: #fff; border: 1px solid #333;">
+                    <option value="monthly" {% if report_type == "monthly" %}selected{% endif %}>شهري</option>
+                    <option value="quarterly" {% if report_type == "quarterly" %}selected{% endif %}>ربع سنوي</option>
+                    <option value="annual" {% if report_type == "annual" %}selected{% endif %}>سنوي</option>
+                </select>
+            </div>
+            <div>
+                <label style="color: var(--gold-primary); font-size: 0.8rem; display: block;">الشهر:</label>
+                <select name="month" class="form-control"
+                    style="background: #1a1a1a; color: #fff; border: 1px solid #333;">
+                    {% for m in month_choices %}
+                    <option value="{{ m.value }}" {% if month == m.value %}selected{% endif %}>{{ m.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="color: var(--gold-primary); font-size: 0.8rem; display: block;">السنة:</label>
+                <select name="year" class="form-control"
+                    style="background: #1a1a1a; color: #fff; border: 1px solid #333;">
+                    {% for y in year_choices %}
+                    <option value="{{ y }}" {% if year == y %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn-calculate" style="margin-top: 15px;">تحديث</button>
+        </form>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="analytics-grid">
+        <div class="metric-card">
+            <i class="fa-solid fa-money-bill-trend-up" style="color: #4CAF50;"></i>
+            <div class="metric-value">{{ total_revenue | floatformat:0 }}</div>
+            <div class="metric-label">الإيرادات (ج.م)</div>
+        </div>
+        <div class="metric-card">
+            <i class="fa-solid fa-money-bill-transfer" style="color: #ff5252;"></i>
+            <div class="metric-value">{{ total_expenses | floatformat:0 }}</div>
+            <div class="metric-label">المصاريف (ج.م)</div>
+        </div>
+        <div class="metric-card" style="border: 2px solid var(--gold-primary);">
+            <i class="fa-solid fa-sack-dollar" style="color: var(--gold-bright);"></i>
+            <div class="metric-value {% if is_profit %}text-green{% else %}text-red{% endif %}">{{ net_profit | floatformat:0 }}</div>
+            <div class="metric-label">صافي الربح</div>
+        </div>
+    </div>
+
+    <!-- AI Analysis Section -->
+    <div class="glass-card" style="border: 1px solid var(--gold-primary); background: rgba(212, 175, 55, 0.05);">
+        <h3 class="chart-header gold-text"><i class="fa-solid fa-wand-magic-sparkles"></i> رؤية الذكاء الاصطناعي
+            الاستراتيجية (AI Strategic Insights)</h3>
+        <div class="grid-2col" style="grid-template-columns: 1fr 1.5fr;">
+            <div>
+                {% if alerts %}
+                <h4 style="color: #ff5252; margin-bottom: 10px;"><i class="fa-solid fa-triangle-exclamation"></i>
+                    تنبيهات هامة:</h4>
+                <div style="margin-bottom: 20px;">
+                    {% for alert in alerts %}
+                    <div class="recommendation-item"
+                        style="border-right-color: #ff5252; background: rgba(255,82,82,0.1);">
+                        <div class="rec-icon" style="background: #ff5252; color: #fff;"><i
+                                class="fa-solid fa-xmark"></i></div>
+                        <div>{{ alert }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% if ai_insights.growth %}
+                <h4 class="gold-text" style="margin-bottom: 10px;"><i class="fa-solid fa-chart-line"></i> تحليل النمو
+                    والاتجاهات:</h4>
+                <div class="grid-2col" style="margin-bottom: 20px;">
+                    <div class="stat-card">
+                        <div style="font-size: 0.8rem;">نمو الإيرادات</div>
+                        <div class="{% if ai_insights.growth.revenue >= 0 %}trend-up{% else %}trend-down{% endif %}"
+                            style="font-size: 1.3rem;">
+                            {% if ai_insights.growth.revenue >= 0 %}↑{% else %}↓{% endif %} {{ ai_insights.growth.revenue | floatformat:1 }}%
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div style="font-size: 0.8rem;">نمو الربح</div>
+                        <div class="{% if ai_insights.growth.profit >= 0 %}trend-up{% else %}trend-down{% endif %}"
+                            style="font-size: 1.3rem;">
+                            {% if ai_insights.growth.profit >= 0 %}↑{% else %}↓{% endif %} {{ ai_insights.growth.profit | floatformat:1 }}%
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <h4 style="color: #fff; margin-bottom: 10px;"><i class="fa-solid fa-lightbulb"></i> التوصيات
+                    الاستراتيجية:</h4>
+                {% for rec in recommendations %}
+                <div class="recommendation-item">
+                    <div class="rec-icon"><i class="fa-solid fa-check"></i></div>
+                    <div>{{ rec }}</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div>
+                <h4 style="color: #fff; margin-bottom: 10px;"><i class="fa-solid fa-calendar-alt"></i> خطة الإنتاج
+                    المقترحة (الهدف الذكي):</h4>
+                <div style="overflow-x: auto;">
+                    <table class="custom-table" style="font-size: 0.9rem;">
+                        <thead>
+                            <tr>
+                                <th>الصنف</th>
+                                <th class="text-center">الإنتاج الحالي</th>
+                                <th class="text-center" style="color: var(--gold-bright);">المستهدف</th>
+                                <th class="text-center" style="color: #4CAF50;">الربح المتوقع</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for plan in production_plan %}
+                            <tr>
+                                <td>{{ plan.item }}</td>
+                                <td class="text-center">{{ plan.current_count }}</td>
+                                <td class="text-center gold-text" style="font-weight: 900;">{{ plan.target_count }}</td>
+                                <td class="text-center text-green">{{ plan.expected_profit | floatformat:0 }} ج.م</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Sections -->
+    <div class="grid-2col">
+        <div class="glass-card">
+            <h3 class="chart-header"><i class="fa-solid fa-gears"></i> كفاءة التشغيل (متوسط الوقت)</h3>
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>المرحلة</th>
+                        <th class="text-center">العمليات</th>
+                        <th class="text-center">متوسط الوقت</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stage in efficiency_data %}
+                    <tr>
+                        <td>{{ stage.stage }}</td>
+                        <td class="text-center">{{ stage.count }}</td>
+                        <td class="text-center text-green">{{ stage.avg_duration }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="glass-card">
+            <h3 class="chart-header"><i class="fa-solid fa-gem"></i> استهلاك الأحجار</h3>
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>نوع الحجر</th>
+                        <th class="text-center">المرات</th>
+                        <th class="text-center">الكمية الكلية</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stone in stone_usage %}
+                    <tr>
+                        <td>{{ stone.stone__name }}</td>
+                        <td class="text-center">{{ stone.usage_count }}</td>
+                        <td class="text-center text-green">{{ stone.total_qty | floatformat:3 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Partner Shares Section -->
+    <div class="glass-card">
+        <h3 class="chart-header"><i class="fa-solid fa-users-rectangle"></i> توزيع نصيب الشركاء من صافي الربح</h3>
+        <div class="grid-2col">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>الشريك</th>
+                        <th class="text-center">النسبة</th>
+                        <th class="text-center">المبلغ المستحق</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for share in partner_shares %}
+                    <tr>
+                        <td>{{ share.partner.name }}</td>
+                        <td class="text-center">{{ share.partner.percentage }}%</td>
+                        <td class="text-center text-green">{{ share.share | floatformat:0 }} ج.م</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="stat-card"
+                style="display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px dashed var(--gold-primary);">
+                <div style="font-size: 1rem; color: #ccc;">إجمالي التوزيعات</div>
+                <div class="gold-text" style="font-size: 2rem; font-weight: 900;">{{ net_profit | floatformat:0 }} ج.م
+                </div>
+                <div style="font-size: 0.8rem; color: #888;">(بناءً على صافي الربح الحالي)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profit Goal Planner -->
+    <div class="glass-card" style="margin-top: 20px;">
+        <h3 class="chart-header"><i class="fa-solid fa-bullseye"></i> مخطط الأهداف الربحية (Profit Goal Planner)</h3>
+        <form method="get" id="goal-planner-form"
+            style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 20px;">
+            <input type="hidden" name="report_type" value="{{ report_type }}">
+            <input type="hidden" name="month" value="{{ month }}">
+            <input type="hidden" name="year" value="{{ year }}">
+            <div>
+                <label style="font-size: 0.8rem; color: var(--gold-primary);">الهدف المطلوب (ج.م):</label>
+                <input type="number" name="goal_profit" class="form-control"
+                    value="{{ goal_results.target | default:0 }}"
+                    style="background: #1a1a1a; color: #fff; border: 1px solid #444;">
+            </div>
+            <div>
+                <label style="font-size: 0.8rem; color: var(--gold-primary);">المدة (أشهر):</label>
+                <input type="number" name="goal_months" class="form-control"
+                    value="{{ goal_results.months | default:1 }}"
+                    style="background: #1a1a1a; color: #fff; border: 1px solid #444; width: 80px;">
+            </div>
+            <button type="submit" id="btn-submit-goal" class="btn-calculate">احسب المتطلبات</button>
+        </form>
+
+        <!-- Setup Bar (Progress) -->
+        <div id="setup-progress-container"
+            style="display: none; margin-bottom: 25px; padding: 25px; background: rgba(212, 175, 55, 0.05); border: 1px dashed var(--gold-primary); border-radius: 15px; text-align: center;">
+            <div style="color: var(--gold-primary); font-weight: 800; font-size: 1.1rem; margin-bottom: 15px;">
+                <i class="fa-solid fa-wand-magic-sparkles fa-spin"></i> جاري إعداد التوقعات وتحليل الأهداف الذكية... (AI
+                Setup)
+            </div>
+            <div
+                style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; border: 1px solid rgba(212,175,55,0.2);">
+                <div id="setup-fill"
+                    style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--gold-primary), var(--gold-bright)); transition: width 0.3s ease;">
+                </div>
+            </div>
+        </div>
+
+        {% if goal_results.items_needed %}
+        <div id="results-anchor"
+            style="background: rgba(76, 175, 80, 0.05); padding: 20px; border-radius: 12px; border: 1px solid #4CAF50;">
+            <h4 style="color: #4CAF50;"><i class="fa-solid fa-circle-check"></i> لتحقيق هدف {{ goal_results.target | floatformat:0 }} ج.م خلال {{ goal_results.months }} شهر، يجب إنتاج:</h4>
+            <div class="grid-2col" style="margin-top: 15px;">
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>الصنف</th>
+                            <th class="text-center">الهدف الكلي ({{ goal_results.months }} شهر)</th>
+                            <th class="text-center">شهرياً (خطة المبيعات)</th>
+                            <th class="text-center">يومياً (خطة الورشة)</th>
+                            <th class="text-center">الوزن (جم)</th>
+                            <th class="text-center">القيمة (ج.م)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for res in goal_results.items_needed %}
+                        <tr>
+                            <td>{{ res.product_name }}</td>
+                            <td class="text-center text-green" style="font-weight: 900;">{{ res.required_units }} قطعة
+                            </td>
+                            <td class="text-center">{{ res.monthly_rate }}</td>
+                            <td class="text-center text-gold" style="font-weight: 700;">{{ res.daily_rate }}</td>
+                            <td class="text-center">{{ res.total_weight | floatformat:1 }} جم</td>
+                            <td class="text-center text-green">{{ res.total_value | floatformat:0 }} ج.م</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <table class="custom-table">
+                    <thead>
+                        <tr>
+                            <th>المرحلة الرسمية</th>
+                            <th class="text-center">ساعات العمل</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stage in goal_results.labor_needed %}
+                        <tr>
+                            <td>{{ stage.stage }}</td>
+                            <td class="text-center text-green">{{ stage.hours }} ساعة</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    const goalForm = document.getElementById('goal-planner-form');
+    const setupBar = document.getElementById('setup-progress-container');
+    const setupFill = document.getElementById('setup-fill');
+
+    if (goalForm) {
+        goalForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const btn = this.querySelector('button');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري الحساب...';
+            setupBar.style.display = 'block';
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += Math.random() * 20;
+                if (progress >= 100) {
+                    progress = 100;
+                    setupFill.style.width = '100%';
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        // Use this.submit() to bypass listener and actually submit
+                        goalForm.submit();
+                    }, 400);
+                } else {
+                    setupFill.style.width = progress + '%';
+                }
+            }, 100);
+        });
+    }
+
+    // Auto-scroll to results if they exist
+    window.addEventListener('load', function () {
+        const anchor = document.getElementById('results-anchor');
+        if (anchor) {
+            anchor.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+</script>
+{% endblock %}

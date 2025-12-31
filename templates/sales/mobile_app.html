@@ -1,0 +1,783 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <title>Valunshy Mandoob</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --primary: #D4AF37;
+            --text: #ffffff;
+            --text-muted: #aaaaaa;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Views Management */
+        .view {
+            display: none;
+            padding: 20px;
+            padding-bottom: 80px;
+        }
+
+        .view.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Login Screen */
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .logo-circle {
+            width: 80px;
+            height: 80px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: var(--primary);
+            margin-bottom: 20px;
+            border: 2px solid var(--primary);
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: #2a2a2a;
+            border: 1px solid #333;
+            color: white;
+            border-radius: 12px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn-main {
+            width: 100%;
+            padding: 15px;
+            background: var(--primary);
+            color: black;
+            border: none;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* App Header */
+        .app-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            margin-bottom: 10px;
+            position: sticky;
+            top: 0;
+            background: var(--bg-color);
+            z-index: 100;
+        }
+
+        /* Product Cards */
+        .product-card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            display: flex;
+            padding: 10px;
+            gap: 15px;
+            border: 1px solid #333;
+            position: relative;
+        }
+
+        .item-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+        }
+
+        .item-meta {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .item-weight {
+            color: var(--primary);
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .btn-add {
+            position: absolute;
+            left: 10px;
+            bottom: 10px;
+            background: var(--primary);
+            color: black;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Bottom Nav */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #1e1e1e;
+            border-top: 1px solid #333;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            color: #666;
+            font-size: 24px;
+            position: relative;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: red;
+            color: white;
+            font-size: 10px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Cart Items */
+        .cart-item {
+            background: #252525;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Invoice View Styles */
+        #invoice-view {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .invoice-card {
+            background: #fff;
+            color: #000;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: right;
+        }
+
+        .invoice-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+        }
+
+        .invoice-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .invoice-total {
+            font-weight: bold;
+            font-size: 18px;
+            border-top: 1px solid #ccc;
+            margin-top: 10px;
+            padding-top: 10px;
+        }
+
+        .btn-print {
+            background: var(--accent);
+            color: #000;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- 1. Login View -->
+    <div id="login-view" class="view active login-container">
+        <div class="logo-circle"><i class="fa-solid fa-gem"></i></div>
+        <h2 style="margin-bottom: 30px;">مندوب فالونشي</h2>
+        <input type="text" id="username" placeholder="اسم المستخدم" dir="auto">
+        <input type="password" id="password" placeholder="كلمة المرور" dir="auto">
+        <button class="btn-main" onclick="login(event)">تسجيل الدخول</button>
+        <p id="login-error" style="color: red; margin-top: 10px; display: none;">بيانات الدخول غير صحيحة</p>
+    </div>
+
+    <!-- 2. Home Catalog View -->
+    <div id="home-view" class="view">
+        <div class="app-header">
+            <div>
+                <div style="font-size: 12px; color: #888;">أهلاً بك،</div>
+                <div id="rep-name" style="font-weight: bold; font-size: 18px;">...</div>
+            </div>
+            <div style="text-align: left;">
+                <div style="font-size: 10px; color: #888;">رصيد اليوم</div>
+                <div style="color: var(--primary); font-weight: bold;" id="sales-total">0 ج.م</div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 5px;">
+            <span
+                style="background: var(--primary); color: black; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 13px;">الكل</span>
+            <span style="background: #333; padding: 5px 15px; border-radius: 20px; font-size: 13px;">عيار 21</span>
+            <span style="background: #333; padding: 5px 15px; border-radius: 20px; font-size: 13px;">عيار 18</span>
+        </div>
+
+        <div id="products-list">
+            <!-- Products will be loaded here via JS -->
+            <div style="text-align: center; color: #666; margin-top: 50px;">جاري تحميل الأصناف...</div>
+        </div>
+    </div>
+
+    <!-- 3. Cart View -->
+    <div id="cart-view" class="view">
+        <h2 style="margin-top: 0;">سلة البيع <i class="fa-solid fa-cart-shopping" style="color: var(--primary);"></i>
+        </h2>
+        <div id="cart-items"></div>
+        <div style="margin-top: 30px; border-top: 1px solid #333; padding-top: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span>إجمالي الوزن</span>
+                <span id="cart-total-weight" style="color: var(--primary);">0.00 جم</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+                <span>الإجمالي</span>
+                <span id="cart-grand-total">0.00 ج.م</span>
+            </div>
+            <button class="btn-main" style="margin-top: 20px;" onclick="checkout()">إتمام عملية البيع</button>
+        </div>
+    </div>
+
+    <!-- Invoice View (New) -->
+    <div id="invoice-view" class="view">
+        <div class="header">
+            <div>تمت العملية بنجاح 🎉</div>
+            <div class="badge" onclick="switchView('home-view')">
+                <i class="fa-solid fa-times"></i>
+            </div>
+        </div>
+
+        <div id="invoice-content" class="invoice-card">
+            <!-- Invoice Details will be injected here -->
+        </div>
+
+        <button class="btn-print" onclick="window.print()">طباعة الفاتورة <i class="fa-solid fa-print"></i></button>
+        <button id="btn-whatsapp" class="btn-primary" style="background:#25D366; margin-top:10px;">إرسال عبر واتساب <i
+                class="fa-brands fa-whatsapp"></i></button>
+        <button class="btn-primary" onclick="switchView('home-view')" style="margin-top:10px; background:#333;">عودة
+            للرئيسية</button>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav" id="bottom-nav" style="display: none;">
+        <div class="nav-item active" onclick="switchView('home-view', this)"><i class="fa-solid fa-house"></i></div>
+        <div class="nav-item" onclick="switchView('cart-view', this)">
+            <i class="fa-solid fa-cart-shopping"></i>
+            <span class="badge" id="cart-count" style="display: none;">0</span>
+        </div>
+        <div class="nav-item" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i></div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token');
+        let cart = [];
+
+        // --- Init ---
+        if (token) {
+            showApp();
+        }
+
+        // --- Auth Functions ---
+        async function login(e) {
+            if (e) e.preventDefault();
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('login-error');
+            const btn = document.querySelector('.btn-main');
+            const originalText = btn.innerText;
+
+            if (!user || !pass) {
+                errorMsg.innerText = "يرجى إدخال اسم المستخدم وكلمة المرور";
+                errorMsg.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "جاري التحقق... ";
+            errorMsg.style.display = 'none';
+
+            try {
+                console.log("Starting login fetch...");
+
+                const res = await fetch('/api-token-auth/', {
+
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+
+                    ,
+                    body: JSON.stringify({
+                        username: user, password: pass
+                    })
+                });
+
+                console.log("Response status:", res.status);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('token', data.token);
+                    token = data.token;
+                    btn.innerText = "تم بنجاح!";
+                    showApp(); // Direct switch instead of reload
+                }
+
+                else {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    let msg = "تأكد من البيانات";
+                    if (res.status === 403) msg = "خطأ (403): الوصول مرفوض - CSRF issue?";
+                    if (res.status === 401) msg = "خطأ (401): بيانات غير صحيحة";
+
+                    try {
+                        const errData = await res.json();
+                        msg = errData.non_field_errors || errData.detail || msg;
+                    }
+
+                    catch (jsonErr) { }
+
+                    errorMsg.innerText = msg;
+                    errorMsg.style.display = 'block';
+                }
+            }
+
+            catch (err) {
+                console.error("Fetch catch:", err);
+                btn.disabled = false;
+                btn.innerText = originalText;
+                errorMsg.innerText = "عطل اتصال: " + err.message;
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            location.reload();
+        }
+
+        function showApp() {
+            document.getElementById('login-view').classList.remove('active');
+            document.getElementById('home-view').classList.add('active');
+            document.getElementById('bottom-nav').style.display = 'flex';
+            loadProfile();
+            loadCatalog();
+            loadPrices(); // Add this line
+        }
+
+        // --- View Navigation ---
+        function switchView(viewId, navItem) { // Added navItem parameter
+            document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+
+            // Bottom Nav Active State
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if (navItem) navItem.classList.add('active'); // Use navItem to set active class
+
+            if (viewId === 'home-view') {
+                loadCatalog();
+                loadPrices(); // Refresh prices
+            }
+            if (viewId === 'cart-view') {
+                if (customers.length === 0) loadCustomers(); // Load first time
+                renderCart();
+            }
+        }
+
+        // --- Data Loading ---
+        async function loadCustomers() {
+            try {
+                const res = await fetch('/sales/api/customers/', { headers: { 'Authorization': `Token ${token}` } });
+                if (res.ok) {
+                    customers = await res.json();
+                    renderCart(); // Re-render to show options
+                }
+            } catch (e) { console.error("Customers load failed", e); }
+        }
+
+        async function loadPrices() {
+            try {
+                const res = await fetch('/sales/api/prices/', {
+                    headers: { 'Authorization': `Token ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    data.forEach(p => {
+                        goldPrices[p.carat] = parseFloat(p.price_per_gram);
+                    });
+                    console.log('Gold Prices updated:', goldPrices);
+                }
+            } catch (e) {
+                console.error("Failed to load prices", e);
+            }
+        }
+
+        async function loadProfile() {
+            console.log('Loading profile...');
+            try {
+                const res = await fetch('/sales/api/me/', {
+                    headers: {
+                        'Authorization': `Token ${token}`
+                    }
+                });
+
+                console.log('Profile response status:', res.status);
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('Profile data:', data);
+                    document.getElementById('rep-name').innerText = data.name;
+                    document.getElementById('sales-total').innerText = parseFloat(data.total_sales).toFixed(0) + ' ج.م';
+                } else {
+                    console.error('Profile load failed with status:', res.status);
+                }
+            } catch (e) {
+                console.error("Profile load failed", e);
+            }
+        }
+
+        async function loadCatalog() {
+            console.log('Loading catalog...');
+            try {
+                const res = await fetch('/sales/api/catalog/', {
+                    headers: {
+                        'Authorization': `Token ${token}`
+                    }
+                });
+
+                console.log('Catalog response status:', res.status);
+                if (!res.ok) {
+                    throw new Error("عطل في الخادم: " + res.status);
+                }
+
+                const data = await res.json();
+                console.log('Catalog data:', data);
+                const container = document.getElementById('products-list');
+                container.innerHTML = '';
+
+                if (data.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:20px; color:#666;">لا توجد أصناف متاحة في العهدة</div>';
+                    return;
+                }
+
+                data.forEach(item => {
+                    const el = document.createElement('div');
+                    el.className = 'product-card';
+
+                    el.innerHTML = `
+                    <div style="width: 60px; height: 60px; background: #333; border-radius: 10px; display:flex; align-items:center; justify-content:center; color:#555;">
+                        <i class="fa-solid fa-gem"></i>
+                    </div>
+                    <div class="item-info">
+                        <h3>${item.name} <small style="color:#888;">(${item.barcode})</small></h3>
+                        <div class="item-meta">${item.carat_name} | نقاء: ${item.purity}</div>
+                        <div class="item-weight">${item.net_gold_weight} جم</div>
+                    </div>
+                    <button class="btn-add" onclick='addToCart(event, ${JSON.stringify(item)})'>
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                `;
+                    container.appendChild(el);
+                });
+            }
+
+            catch (e) {
+                console.error("Catalog load failed", e);
+                const container = document.getElementById('products-list');
+
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:red;">خطأ في تحميل البيانات: ${e.message}</div>`;
+            }
+        }
+
+        // --- Cart Functions ---
+        function addToCart(event, item) {
+            // Check existence
+            if (cart.find(x => x.id === item.id)) return;
+            cart.push(item);
+            updateCartBadge();
+
+            // Minimal feedback
+            const btn = event.target.closest('button');
+            btn.style.background = '#4CAF50';
+            setTimeout(() => btn.style.background = 'var(--primary)', 500);
+        }
+
+        function updateCartBadge() {
+            const badge = document.getElementById('cart-count');
+
+            if (cart.length > 0) {
+                badge.style.display = 'flex';
+                badge.innerText = cart.length;
+            }
+
+            else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            container.innerHTML = '';
+
+            // Add Customer Selector
+            const customerSelect = document.createElement('div');
+            customerSelect.style.marginBottom = '15px';
+            customerSelect.style.background = '#222';
+            customerSelect.style.padding = '10px';
+            customerSelect.style.borderRadius = '10px';
+
+            let options = '<option value="">-- اختر عميل (نقدي افتراضي) --</option>';
+            customers.forEach(c => {
+                options += `<option value="${c.id}">${c.name} (${c.phone})</option>`;
+            });
+
+            customerSelect.innerHTML = `
+                <label style="color:#aaa; display:block; margin-bottom:5px;">بيانات العميل:</label>
+                <select id="cart-customer" style="width:100%; padding:10px; border-radius:8px; border:none; background:#333; color:#fff;">
+                    ${options}
+                </select>
+            `;
+            container.appendChild(customerSelect);
+
+            let totalWeight = 0;
+            let totalValue = 0;
+
+            cart.forEach((item, index) => {
+                const weight = parseFloat(item.net_gold_weight);
+                const pricePerGram = goldPrices[item.carat] || 0;
+                const laborVal = parseFloat(item.labor_fee || 100); // Default labor if missing
+
+                // Item Value = (Weight * GoldPrice) + Labor
+                const itemGoldValue = weight * pricePerGram;
+                const itemTotal = itemGoldValue + laborVal;
+
+                totalWeight += weight;
+                if (pricePerGram > 0) totalValue += itemTotal;
+
+                const el = document.createElement('div');
+                el.className = 'cart-item';
+
+                el.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold;">${item.name}</div>
+                        <div style="font-size:12px; color:#aaa;">
+                             ${weight} جم | ${item.carat_name} <br>
+                             <span style="color:var(--accent);">سعر اليوم: ${pricePerGram ? pricePerGram.toFixed(2) : 'غير محدد'} ج.م</span>
+                        </div>
+                    </div>
+                    <div style="text-align:left;">
+                        <div style="font-weight:bold;">${pricePerGram ? itemTotal.toFixed(0) : '---'} ج.م</div>
+                        <div style="color: var(--primary); cursor:pointer; margin-top:5px;" onclick="removeFromCart(${index})">
+                            <i class="fa-solid fa-trash"></i>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+
+            document.getElementById('cart-total-weight').innerText = totalWeight.toFixed(3) + ' جم';
+            document.getElementById('cart-grand-total').innerText = totalValue.toFixed(0) + ' ج.م';
+        }
+
+        function removeFromCart(idx) {
+            cart.splice(idx, 1);
+            renderCart();
+            updateCartBadge();
+        }
+
+        async function checkout() {
+            console.log('Checkout started, cart:', cart);
+            if (cart.length === 0) {
+                alert("السلة فارغة!");
+                return;
+            }
+
+            // Check if prices are loaded
+            if (Object.keys(goldPrices).length === 0) {
+                await loadPrices();
+                if (Object.keys(goldPrices).length === 0) {
+                    alert("تحذير: لم يتم تحميل أسعار الذهب. لا يمكن إتمام البيع.");
+                    return;
+                }
+            }
+
+            // Get Customer
+            const customerId = document.getElementById('cart-customer') ? document.getElementById('cart-customer').value : null;
+
+            if (!confirm("تأكيد عملية البيع؟")) return;
+
+            // Prepare Invoice Payload
+            const payload = {
+                customer: customerId || null, // Should add customer selection
+                branch: 1, // Default branch for now
+                payment_method: "cash",
+                items: cart.map(item => {
+                    const weight = parseFloat(item.net_gold_weight);
+                    const price = goldPrices[item.carat] || 0;
+
+                    if (price === 0) {
+                        throw new Error(`لم يتم العثور على سعر لعيار ${item.carat_name}`);
+                    }
+
+                    return {
+                        item: item.id,
+                        sold_weight: weight,
+                        sold_gold_price: price,
+                        sold_labor_fee: 100, // Fixed for now, should come from item
+                        subtotal: (weight * price) + 100
+                    };
+                })
+            };
+
+            console.log('Sending payload:', payload);
+
+            try {
+                const res = await fetch('/sales/api/invoice/create/', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Render Invoice
+                    const invDiv = document.getElementById('invoice-content');
+                    let itemsHtml = '';
+                    data.items.forEach(i => {
+                        itemsHtml += `<div class="invoice-row"><span>${i.item_name || 'ذهب'}</span> <span>${i.sold_gold_price} x ${i.sold_weight}</span></div>`;
+                    });
+
+                    invDiv.innerHTML = `
+                        <div class="invoice-title">فاتورة ضريبية مبسطة</div>
+                        <div class="invoice-row"><span>رقم الفاتورة:</span> <span>${data.invoice_number}</span></div>
+                        <div class="invoice-row"><span>التاريخ:</span> <span>${data.created_at.split('T')[0]}</span></div>
+                        <hr>
+                        ${itemsHtml}
+                        <div class="invoice-total">
+                            <div class="invoice-row"><span>الإجمالي:</span> <span>${parseFloat(data.grand_total).toFixed(0)} ج.م</span></div>
+                        </div>
+                    `;
+
+                    // Generate WhatsApp Link
+                    let waMsg = `*فاتورة بيع - مجوهرات فالونشي 💎*\n`;
+                    waMsg += `رقم الفاتورة: ${data.invoice_number}\n`;
+                    waMsg += `التاريخ: ${data.created_at.split('T')[0]}\n`;
+                    waMsg += `----------------\n`;
+                    data.items.forEach(i => {
+                        waMsg += `- ${i.item_name || 'ذهب'}: ${parseFloat(i.subtotal).toFixed(0)} ج.م\n`;
+                    });
+                    waMsg += `----------------\n`;
+                    waMsg += `*الإجمالي: ${parseFloat(data.grand_total).toFixed(0)} ج.م*\n`;
+                    waMsg += `شكراً لتسوقكم معنا! ✨`;
+
+                    const waBtn = document.getElementById('btn-whatsapp');
+                    waBtn.onclick = function () {
+                        const url = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
+                        window.open(url, '_blank');
+                    };
+
+                    // Clear Cart & Switch View
+                    cart = [];
+                    updateCartBadge();
+                    switchView('invoice-view');
+
+                } else {
+                    const err = await res.json();
+                    console.error('Error response:', err);
+                    alert("فشل في العملية: " + JSON.stringify(err));
+                }
+            } catch (e) {
+                console.error("Checkout failed", e);
+                alert("حدث خطأ أثناء الاتصال بالخادم");
+            }
+        }
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,779 @@
+{% extends "admin/base_site.html" %}
+{% load static i18n %}
+
+{% block title %}لوحة تحكم المدير العام{% endblock %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .gm-dashboard {
+        padding: 20px;
+        background-color: var(--bg-main, #151520);
+        /* Lightened from #0f0f1a */
+    }
+
+    /* Hide default admin header to avoid duplication */
+    .page-header {
+        display: none !important;
+    }
+
+    .gm-header {
+        background: linear-gradient(135deg, #D4AF37, #A67C00);
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        color: #fff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .gm-header h1 {
+        margin: 0;
+        font-size: 2rem;
+    }
+
+    .gm-header .date {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: var(--bg-card, #1e1e30);
+        /* Lightened from #1a1a2e */
+        border-radius: 15px;
+        padding: 25px;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 5px;
+        height: 100%;
+    }
+
+    .stat-card.gold::before {
+        background: #D4AF37;
+    }
+
+    .stat-card.green::before {
+        background: #4CAF50;
+    }
+
+    .stat-card.blue::before {
+        background: #2196F3;
+    }
+
+    .stat-card.orange::before {
+        background: #FF9800;
+    }
+
+    .stat-card.purple::before {
+        background: #9C27B0;
+    }
+
+    .stat-card.red::before {
+        background: #f44336;
+    }
+
+    .stat-card .label {
+        color: #888;
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+
+    .stat-card .value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #fff;
+    }
+
+    .stat-card .subtitle {
+        color: #666;
+        font-size: 0.85rem;
+        margin-top: 5px;
+    }
+
+    .stat-card .icon {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        font-size: 2.5rem;
+        opacity: 0.2;
+    }
+
+    .section-title {
+        font-size: 1.3rem;
+        color: #D4AF37;
+        margin: 30px 0 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    }
+
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+
+    .report-card {
+        background: var(--bg-card, #1a1a2e);
+        border-radius: 12px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transition: all 0.3s;
+    }
+
+    .report-card:hover {
+        border-color: #D4AF37;
+        transform: translateY(-3px);
+    }
+
+    .report-card h3 {
+        color: #fff;
+        margin: 0 0 10px;
+        font-size: 1.1rem;
+    }
+
+    .report-card p {
+        color: #888;
+        font-size: 0.9rem;
+        margin: 0 0 15px;
+    }
+
+    .report-card a {
+        display: inline-block;
+        background: #D4AF37;
+        color: #000;
+        padding: 8px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .recent-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    .recent-table th {
+        background: rgba(212, 175, 55, 0.2);
+        color: #D4AF37;
+        padding: 12px;
+        text-align: right;
+        font-size: 0.9rem;
+    }
+
+    .recent-table td {
+        padding: 12px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        color: #ccc;
+        font-size: 0.9rem;
+    }
+
+    .badge {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+    }
+
+    .badge-success {
+        background: #4CAF50;
+        color: #fff;
+    }
+
+    .badge-warning {
+        background: #FF9800;
+        color: #000;
+    }
+
+    .badge-danger {
+        background: #f44336;
+        color: #fff;
+    }
+
+    .btn-back:hover {
+        background: rgba(255, 255, 255, 0.3) !important;
+        transform: translateX(-5px);
+    }
+
+    /* P&L Card Styles */
+    .profit-loss-container {
+        background: linear-gradient(135deg, #1e1e2f, #252540);
+        padding: 30px;
+        border-radius: 20px;
+        margin-bottom: 30px;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 25px;
+        justify-content: space-around;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .pl-item {
+        text-align: center;
+        z-index: 1;
+        transition: transform 0.3s;
+    }
+
+    .pl-item:hover {
+        transform: translateY(-5px);
+    }
+
+    .pl-label {
+        font-size: 1rem;
+        color: #aaa;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .pl-value {
+        font-size: 2rem;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    .pl-value.revenue {
+        color: #4CAF50;
+    }
+
+    .pl-value.expense {
+        color: #f44336;
+    }
+
+    .pl-net-box {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 20px 40px;
+        border-radius: 18px;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        min-width: 250px;
+    }
+
+    .pl-net-box.profit {
+        border-color: rgba(76, 175, 80, 0.4);
+        box-shadow: 0 0 20px rgba(76, 175, 80, 0.1);
+    }
+
+    .pl-net-box.loss {
+        border-color: rgba(244, 67, 54, 0.4);
+        box-shadow: 0 0 20px rgba(244, 67, 54, 0.1);
+    }
+
+    .operation-sign {
+        font-size: 2.5rem;
+        color: rgba(255, 255, 255, 0.1);
+        font-weight: 200;
+    }
+
+    /* Dashboard Layout Grid */
+    .dashboard-layout-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    @media (max-width: 1024px) {
+        .dashboard-layout-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .chart-container {
+        background: var(--bg-card, #1a1a2e);
+        border-radius: 20px;
+        padding: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        position: relative;
+        height: 350px;
+        /* Give it a fixed height context */
+    }
+
+    .top-items-container {
+        background: var(--bg-card, #1a1a2e);
+        border-radius: 20px;
+        padding: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .top-item-row {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .top-item-row:last-child {
+        border-bottom: none;
+    }
+
+    .top-item-rank {
+        width: 30px;
+        height: 30px;
+        background: rgba(212, 175, 55, 0.15);
+        color: #D4AF37;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .profit-text {
+        color: #4CAF50 !important;
+    }
+
+    .loss-text {
+        color: #f44336 !important;
+    }
+</style>
+
+<div class="gm-dashboard">
+    <!-- Header -->
+    <div class="gm-header">
+        <div>
+            <h1>👑 لوحة تحكم المدير العام</h1>
+            <p style="margin: 5px 0 0; opacity: 0.8;">مرحباً {{ user.first_name|default:user.username }}</p>
+        </div>
+        <div style="text-align: left;">
+            <button onclick="window.history.back()" class="btn-back"
+                style="background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 6px 15px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-family: inherit; font-size: 0.9rem; margin-bottom: 5px; transition: all 0.3s;">
+                <i class="fa-solid fa-arrow-right"></i> رجوع
+            </button>
+            <div class="date">
+                {{ today|date:"l، j F Y" }}
+            </div>
+        </div>
+    </div>
+
+    <!-- Smart Status Banner -->
+    <div
+        style="background: rgba(212, 175, 55, 0.1); border: 1px dashed #D4AF37; padding: 15px 25px; border-radius: 12px; margin-bottom: 30px; display: flex; align-items: center; gap: 15px;">
+        <div style="font-size: 1.5rem;">💡</div>
+        <div style="color: #D4AF37; font-weight: 500; font-size: 1.1rem;">{{ business_status_msg }}</div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div style="display: flex; gap: 15px; margin-bottom: 30px; flex-wrap: wrap;">
+        <a href="{% url 'admin:sales_invoice_add' %}" class="btn-quick"
+            style="flex: 1; background: rgba(76, 175, 80, 0.15); border: 1px solid rgba(76, 175, 80, 0.3); color: #4CAF50; padding: 15px; border-radius: 12px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; transition: all 0.3s;">
+            <i class="fa-solid fa-cart-plus"></i> فاتورة مبيعات
+        </a>
+        <a href="{% url 'admin:finance_receiptvoucher_add' %}" class="btn-quick"
+            style="flex: 1; background: rgba(33, 150, 243, 0.15); border: 1px solid rgba(33, 150, 243, 0.3); color: #2196F3; padding: 15px; border-radius: 12px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; transition: all 0.3s;">
+            <i class="fa-solid fa-file-invoice-dollar"></i> إذن قبض
+        </a>
+        <a href="{% url 'admin:finance_expensevoucher_add' %}" class="btn-quick"
+            style="flex: 1; background: rgba(244, 67, 54, 0.15); border: 1px solid rgba(244, 67, 54, 0.3); color: #f44336; padding: 15px; border-radius: 12px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; transition: all 0.3s;">
+            <i class="fa-solid fa-file-invoice"></i> إذن صرف
+        </a>
+        <a href="{% url 'admin:manufacturing_manufacturingorder_add' %}" class="btn-quick"
+            style="flex: 1; background: rgba(156, 39, 176, 0.15); border: 1px solid rgba(156, 39, 176, 0.3); color: #9C27B0; padding: 15px; border-radius: 12px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; transition: all 0.3s;">
+            <i class="fa-solid fa-hammer"></i> أمر تصنيع
+        </a>
+    </div>
+    <style>
+        .btn-quick:hover {
+            transform: translateY(-3px);
+            background: rgba(255, 255, 255, 0.1) !important;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+
+    <!-- Profit & Loss Card -->
+    <div class="profit-loss-container">
+        <!-- Decoration -->
+        <div
+            style="position: absolute; top: -20px; right: -20px; font-size: 10rem; opacity: 0.05; transform: rotate(15deg); color: #D4AF37;">
+            <i class="fa-solid fa-chart-pie"></i>
+        </div>
+
+        <div class="pl-item">
+            <div class="pl-label">الإيرادات المجمعة</div>
+            <div class="pl-value revenue">
+                <i class="fa-solid fa-arrow-up-right-dots"></i>
+                {{ total_revenue|floatformat:0|default:"0" }} <small style="font-size: 1rem; color: #aaa;">ج.م</small>
+            </div>
+        </div>
+
+        <div class="operation-sign"><i class="fa-solid fa-minus"></i></div>
+
+        <div class="pl-item">
+            <div class="pl-label">المصروفات والعمولات</div>
+            <div class="pl-value expense">
+                <i class="fa-solid fa-arrow-down-right-dots"></i>
+                {{ total_expenses|floatformat:0|default:"0" }} <small style="font-size: 1rem; color: #aaa;">ج.م</small>
+            </div>
+        </div>
+
+        <div class="operation-sign"><i class="fa-solid fa-equals"></i></div>
+
+        <div class="pl-net-box {% if net_profit >= 0 %}profit{% else %}loss{% endif %}">
+            <div class="pl-label" style="color: #D4AF37;">الأرباح الصافية التقديرية</div>
+            <div class="pl-value {% if net_profit >= 0 %}profit-text{% else %}loss-text{% endif %}"
+                style="font-size: 2.5rem;">
+                {% if net_profit > 0 %}+{% endif %}{{ net_profit|floatformat:0|default:"0" }} <small
+                    style="font-size: 1.2rem; color: #fff; margin-inline-start: 5px;">ج.م</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Insights -->
+    <div class="dashboard-layout-grid">
+        <div class="chart-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0; color: #fff;"><i class="fa-solid fa-chart-line"
+                        style="color: #D4AF37; margin-inline-end: 10px;"></i> منحنى المبيعات (آخر 7 أيام)</h3>
+            </div>
+            <canvas id="salesChart" data-labels="{{ sales_chart_labels|safe }}"
+                data-values="{{ sales_chart_data|safe }}"></canvas>
+        </div>
+
+        <div class="top-items-container">
+            <h3 style="margin: 0 0 20px; color: #fff;"><i class="fa-solid fa-trophy"
+                    style="color: #D4AF37; margin-inline-end: 10px;"></i> الأصناف الأكثر مبيعاً</h3>
+            <div class="top-items-list">
+                {% for item in top_items %}
+                <div class="top-item-row">
+                    <div class="top-item-rank">{{ forloop.counter }}</div>
+                    <div style="flex: 1;">
+                        <div style="color: #fff; font-weight: 500;">{{ item.name }}</div>
+                        <div style="font-size: 0.8rem; color: #888;">{{ item.barcode }} | {{ item.carat.name }}</div>
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="color: #D4AF37; font-weight: bold;">{{ item.sales_count }}</div>
+                        <div style="font-size: 0.7rem; color: #666;">مباع</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div style="text-align: center; color: #666; padding: 20px;">لا توجد بيانات مبيعات بعد</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Main Stats -->
+    <div class="stats-grid">
+        <a href="{% url 'admin:sales_invoice_changelist' %}" class="stat-card gold"
+            style="text-decoration: none; display: block;">
+            <span class="icon">💰</span>
+            <div class="label">إجمالي المبيعات اليوم</div>
+            <div class="value">{{ today_sales|floatformat:0|default:"0" }} <small>ج.م</small></div>
+            <div class="subtitle">{{ today_invoices_count }} فاتورة</div>
+        </a>
+
+        <a href="{% url 'admin:inventory_item_changelist' %}" class="stat-card green"
+            style="text-decoration: none; display: block;">
+            <span class="icon">📦</span>
+            <div class="label">قيمة المخزون</div>
+            <div class="value">{{ inventory_value|floatformat:0|default:"0" }} <small>ج.م</small></div>
+            <div class="subtitle">{{ inventory_count }} قطعة</div>
+        </a>
+
+        <a href="{% url 'admin:finance_treasury_changelist' %}" class="stat-card blue"
+            style="text-decoration: none; display: block;">
+            <span class="icon">💵</span>
+            <div class="label">رصيد الخزينة</div>
+            <div class="value">{{ treasury_balance|floatformat:0|default:"0" }} <small>ج.م</small></div>
+        </a>
+
+        <a href="{% url 'admin:finance_custody_changelist' %}" class="stat-card purple"
+            style="text-decoration: none; display: block;">
+            <span class="icon">🤝</span>
+            <div class="label">العهد المالية المستحقة</div>
+            <div class="value">{{ active_custody_total|floatformat:0|default:"0" }} <small>ج.م</small></div>
+            <div class="subtitle">{{ active_custody_count }} عهدة نشطة</div>
+        </a>
+
+        <a href="{% url 'admin:sales_invoice_changelist' %}?status__exact=pending" class="stat-card orange"
+            style="text-decoration: none; display: block;">
+            <span class="icon">⏳</span>
+            <div class="label">طلبات معلقة</div>
+            <div class="value">{{ pending_orders }}</div>
+            <div class="subtitle">تحتاج مراجعة</div>
+        </a>
+
+        <a href="{% url 'admin:manufacturing_manufacturingorder_changelist' %}" class="stat-card purple"
+            style="text-decoration: none; display: block; grid-column: span 2;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <span class="icon">🏭</span>
+                    <div class="label">أوامر التصنيع (نظرة شاملة)</div>
+                    <div class="value">{{ manufacturing_orders }} <small style="font-size: 1rem;">أمر نشط</small></div>
+                </div>
+                <div style="text-align: left;">
+                    <div class="subtitle" style="color: #D4AF37; font-weight: bold;">
+                        <i class="fa-solid fa-scale-balanced"></i> {{ mo_weight|floatformat:2 }} جرام
+                    </div>
+                    <small style="color: #888;">ذهب تحت التشغيل</small>
+                </div>
+            </div>
+
+            <div style="margin-top: 15px; display: flex; gap: 10px; font-size: 0.85rem;">
+                <div
+                    style="background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 8px; flex: 1; text-align: center;">
+                    <i class="fa-solid fa-fire" style="color: #ff5722;"></i> سبك: <strong>{{ mo_casting }}</strong>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 8px; flex: 1; text-align: center;">
+                    <i class="fa-solid fa-hammer" style="color: #2196F3;"></i> تشكيل: <strong>{{ mo_crafting }}</strong>
+                </div>
+                <div
+                    style="background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 8px; flex: 1; text-align: center;">
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #00BCD4;"></i> تلميع: <strong>{{
+                        mo_polishing }}</strong>
+                </div>
+            </div>
+
+            {% if mo_delayed > 0 %}
+            <div
+                style="margin-top: 10px; background: rgba(244, 67, 54, 0.1); color: #f44336; padding: 5px 10px; border-radius: 5px; font-size: 0.8rem; text-align: center;">
+                <i class="fa-solid fa-triangle-exclamation"></i> انتباه: يوجد {{ mo_delayed }} أوامر متأخرة
+            </div>
+            {% endif %}
+        </a>
+
+        <a href="{% url 'admin:sales_salesrepresentative_changelist' %}" class="stat-card red"
+            style="text-decoration: none; display: block;">
+            <span class="icon">💳</span>
+            <div class="label">عمولات مستحقة</div>
+            <div class="value">{{ pending_commissions|floatformat:0|default:"0" }} <small>ج.م</small></div>
+        </a>
+
+        <a href="{% url 'admin:crm_supplier_changelist' %}" class="stat-card blue"
+            style="text-decoration: none; display: block;">
+            <span class="icon">🚚</span>
+            <div class="label">أرصدة الموردين</div>
+            <div class="value">{{ suppliers_balance|floatformat:0|default:"0" }} <small>ج.م</small></div>
+            <div class="subtitle">{{ suppliers_count }} مورد</div>
+        </a>
+
+        <a href="{% url 'admin:crm_customer_changelist' %}" class="stat-card gold"
+            style="text-decoration: none; display: block;">
+            <span class="icon">👥</span>
+            <div class="label">إجمالي مبيعات العملاء</div>
+            <div class="value">{{ customers_purchases|floatformat:0|default:"0" }} <small>ج.م</small></div>
+            <div class="subtitle">{{ customers_count }} عميل مسجل</div>
+        </a>
+    </div>
+
+    <!-- Cost Center Breakdown -->
+    <h2 class="section-title"><i class="fa-solid fa-sitemap" style="margin-inline-end: 10px;"></i> تحليل مراكز التكلفة
+    </h2>
+    <div class="reports-grid" style="margin-bottom: 30px;">
+        {% for cc in cost_centers_data %}
+        <div class="report-card" style="position: relative;">
+            <div style="font-size: 0.7rem; color: #888; position: absolute; top: 15px; left: 15px;">{{ cc.code }}</div>
+            <h3 style="color: #D4AF37;">{{ cc.name }}</h3>
+
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span style="color: #888;">الإيرادات:</span>
+                    <span style="color: #4CAF50; font-weight: bold;">{{ cc.revenue|floatformat:0 }} ج.م</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                    <span style="color: #888;">المصروفات:</span>
+                    <span style="color: #f44336; font-weight: bold;">{{ cc.expenses|floatformat:0 }} ج.م</span>
+                </div>
+                <div
+                    style="margin-top: 5px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between;">
+                    <span style="color: #fff;">صافي الربح/الخسارة:</span>
+                    <span class="{% if cc.profit >= 0 %}profit-text{% else %}loss-text{% endif %}"
+                        style="font-weight: 800; font-size: 1.1rem;">
+                        {{ cc.profit|floatformat:0 }} ج.م
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="report-card" style="grid-column: 1 / -1; text-align: center; color: #666;">
+            لا توجد حركات مسجلة حالياً مرتبطة بمراكز التكلفة
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Reports Section -->
+    <h2 class="section-title">📊 التقارير</h2>
+    <div class="reports-grid">
+        <div class="report-card">
+            <h3>📈 تقرير المبيعات</h3>
+            <p>تحليل المبيعات حسب الفترة والفرع والمندوب</p>
+            <a href="{% url 'admin:sales_invoice_changelist' %}">عرض التقرير</a>
+        </div>
+
+        <div class="report-card">
+            <h3>📦 تقرير المخزون</h3>
+            <p>جرد المخزون حسب الفرع والعيار والحالة</p>
+            <a href="{% url 'admin:inventory_item_changelist' %}">عرض التقرير</a>
+        </div>
+
+        <div class="report-card">
+            <h3>💰 ميزان المراجعة</h3>
+            <p>أرصدة الحسابات والقيود المحاسبية</p>
+            <a href="{% url 'finance:trial_balance' %}">عرض التقرير</a>
+        </div>
+
+        <div class="report-card">
+            <h3>👥 تقرير المندوبين</h3>
+            <p>أداء المندوبين والعمولات المستحقة</p>
+            <a href="{% url 'admin:sales_salesrepresentative_changelist' %}">عرض التقرير</a>
+        </div>
+
+        <div class="report-card">
+            <h3>🏭 تقرير التصنيع</h3>
+            <p>أوامر التصنيع والإنتاج</p>
+            <a href="{% url 'admin:manufacturing_manufacturingorder_changelist' %}">عرض التقرير</a>
+        </div>
+
+        <div class="report-card">
+            <h3>👤 تقرير العملاء</h3>
+            <p>بيانات العملاء وسجل المشتريات</p>
+            <a href="{% url 'admin:crm_customer_changelist' %}">عرض التقرير</a>
+        </div>
+
+        <div class="report-card">
+            <h3>🚚 تقرير الموردين</h3>
+            <p>بيانات الموردين وأرصدتهم والمعاملات</p>
+            <a href="{% url 'admin:crm_supplier_changelist' %}">عرض التقرير</a>
+        </div>
+
+        <div class="report-card">
+            <h3>📊 حسابات الموردين</h3>
+            <p>كشف حساب تفصيلي لكل مورد</p>
+            <a href="/crm/reports/supplier-accounts/">عرض التقرير</a>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <h2 class="section-title">🕐 آخر النشاطات</h2>
+    <div class="report-card">
+        <table class="recent-table">
+            <thead>
+                <tr>
+                    <th>الوقت</th>
+                    <th>المستخدم</th>
+                    <th>الإجراء</th>
+                    <th>التفاصيل</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in recent_activity %}
+                <tr>
+                    <td>{{ log.created_at|timesince }} مضت</td>
+                    <td>{{ log.user.username }}</td>
+                    <td>
+                        <span
+                            class="badge {% if log.action == 'create' %}badge-success{% elif log.action == 'delete' %}badge-danger{% else %}badge-warning{% endif %}">
+                            {{ log.get_action_display }}
+                        </span>
+                    </td>
+                    <td>{{ log.description|truncatewords:10 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: #666;">لا توجد نشاطات مسجلة</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const canvas = document.getElementById('salesChart');
+        if (canvas) {
+            try {
+                // Ensure the string is valid JSON for JSON.parse
+                const labelsAttr = canvas.getAttribute('data-labels').replace(/'/g, '"');
+                const valuesAttr = canvas.getAttribute('data-values');
+
+                const labels = JSON.parse(labelsAttr);
+                const salesData = JSON.parse(valuesAttr);
+
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'إجمالي المبيعات (ج.م)',
+                            data: salesData,
+                            borderColor: '#D4AF37',
+                            backgroundColor: 'rgba(212, 175, 55, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointBackgroundColor: '#D4AF37',
+                            pointRadius: 5
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#1a1a2e',
+                                titleColor: '#D4AF37',
+                                bodyColor: '#fff',
+                                borderColor: '#D4AF37',
+                                borderWidth: 1,
+                                displayColors: false,
+                                padding: 10
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(255,255,255,0.05)' },
+                                ticks: { color: '#888' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#888' }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Chart initialization failed:', error);
+            }
+        }
+
+        const currentPath = window.location.pathname;
+        const navLinks = document.querySelectorAll('.nav-item');
+        navLinks.forEach(link => {
+            const href = link.getAttribute('href');
+            if (currentPath === href || (href !== '/' && currentPath.startsWith(href))) {
+                link.classList.add('active');
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,504 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+    /* 
+       SUPER PREMIUM COLLAPSIBLE DRAWER LAYOUT 
+       Filters are hidden off-canvas and slide in when requested.
+    */
+
+    /* Reset default behavior */
+    #content-main {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    #changelist {
+        display: block !important;
+        /* Standard block to allow absolute positioning context if needed */
+        width: 100% !important;
+        background: transparent !important;
+        position: relative !important;
+        border: none !important;
+    }
+
+    /* FULL WIDTH TABLE when filters are hidden */
+    #changelist.filtered {
+        display: block !important;
+    }
+
+    #changelist-form {
+        width: 100% !important;
+        padding: 0 !important;
+    }
+
+    /* DRAWER STYLES */
+    #changelist-filter {
+        position: fixed !important;
+        top: 0;
+        right: -400px;
+        /* Hidden by default (RTL friendly if we handle direction) */
+        width: 320px !important;
+        height: 100vh !important;
+        z-index: 10001 !important;
+        background: #1e1e1e !important;
+        border-right: 1px solid var(--gold-primary);
+        /* For LTR */
+        border-left: 1px solid var(--gold-primary);
+        /* For RTL */
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        transition: right 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), left 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        overflow-y: auto !important;
+        padding: 70px 20px 20px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* RTL Support for Drawer */
+    [dir="rtl"] #changelist-filter {
+        right: auto !important;
+        left: -400px;
+        border-right: 1px solid var(--gold-primary);
+        border-left: none;
+    }
+
+    [dir="rtl"] #changelist-filter.active {
+        left: 0 !important;
+    }
+
+    /* LTR Support */
+    html:not([dir="rtl"]) #changelist-filter {
+        right: -400px;
+        left: auto !important;
+    }
+
+    html:not([dir="rtl"]) #changelist-filter.active {
+        right: 0 !important;
+    }
+
+    #changelist-filter h2 {
+        font-size: 1.1rem !important;
+        color: var(--gold-primary) !important;
+        margin: 0 0 20px 0 !important;
+        text-transform: uppercase !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 10px;
+    }
+
+    .filter-close-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        color: #fff;
+        font-size: 1.2rem;
+        cursor: pointer;
+        padding: 5px;
+    }
+
+    [dir="rtl"] .filter-close-btn {
+        right: auto;
+        left: 20px;
+    }
+
+    /* Overlay Backdrop */
+    #filter-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        backdrop-filter: blur(2px);
+        display: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    #filter-backdrop.active {
+        display: block;
+        opacity: 1;
+    }
+
+    /* Filter Items */
+    #changelist-filter .filter-group {
+        margin-bottom: 25px;
+    }
+
+    #changelist-filter h3 {
+        color: #bbb !important;
+        margin-bottom: 10px;
+        font-weight: 600;
+    }
+
+    #changelist-filter ul {
+        padding: 0 !important;
+        margin: 0 !important;
+        list-style: none !important;
+    }
+
+    #changelist-filter li {
+        margin-bottom: 5px;
+    }
+
+    #changelist-filter a {
+        color: #eee !important;
+        text-decoration: none;
+        display: block;
+        padding: 5px 10px;
+        border-radius: 5px;
+        transition: background 0.2s;
+    }
+
+    #changelist-filter a:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    #changelist-filter li.selected a {
+        background: var(--gold-primary) !important;
+        color: #000 !important;
+        font-weight: bold;
+    }
+
+    /* Buttons Row */
+    .object-tools {
+        display: flex !important;
+        gap: 12px !important;
+        margin-bottom: 20px !important;
+        float: none !important;
+        justify-content: flex-end !important;
+        padding: 0 !important;
+        list-style: none !important;
+    }
+
+    [dir="rtl"] .object-tools {
+        justify-content: flex-start !important;
+    }
+
+    .object-tools a {
+        height: 42px !important;
+        padding: 0 22px !important;
+        border-radius: 12px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        font-weight: 800 !important;
+        text-decoration: none !important;
+        font-size: 0.85rem !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+        gap: 8px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .object-tools a.addlink {
+        background: linear-gradient(135deg, var(--gold-primary), var(--gold-deep)) !important;
+        color: #000 !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4) !important;
+    }
+
+    .object-tools a:hover {
+        transform: translateY(-3px) !important;
+        filter: brightness(1.2) !important;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    /* Toggle Filter Button Style */
+    #toggle-filter-btn {
+        background: #2a2a2a !important;
+        color: #fff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    #toggle-filter-btn:hover {
+        background: #333 !important;
+    }
+
+    /* Form & Results Table */
+    .results {
+        width: 100% !important;
+        overflow-x: auto !important;
+        background: rgba(0, 0, 0, 0.2) !important;
+        border-radius: 15px !important;
+        border: 1px solid var(--glass-border) !important;
+        margin-top: 10px;
+    }
+
+    #result_list {
+        width: 100% !important;
+    }
+
+    #result_list thead th {
+        background: rgba(212, 175, 55, 0.05) !important;
+        color: var(--gold-primary) !important;
+        padding: 15px !important;
+        border-bottom: 2px solid var(--gold-primary);
+        font-weight: 800;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+    }
+
+    #result_list tr {
+        transition: all 0.2s ease;
+    }
+
+    #result_list tr:hover td {
+        background: rgba(212, 175, 55, 0.03) !important;
+        color: var(--gold-primary) !important;
+    }
+
+    #result_list td {
+        padding: 12px 15px !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        vertical-align: middle;
+    }
+
+    /* SEARCH BAR PREMIUM */
+    #searchbar {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 12px !important;
+        color: #fff !important;
+        padding: 10px 20px !important;
+        width: 300px !important;
+        transition: all 0.3s ease !important;
+    }
+
+    #searchbar:focus {
+        border-color: var(--gold-primary) !important;
+        background: rgba(255, 255, 255, 0.1) !important;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.2) !important;
+        outline: none !important;
+    }
+
+    #changelist-search input[type="submit"] {
+        background: var(--gold-primary) !important;
+        color: #000 !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 8px 20px !important;
+        font-weight: 800 !important;
+        cursor: pointer !important;
+        transition: all 0.3s ease !important;
+    }
+
+    #changelist-search input[type="submit"]:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4) !important;
+    }
+
+    /* ACTIONS BAR */
+    .actions {
+        background: rgba(255, 255, 255, 0.02) !important;
+        padding: 15px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        margin-bottom: 15px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 15px !important;
+        color: #aaa !important;
+    }
+
+    .actions select {
+        background: #2a2a2a !important;
+        color: #fff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        padding: 8px 12px !important;
+        border-radius: 8px !important;
+    }
+
+    .actions .button {
+        background: #333 !important;
+        color: #fff !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        padding: 8px 18px !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .actions .button:hover {
+        background: var(--gold-primary) !important;
+        color: #000 !important;
+        border-color: var(--gold-primary) !important;
+    }
+
+    /* PAGINATION */
+    .pagination {
+        margin-top: 25px !important;
+        padding: 15px !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+        text-align: center !important;
+        color: #888 !important;
+    }
+
+    .pagination a,
+    .pagination .this-page {
+        padding: 8px 14px !important;
+        margin: 0 4px !important;
+        border-radius: 8px !important;
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .pagination a {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: #ccc !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .pagination a:hover {
+        background: var(--gold-primary) !important;
+        color: #000 !important;
+        border-color: var(--gold-primary) !important;
+    }
+
+    .pagination .this-page {
+        background: var(--gold-primary) !important;
+        color: #000 !important;
+        font-weight: 800 !important;
+    }
+
+    /* PREMIUM BUTTON UTILITIES */
+    .btn-premium {
+        height: 42px !important;
+        padding: 0 22px !important;
+        border-radius: 12px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        font-weight: 800 !important;
+        text-decoration: none !important;
+        font-size: 0.85rem !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+        gap: 8px !important;
+        border: none !important;
+        color: #fff !important;
+        cursor: pointer !important;
+    }
+
+    .btn-premium:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4) !important;
+        filter: brightness(1.1);
+    }
+</style>
+{% endblock %}
+
+{% block extrahead %}
+{{ block.super }}
+{{ media.js }}
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    {% block object-tools %}
+    <ul class="object-tools">
+        {% block object-tools-items %}
+        {% if cl.has_filters %}
+        <li>
+            <a href="#" id="toggle-filter-btn">
+                <i class="fa-solid fa-filter" style="margin-inline-end: 8px;"></i>
+                {% translate "Filter" %}
+            </a>
+        </li>
+        {% endif %}
+
+        {% if has_add_permission %}
+        <li>
+            {% url cl.opts|admin_urlname:'add' as add_url %}
+            <a href="{% add_preserved_filters add_url is_popup to_field %}" class="addlink">
+                <i class="fa-solid fa-plus-circle" style="margin-inline-end: 8px;"></i>
+                {% blocktranslate with cl.opts.verbose_name as name %}أضف {{ name }}{% endblocktranslate %}
+            </a>
+        </li>
+        {% endif %}
+        {% endblock %}
+    </ul>
+    {% endblock %}
+
+    <!-- Backdrop for filter -->
+    <div id="filter-backdrop"></div>
+
+    <div class="module{% if cl.has_filters %} filtered{% endif %}" id="changelist">
+
+        {% block search %}{% search_form cl %}{% endblock %}
+
+        {% block date_hierarchy %}{% date_hierarchy cl %}{% endblock %}
+
+        {% if cl.has_filters %}
+        <div id="changelist-filter">
+            <div class="filter-close-btn"><i class="fa-solid fa-times"></i></div>
+            <h2>{% translate 'Filter' %}</h2>
+            <div class="filter-content">
+                {% for spec in cl.filter_specs %}
+                <div class="filter-group">
+                    <h3>{{ spec.title }}</h3>
+                    {% admin_list_filter cl spec %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const filterBtn = document.getElementById('toggle-filter-btn');
+                const filterDrawer = document.getElementById('changelist-filter');
+                const filterBackdrop = document.getElementById('filter-backdrop');
+                const closeBtn = document.querySelector('.filter-close-btn');
+
+                if (filterBtn && filterDrawer) {
+                    function openFilter(e) {
+                        if (e) e.preventDefault();
+                        filterDrawer.classList.add('active');
+                        if (filterBackdrop) filterBackdrop.classList.add('active');
+                    }
+
+                    function closeFilter() {
+                        filterDrawer.classList.remove('active');
+                        if (filterBackdrop) filterBackdrop.classList.remove('active');
+                    }
+
+                    filterBtn.addEventListener('click', openFilter);
+
+                    if (closeBtn) closeBtn.addEventListener('click', closeFilter);
+                    if (filterBackdrop) filterBackdrop.addEventListener('click', closeFilter);
+
+                    // ESC key to close
+                    document.addEventListener('keydown', function (event) {
+                        if (event.key === "Escape") {
+                            closeFilter();
+                        }
+                    });
+                }
+            });
+        </script>
+
+        <form id="changelist-form" method="post" {% if cl.formset and cl.formset.is_multipart %}
+            enctype="multipart/form-data" {% endif %} novalidate>
+            {% csrf_token %}
+            {% if cl.formset %}
+            <div>{{ cl.formset.management_form }}</div>
+            {% endif %}
+
+            <div class="results">
+                {% block result_list %}
+                {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+                {% result_list cl %}
+                {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+                {% endblock %}
+            </div>
+
+            {% block pagination %}{% pagination cl %}{% endblock %}
+        </form>
+    </div>
+</div>
+{% endblock %}

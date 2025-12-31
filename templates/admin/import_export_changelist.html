@@ -1,0 +1,21 @@
+{% extends "admin/change_list.html" %}
+{% load i18n admin_urls static %}
+
+{% block object-tools-items %}
+{{ block.super }}
+
+<li class="import-export-btns" style="display: flex; gap: 12px; margin-inline-start: 12px;">
+    <a href="download-template/" class="btn-premium"
+        style="background: linear-gradient(135deg, #2196F3, #1565C0) !important;">
+        <i class="fa-solid fa-file-excel"></i> {% translate "Template" %}
+    </a>
+    <a href="import-data/" class="btn-premium"
+        style="background: linear-gradient(135deg, #4CAF50, #2E7D32) !important;">
+        <i class="fa-solid fa-file-import"></i> {% translate "Import" %}
+    </a>
+    <a href="export-data/" class="btn-premium"
+        style="background: linear-gradient(135deg, #9C27B0, #7B1FA2) !important;">
+        <i class="fa-solid fa-file-export"></i> {% translate "Export" %}
+    </a>
+</li>
+{% endblock %}

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>بطاقة تشغيل | {{ order.order_number }}</title>
+    <!-- Barcode Support: Industry Standard Code 128 -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @page {
+            size: A5;
+            margin: 10mm;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            color: #000;
+        }
+
+        .job-card {
+            width: 100%;
+            border: 2px solid #000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #ccc;
+            padding-bottom: 5px;
+        }
+
+        .label {
+            font-weight: bold;
+            color: #444;
+        }
+
+        .value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .barcode-section {
+            text-align: center;
+            margin-top: 30px;
+            border-top: 2px solid #000;
+            padding-top: 20px;
+        }
+
+        .barcode-font {
+            font-family: 'Libre Barcode 39';
+            font-size: 60px;
+            line-height: 1;
+        }
+
+        .barcode-num {
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 5px;
+            letter-spacing: 3px;
+        }
+
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            text-align: center;
+            color: #777;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="no-print" style="background: #eee; padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">
+        <button onclick="window.print()"
+            style="padding: 10px 30px; font-weight: bold; cursor: pointer; background: #D4AF37; border: none; border-radius: 5px;">إصدار
+            أمر الطباعة</button>
+    </div>
+
+    <div class="job-card">
+        <div class="header">
+            <h1>بطاقة تشغيل مصنع (Job Card)</h1>
+            <div style="font-size: 14px;">Valunshy Jewelry - قسم التصنيع</div>
+        </div>
+
+        <div class="row">
+            <span class="label">رقم الأمر:</span>
+            <span class="value">{{ order.order_number }}</span>
+        </div>
+        <div class="row">
+            <span class="label">الورشة / الفني:</span>
+            <span class="value">{{ order.workshop.name }}</span>
+        </div>
+        <div class="row">
+            <span class="label">العيار المطلوب:</span>
+            <span class="value">{{ order.carat.name }}</span>
+        </div>
+        <div class="row">
+            <span class="label">الوزن الخارج (خام):</span>
+            <span class="value">{{ order.input_weight }} جم</span>
+        </div>
+        <div class="row">
+            <span class="label">نوع الصنف:</span>
+            <span class="value">{{ order.item_name_pattern|default:"-" }}</span>
+        </div>
+
+        {% if order.orderstone_set.exists %}
+        <div style="margin-top: 20px; border: 1px solid #000; padding: 10px;">
+            <div class="label" style="text-align: center; border-bottom: 1px solid #ddd; margin-bottom: 10px;">
+                💎 الفصوص والأحجار المطلوبة
+            </div>
+            <table style="width: 100%; text-align: center; font-size: 14px; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #eee;">
+                        <th style="border: 1px solid #ccc;">الحجر</th>
+                        <th style="border: 1px solid #ccc;">العدد/الوزن</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in order.orderstone_set.all %}
+                    <tr>
+                        <td style="border: 1px solid #ccc; padding: 5px;">{{ s.stone.name }}</td>
+                        <td style="border: 1px solid #ccc; padding: 5px;">{{ s.quantity }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div style="margin-top: 20px;">
+            <div class="label" style="margin-bottom: 10px;">ملاحظات الإنتاج:</div>
+            <div style="min-height: 80px; border: 1px solid #eee; padding: 10px; background: #fafafa;">
+                {{ order.notes|default:"لا توجد ملاحظات إضافية." }}
+            </div>
+        </div>
+
+        <div class="barcode-section">
+            <svg id="barcode"></svg>
+            <p style="font-size: 12px; margin-top: 10px;">امسح هذا الكود عند تسليم الشغل لإنهاء الأمر آلياً</p>
+        </div>
+
+        <div class="footer">
+            تاريخ الإصدار: {{ order.start_date|date:"Y-m-d" }} | تم الإنشاء بواسطة: {{
+            order.assigned_technician|default:"النظام الآلي" }}
+        </div>
+    </div>
+    <script>
+        window.onload = function () {
+            JsBarcode("#barcode", "{{ order.order_number }}", {
+                format: "CODE128",
+                displayValue: true,
+                fontSize: 16,
+                height: 80,
+                margin: 10
+            });
+        };
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,285 @@
+{% load static i18n %}{% get_current_language as LANGUAGE_CODE %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_CODE == 'ar' %}rtl{% else %}ltr{% endif %}" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}{% endblock %} | نظام فالينشى المتطور</title>
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}?v=2.5">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💎</text></svg>">
+    {% block extrastyle %}{% endblock %}
+    {% block extrahead %}{% endblock %}
+    {% block responsive %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% endblock %}
+    {% block blockbots %}
+    <meta name="robots" content="NONE,NOARCHIVE">{% endblock %}
+
+</head>
+
+<body class="{% block bodyclass %}{% endblock %}">
+    <aside class="sidebar">
+        <div class="logo">
+            <div class="logo-icon"><i class="fa-solid fa-gem"></i></div>
+            <div class="logo-text" style="font-size: 1.1rem; font-weight: 800;">VALUNSHY PRO</div>
+        </div>
+        <nav>
+            <ul class="nav-links">
+                <!-- Group 1: Dashboards -->
+                <li class="nav-group-header" style="color: #42A5F5; background: rgba(66, 165, 245, 0.05);">
+                    <i class="fa-solid fa-gauge-high"></i> {% if LANGUAGE_CODE == 'ar' %}لوحات التحكم{% else %}Dashboards{% endif %}
+                </li>
+                <li><a href="/" class="nav-item"><i class="fa-solid fa-house"></i><span>{% if LANGUAGE_CODE == "ar" %}الرئيسية{% else %}Main Home{% endif %}</span></a></li>
+                <li><a href="/finance/reports/monthly-analytics/" class="nav-item" style="color: #BA68C8;"><i class="fa-solid fa-wand-magic-sparkles"></i><span>{% if LANGUAGE_CODE == "ar" %}التحليل الشهري الذكي{% else %}Smart AI Analytics{% endif %}</span></a></li>
+                <li><a href="/finance/dashboard/" class="nav-item"><i class="fa-solid fa-chart-line"></i><span>{% if LANGUAGE_CODE == "ar" %}لوحة المالية{% else %}Finance Dash{% endif %}</span></a></li>
+                <li><a href="/manufacturing/dashboard/" class="nav-item"><i class="fa-solid fa-industry"></i><span>{% if LANGUAGE_CODE == "ar" %}لوحة الإنتاج{% else %}Production Dash{% endif %}</span></a></li>
+                <li><a href="/inventory/dashboard/" class="nav-item"><i class="fa-solid fa-boxes-stacked"></i><span>{% if LANGUAGE_CODE == "ar" %}لوحة المخزون{% else %}Inventory Dash{% endif %}</span></a></li>
+
+                <!-- Group 2: Manufacturing (Green) -->
+                <li class="nav-group-header" style="color: #81C784; background: rgba(129, 199, 132, 0.05);">
+                    <i class="fa-solid fa-hammer"></i> {% if LANGUAGE_CODE == 'ar' %}عمليات التصنيع{% else %}Manufacturing{% endif %}
+                </li>
+                <li><a href="/admin/manufacturing/manufacturingorder/" class="nav-item"><i class="fa-solid fa-clipboard-list"></i><span>{% if LANGUAGE_CODE == "ar" %}أوامر التصنيع{% else %}Work Orders{% endif %}</span></a></li>
+                <li><a href="/admin/manufacturing/workshop/" class="nav-item"><i class="fa-solid fa-warehouse"></i><span>{% if LANGUAGE_CODE == "ar" %}الورش الفنية{% else %}Workshops{% endif %}</span></a></li>
+                <li><a href="/admin/manufacturing/workshoptransfer/" class="nav-item" style="color: #81C784;"><i class="fa-solid fa-people-carry-box"></i><span>{% if LANGUAGE_CODE == "ar" %}تحويلات الورش{% else %}WS Transfers{% endif %}</span></a></li>
+                <li><a href="/admin/manufacturing/workshopsettlement/" class="nav-item"><i class="fa-solid fa-scale-balanced"></i><span>{% if LANGUAGE_CODE == "ar" %}تسويات الورش{% else %}Settlements{% endif %}</span></a></li>
+                <li><a href="/admin/manufacturing/manufacturingcylinder/" class="nav-item"><i class="fa-solid fa-cylinder"></i><span>{% if LANGUAGE_CODE == "ar" %}سلندرات السبك{% else %}Cylinders{% endif %}</span></a></li>
+
+                <!-- Group 3: Inventory (Gold) -->
+                <li class="nav-group-header" style="color: #FFB74D; background: rgba(255, 183, 77, 0.05);">
+                    <i class="fa-solid fa-boxes-packing"></i> {% if LANGUAGE_CODE == 'ar' %}المخزون والقطع{% else %}Stock & Items{% endif %}
+                </li>
+                <li><a href="/admin/inventory/item/" class="nav-item"><i class="fa-solid fa-gem"></i><span>{% if LANGUAGE_CODE == "ar" %}القطع الجاهزة{% else %}Finished Items{% endif %}</span></a></li>
+                <li><a href="/admin/manufacturing/stone/" class="nav-item"><i class="fa-solid fa-diamond"></i><span>{% if LANGUAGE_CODE == "ar" %}مخزن الأحجار{% else %}Stones Stock{% endif %}</span></a></li>
+                <li><a href="/admin/inventory/itemtransfer/" class="nav-item"><i class="fa-solid fa-truck-fast"></i><span>{% if LANGUAGE_CODE == "ar" %}تحويل القطع{% else %}Item Transfers{% endif %}</span></a></li>
+                <li><a href="/admin/inventory/materialtransfer/" class="nav-item"><i class="fa-solid fa-dolly"></i><span>{% if LANGUAGE_CODE == "ar" %}تحويل الخام{% else %}Raw Transfers{% endif %}</span></a></li>
+                <li><a href="/admin/manufacturing/installationtool/" class="nav-item"><i class="fa-solid fa-screwdriver-wrench"></i><span>{% if LANGUAGE_CODE == "ar" %}مخزن الأدوات{% else %}Tools Stock{% endif %}</span></a></li>
+
+                <!-- Group 4: Sales & CRM (Pink) -->
+                <li class="nav-group-header" style="color: #F06292; background: rgba(240, 98, 146, 0.05);">
+                    <i class="fa-solid fa-cart-shopping"></i> {% if LANGUAGE_CODE == 'ar' %}المبيعات والعملاء{% else %}Sales & CRM{% endif %}
+                </li>
+                <li><a href="/admin/sales/invoice/" class="nav-item"><i class="fa-solid fa-file-invoice-dollar"></i><span>{% if LANGUAGE_CODE == "ar" %}الفواتير{% else %}Invoices{% endif %}</span></a></li>
+                <li><a href="/admin/crm/customer/" class="nav-item"><i class="fa-solid fa-users"></i><span>{% if LANGUAGE_CODE == "ar" %}العملاء{% else %}Customers{% endif %}</span></a></li>
+                <li><a href="/admin/sales/salesrepresentative/" class="nav-item"><i class="fa-solid fa-user-tie"></i><span>{% if LANGUAGE_CODE == "ar" %}المندوبين{% else %}Agents{% endif %}</span></a></li>
+                <li><a href="/crm/reports/accounts/" class="nav-item"><i class="fa-solid fa-address-book"></i><span>{% if LANGUAGE_CODE == "ar" %}كشوف الحسابات{% else %}Statements{% endif %}</span></a></li>
+
+                <!-- Group 5: Finance (Purple) -->
+                <li class="nav-group-header" style="color: #9575CD; background: rgba(149, 117, 205, 0.05);">
+                    <i class="fa-solid fa-vault"></i> {% if LANGUAGE_CODE == 'ar' %}الحسابات والخزينة{% else %}Finance & Cash{% endif %}
+                </li>
+                <li><a href="/admin/finance/treasury/" class="nav-item"><i class="fa-solid fa-vault"></i><span>{% if LANGUAGE_CODE == "ar" %}الخزينة{% else %}Treasury{% endif %}</span></a></li>
+                <li><a href="/admin/finance/treasurytransaction/" class="nav-item"><i class="fa-solid fa-money-bill-transfer"></i><span>{% if LANGUAGE_CODE == "ar" %}حركات النقدية{% else %}Cash Flows{% endif %}</span></a></li>
+                <li><a href="/admin/finance/treasurytransfer/" class="nav-item"><i class="fa-solid fa-right-left"></i><span>{% if LANGUAGE_CODE == "ar" %}التحويل بين الخزن{% else %}Treasury Transfers{% endif %}</span></a></li>
+                <li><a href="/finance/reports/treasury-comparison/" class="nav-item" style="color: #9575CD;"><i class="fa-solid fa-code-compare"></i><span>{% if LANGUAGE_CODE == "ar" %}مطابقة الخزائن{% else %}Reconciliation{% endif %}</span></a></li>
+                <li><a href="/admin/finance/expensevoucher/" class="nav-item"><i class="fa-solid fa-file-invoice"></i><span>{% if LANGUAGE_CODE == "ar" %}أذون الصرف{% else %}Vouchers{% endif %}</span></a></li>
+                <li><a href="/finance/reports/gold-position/" class="nav-item"><i class="fa-solid fa-chart-pie"></i><span>{% if LANGUAGE_CODE == "ar" %}موقف الذهب{% else %}Gold Pos{% endif %}</span></a></li>
+                <li><a href="/finance/daily-close/" class="nav-item" style="color: var(--gold-primary);"><i class="fa-solid fa-lock"></i><span>{% if LANGUAGE_CODE == "ar" %}إغلاق اليومية{% else %}Daily Close{% endif %}</span></a></li>
+
+                <!-- Group 6: System (Slate) -->
+                <li class="nav-group-header" style="color: #90A4AE; background: rgba(144, 164, 174, 0.05);">
+                    <i class="fa-solid fa-gears"></i> {% if LANGUAGE_CODE == 'ar' %}الإدارة والنظام{% else %}Management{% endif %}
+                </li>
+                <li><a href="/admin/gm-dashboard/" class="nav-item" style="color: #D4AF37;"><i class="fa-solid fa-crown"></i><span>{% if LANGUAGE_CODE == "ar" %}لوحة المدير العام{% else %}GM Crown{% endif %}</span></a></li>
+                <li><a href="/admin/finance/account/" class="nav-item"><i class="fa-solid fa-sitemap"></i><span>{% if LANGUAGE_CODE == "ar" %}شجرة الحسابات{% else %}Chart of Acc{% endif %}</span></a></li>
+                <li><a href="/admin/auth/user/" class="nav-item"><i class="fa-solid fa-users-gear"></i><span>{% if LANGUAGE_CODE == "ar" %}المستخدمين{% else %}Users{% endif %}</span></a></li>
+                <li><a href="/admin/" class="nav-item"><i class="fa-solid fa-gear"></i><span>{% if LANGUAGE_CODE == "ar" %}الإعدادات{% else %}Setup{% endif %}</span></a></li>
+            </ul>
+        </nav>
+        <div style="margin-top:auto;padding:20px 0;border-top:1px solid rgba(255,255,255,0.05);">
+            <div class="controls-row" style="justify-content:center;">
+                <div class="ui-btn" id="theme-btn" title="Light/Dark Mode"><i class="fa-solid fa-moon"></i></div>
+                <form action="{% url 'set_language' %}" method="post" style="margin: 0;">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <input name="language" type="hidden"
+                        value="{% if LANGUAGE_CODE == 'ar' %}en{% else %}ar{% endif %}">
+                    <button type="submit" class="ui-btn"
+                        style="width: auto; padding: 0 15px; font-weight: 600; font-size: 0.85rem; letter-spacing: 0.5px;">
+                        <i class="fas fa-globe" style="margin-inline-end: 8px; opacity: 0.7;"></i>
+                        {% if LANGUAGE_CODE == 'ar' %}ENGLISH{% else %}عربي{% endif %}</button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-wrapper" id="main-content">
+        <header class="page-header"
+            style="margin-bottom: 3.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1.5rem; display: flex; align-items: flex-end; justify-content: space-between; gap: 2rem;">
+            <div class="welcome-text" style="flex: 1;">
+                <h1 class="page-title"
+                    style="margin: 0; font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; color: #fff;">
+                    {% if title %}{{ title }}{% else %}{{ cl.opts.verbose_name_plural|capfirst }}{% endif %}</h1>
+                <p style="color:var(--text-muted); font-size: 0.95rem; margin-top: 0.5rem; opacity: 0.8;">
+                    {% if LANGUAGE_CODE == 'ar' %}نظام فالينشى المتطور لإدارة المجوهرات{% else %}Valunshy Advanced Jewelry Management System{% endif %}</p>
+            </div>
+            <div class="gold-price-wrapper">
+                {% for price in live_gold_prices %}
+                <div class="price-chip-premium">
+                    <span class="carat-label">{{ price.carat.name }}</span>
+                    <strong class="price-value">{{ price.price_per_gram|floatformat:0 }}<small
+                            class="currency">ج.م</small></strong>
+                </div>
+                {% endfor %}
+            </div>
+        </header>
+        {% if messages %}
+        <div class="messages" style="margin-bottom:2rem;">
+            {% for message in messages %}
+            <div
+                style="background:rgba(76,175,80,0.1);border:1px solid #4CAF50;color:#4CAF50;padding:12px 20px;border-radius:10px;display:flex;align-items:center;gap:10px;">
+                <i class="fa-solid fa-circle-check"></i> {{ message }}
+            </div>
+            {% endfor %}
+        </div>{% endif %}<div class="glass-card" style="min-height:calc(100vh - 200px);padding:2.5rem;">{% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script>
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.nav-item').forEach(link => {
+            const href = link.getAttribute('href');
+            if (currentPath === href || (href !== '/' && currentPath.startsWith(href))) { link.classList.add('active'); }
+        });
+        const themeBtn = document.getElementById('theme-btn');
+        const themeIcon = themeBtn.querySelector('i');
+        const root = document.documentElement;
+        themeBtn.addEventListener('click', () => {
+            const isDark = root.getAttribute('data-theme') === 'dark';
+            const newTheme = isDark ? 'light' : 'dark';
+            root.setAttribute('data-theme', newTheme);
+            themeIcon.className = isDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+            localStorage.setItem('erp_theme', newTheme);
+        });
+        const savedTheme = localStorage.getItem('erp_theme') || 'dark';
+        root.setAttribute('data-theme', savedTheme);
+        themeIcon.className = savedTheme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+
+        // Fix for Action Buttons Clickability
+        document.addEventListener("DOMContentLoaded", function () {
+            const actionsRow = document.querySelector('.actions');
+            if (actionsRow) {
+                // Force bring to front
+                actionsRow.style.position = 'relative';
+                actionsRow.style.zIndex = '9999';
+                // Move it before the table if it's inside a cluttered container
+                const changelistForm = document.getElementById('changelist-form');
+                if (changelistForm && changelistForm.contains(actionsRow)) {
+                    // It is inside form, which is correct. Just ensure form itself is visible
+                    changelistForm.style.overflow = 'visible';
+                }
+            }
+        });
+    </script>
+    {% block footer %}{% endblock %}
+    <!-- AI Assistant UI -->
+    <div class="ai-assistant-btn" id="ai-btn" style="z-index: 10000;">
+        <i class="fa-solid fa-robot"></i>
+    </div>
+
+    <div class="ai-chat-window" id="ai-chat" style="z-index: 10000;">
+        <div class="ai-chat-header">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 10px; height: 10px; background: #4CAF50; border-radius: 50%;"></div>
+                <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--gold-primary); margin: 0;">VALUNSHY AI</h3>
+            </div>
+            <i class="fa-solid fa-times" id="close-ai" style="cursor: pointer; opacity: 0.5;"></i>
+        </div>
+        <div class="ai-chat-messages" id="chat-messages" style="font-family: 'Cairo', sans-serif;">
+            <div class="message ai">
+                أهلاً بك! أنا مساعدك الذكي في نظام فالونشي. كيف يمكنني مساعدتك اليوم؟
+            </div>
+            <!-- Quick Suggestions -->
+            <div class="ai-suggestions"
+                style="padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid rgba(212,175,55,0.1);">
+                <button class="ai-suggest-btn" onclick="sendQuickCommand('مبيعات اليوم')">💰 مبيعات اليوم</button>
+                <button class="ai-suggest-btn" onclick="sendQuickCommand('تحليل المصروفات')">💸 تحليل المصروفات</button>
+                <button class="ai-suggest-btn" onclick="sendQuickCommand('رصيد الذهب')">💎 رصيد الذهب</button>
+                <button class="ai-suggest-btn" onclick="sendQuickCommand('تدقيق البيانات')">🔍 تدقيق البيانات</button>
+                <button class="ai-suggest-btn" onclick="sendQuickCommand('خطة تطوير المبيعات')">🎯 خطة مبيعات</button>
+                <button class="ai-suggest-btn" onclick="sendQuickCommand('ملخص الموقف')">🚀 ملخص عام</button>
+            </div>
+        </div>
+        <div class="ai-chat-input">
+            <input type="text" id="ai-input" placeholder="اسألني عن المبيعات، المخزون، أو المصاريف...">
+            <button id="send-ai"><i class="fa-solid fa-paper-plane"></i></button>
+        </div>
+    </div>
+
+    <script>
+        // AI Assistant Logic
+        const aiBtn = document.getElementById('ai-btn');
+        const aiChat = document.getElementById('ai-chat');
+        const closeAi = document.getElementById('close-ai');
+        const sendBtn = document.getElementById('send-ai');
+        const aiInput = document.getElementById('ai-input');
+        const chatMessages = document.getElementById('chat-messages');
+
+        if (aiBtn) {
+            aiBtn.addEventListener('click', () => aiChat.classList.toggle('active'));
+            closeAi.addEventListener('click', () => aiChat.classList.remove('active'));
+
+            window.sendQuickCommand = function (text) {
+                aiInput.value = text;
+                sendMessage();
+            };
+
+            function showTyping() {
+                const div = document.createElement('div');
+                div.className = 'message ai typing-indicator';
+                div.id = 'typing';
+                div.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+                chatMessages.appendChild(div);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            function hideTyping() {
+                const typing = document.getElementById('typing');
+                if (typing) typing.remove();
+            }
+
+            async function sendMessage() {
+                const query = aiInput.value.trim();
+                if (!query) return;
+
+                addMessage(query, 'user');
+                aiInput.value = '';
+                showTyping();
+
+                try {
+                    const response = await fetch('/ai-assistant/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: JSON.stringify({ query: query })
+                    });
+                    const data = await response.json();
+                    hideTyping();
+                    addMessage(data.response || data.error, 'ai');
+                } catch (error) {
+                    hideTyping();
+                    addMessage('Error connecting to AI service.', 'ai');
+                }
+            }
+
+            function addMessage(text, type) {
+                const div = document.createElement('div');
+                div.className = `message ${type}`;
+                div.innerHTML = text;
+                chatMessages.appendChild(div);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            sendBtn.addEventListener('click', sendMessage);
+            aiInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,358 @@
+﻿{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extra_head %}
+<style>
+    :root {
+        --dark-bg: #0f0f12;
+        --card-bg: rgba(30, 30, 35, 0.7);
+        --gold-primary: #D4AF37;
+        --gold-bright: #FFD700;
+        --text-muted: #888;
+        --text-light: #ddd;
+        --border-color: rgba(212, 175, 55, 0.1);
+        --vibrant-green: #4CAF50;
+        --vibrant-blue: #2196F3;
+        --vibrant-red: #ff5252;
+    }
+
+    .dashboard-container {
+        padding: 24px;
+        background-color: var(--dark-bg);
+        min-height: 100vh;
+        color: #fff;
+        font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    }
+
+    .glass-card {
+        background: var(--card-bg);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .glass-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 48px rgba(212, 175, 55, 0.15);
+        border-color: rgba(212, 175, 55, 0.3);
+    }
+
+    .dashboard-title {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: var(--gold-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .chart-header {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #fff;
+    }
+
+    .custom-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+    }
+
+    .custom-table th {
+        color: var(--text-muted);
+        font-weight: 500;
+        font-size: 0.85rem;
+        padding: 12px 16px;
+        text-align: right;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .custom-table td {
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.02);
+        vertical-align: middle;
+        text-align: right;
+    }
+
+    .custom-table tr td:first-child {
+        border-radius: 0 10px 10px 0;
+    }
+
+    .custom-table tr td:last-child {
+        border-radius: 10px 0 0 10px;
+    }
+
+    .custom-table tr:hover td {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .progress-container {
+        width: 100px;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        overflow: hidden;
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--gold-primary), var(--gold-bright));
+        border-radius: 10px;
+    }
+
+    .workshop-item {
+        padding: 15px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .workshop-item:last-child {
+        border-bottom: none;
+    }
+
+    .workshop-name {
+        font-weight: 700;
+        color: var(--gold-primary);
+        margin-bottom: 8px;
+    }
+
+    .text-gold-bright {
+        color: var(--gold-bright);
+    }
+
+    .text-green {
+        color: var(--vibrant-green);
+    }
+
+    .text-red {
+        color: var(--vibrant-red);
+    }
+
+    .btn-new-order {
+        background: var(--gold-primary);
+        color: #000;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.2s;
+    }
+
+    .btn-new-order:hover {
+        background: var(--gold-bright);
+        transform: scale(1.02);
+    }
+
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--dark-bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: #333;
+        border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: #444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header"
+        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1 class="dashboard-title">
+            <i class="fa-solid fa-industry"></i> لوحة تحكم الإنتاج والجرد اليومي
+        </h1>
+        <div class="header-actions" style="display: flex; gap: 15px; align-items: center;">
+            <div class="scanner-wrapper" style="position: relative;">
+                <input type="text" id="scannerInput"
+                    style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 8px; width: 250px;"
+                    placeholder="امسح باركود الطلب..." onkeypress="if(event.keyCode==13) handleScan(this.value)">
+            </div>
+            <a href="/admin/manufacturing/manufacturingorder/add/" class="btn-new-order">
+                <i class="fa-solid fa-plus"></i> أمر تصنيع جديد
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-grid"
+        style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 30px;" dir="rtl">
+        <div class="glass-card" style="padding: 20px; border-right: 4px solid var(--gold-primary);">
+            <div style="color: var(--text-muted); font-size: 0.9rem;">أوامر تحت التشغيل</div>
+            <div style="font-size: 2rem; font-weight: 800;"><span dir="ltr">{{ total_active_count }}</span> <small
+                    style="font-size: 0.9rem;">أمر</small></div>
+        </div>
+        <div class="glass-card" style="padding: 20px; border-right: 4px solid #4CAF50;">
+            <div style="color: var(--text-muted); font-size: 0.9rem;">إجمالي الذهب بالورش</div>
+            <div style="font-size: 2rem; font-weight: 800;"><span dir="ltr">{{ total_workshop_gold_combined|floatformat:2 }}</span> <small style="font-size: 0.9rem;">جم</small>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #ccc;">24k: <b dir="ltr">{{ total_workshop_gold_24|floatformat:2 }}</b> | 21k: <b dir="ltr">{{ total_workshop_gold_21|floatformat:2 }}</b> | 18k: <b dir="ltr">{{ total_workshop_gold_18|floatformat:2 }}</b></div>
+        </div>
+        <div class="glass-card" style="padding: 20px; border-right: 4px solid #2196F3;">
+            <div style="color: var(--text-muted); font-size: 0.9rem;">رصيد المصنعيات المستحق</div>
+            <div style="font-size: 2rem; font-weight: 800;"><span dir="ltr">{{ total_workshop_labor|floatformat:0 }}</span> <small style="font-size: 0.9rem;">ج.م</small></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <div class="charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+        <div class="glass-card" style="padding: 20px;">
+            <h3 class="chart-header">مؤشر المبيعات</h3>
+            <div style="height: 250px;" dir="ltr"><canvas id="salesChart"></canvas></div>
+        </div>
+        <div class="glass-card" style="padding: 20px;">
+            <h3 class="chart-header">توزيع المخزون</h3>
+            <div style="height: 250px;" dir="ltr"><canvas id="stockChart"></canvas></div>
+        </div>
+        <div class="glass-card" style="grid-column: span 2; padding: 20px;">
+            <h3 class="chart-header">حركة دخول الذهب للورش يومياً</h3>
+            <div style="height: 300px;" dir="ltr"><canvas id="workshopGoldChart"></canvas></div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+        <div class="glass-card" style="padding: 20px;">
+            <h3 class="chart-header">أوامر التصنيع الحالية</h3>
+            <table class="custom-table" dir="rtl">
+                <thead>
+                    <tr>
+                        <th>رقم الأمر</th>
+                        <th>الورشة</th>
+                        <th style="text-align: center;">الوزن</th>
+                        <th style="text-align: center;">الحالة</th>
+                        <th style="text-align: center;">التقدم</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in active_orders %}
+                    <tr>
+                        <td><b><a href="/admin/manufacturing/manufacturingorder/{{ order.id }}/change/"
+                                    style="color: var(--gold-primary);">{{ order.order_number }}</a></b></td>
+                        <td>{{ order.workshop.name }}</td>
+                        <td style="text-align: center;"><span dir="ltr">{{ order.input_weight|floatformat:3 }}</span> جم
+                        </td>
+                        <td style="text-align: center;"><span
+                                style="background: rgba(212,175,55,0.1); border: 1px solid var(--gold-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">{{ order.get_status_display }}</span></td>
+                        <td style="text-align: center;">
+                            <div class="progress-container">
+                                {% if order.status == 'draft' %}<div class="progress-bar" style="width: 15%;"></div>
+                                {% elif order.status == 'casting' %}<div class="progress-bar" style="width: 40%;"></div>
+                                {% elif order.status == 'crafting' %}<div class="progress-bar" style="width: 65%;">
+                                </div>
+                                {% elif order.status == 'polishing' %}<div class="progress-bar" style="width: 85%;">
+                                </div>
+                                {% else %}<div class="progress-bar" style="width: 100%;"></div>{% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-muted);">لا توجد أوامر نشطة.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div>
+            <div class="glass-card" style="padding: 20px; margin-bottom: 20px;">
+                <h3 class="chart-header">أرصدة الورش</h3>
+                {% for ws in workshops %}
+                <div style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <div style="font-weight: bold; color: var(--gold-primary);">{{ ws.name }}</div>
+                    <div style="font-size: 0.85rem; display: flex; justify-content: space-between;">
+                        <span>21k: <b dir="ltr">{{ ws.gold_balance_21|floatformat:2 }}</b> جم</span>
+                        <span>18k: <b dir="ltr">{{ ws.gold_balance_18|floatformat:2 }}</b> جم</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="glass-card" style="padding: 20px;">
+                <h3 class="chart-header">تحليل الخسية</h3>
+                <div style="text-align: center;">
+                    <div style="font-size: 2.5rem; font-weight: bold;"
+                        class="{% if avg_scrap > 1.5 %}text-red{% else %}text-green{% endif %}">
+                        {{ avg_scrap|floatformat:2 }}%
+                    </div>
+                    <div style="margin-top: 10px;">
+                        {% if avg_scrap > 1.5 %}فاقد مرتفع!{% else %}معدل طبيعي{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ chart_dates|json_script:"chart-dates-data" }}
+{{ chart_sales|json_script:"chart-sales-data" }}
+{{ chart_carat_labels|json_script:"chart-carat-labels-data" }}
+{{ chart_carat_values|json_script:"chart-carat-values-data" }}
+{{ workshop_gold_data|json_script:"workshop-gold-data" }}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        try {
+            const getD = (id) => JSON.parse(document.getElementById(id).textContent);
+            const dates = getD('chart-dates-data');
+            const sales = getD('chart-sales-data');
+            const cLables = getD('chart-carat-labels-data');
+            const cValues = getD('chart-carat-values-data');
+            const wsDataRaw = getD('workshop-gold-data');
+
+            const commonOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ccc' } } } };
+
+            new Chart(document.getElementById('salesChart'), {
+                type: 'line',
+                data: { labels: dates, datasets: [{ label: 'Sales', data: sales, borderColor: '#D4AF37', fill: true, backgroundColor: 'rgba(212,175,55,0.1)' }] },
+                options: commonOptions
+            });
+
+            new Chart(document.getElementById('stockChart'), {
+                type: 'doughnut',
+                data: { labels: cLables, datasets: [{ data: cValues, backgroundColor: ['#D4AF37', '#FF9800', '#2196F3', '#4CAF50'] }] },
+                options: commonOptions
+            });
+
+            new Chart(document.getElementById('workshopGoldChart'), {
+                type: 'bar',
+                data: { labels: dates, datasets: wsDataRaw.map((ws, i) => ({ label: ws.name, data: ws.data, backgroundColor: ['#D4AF37', '#FF9800', '#2196F3', '#4CAF50', '#9C27B0', '#E91E63', '#00BCD4', '#8BC34A'][i % 8] })) },
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        y: {
+                            stacked: true,
+                            grid: { color: 'rgba(255,255,255,0.1)', drawBorder: true },
+                            ticks: { color: '#ccc', font: { size: 11 } },
+                            beginAtZero: true
+                        },
+                        x: {
+                            stacked: true,
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            ticks: { color: '#ccc', font: { size: 11 } }
+                        }
+                    }
+                }
+            });
+        } catch (e) { console.error("Chart Error:", e); }
+    });
+    function handleScan(val) { if (val) window.location.href = "/admin/manufacturing/manufacturingorder/?q=" + encodeURIComponent(val); }
+</script>
+{% endblock %}

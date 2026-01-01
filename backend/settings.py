@@ -196,9 +196,12 @@ MEDIA_ROOT = RUNTIME_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 CORS_ALLOW_ALL_ORIGINS = True  # For development
 
-# ... End of file
+LOGIN_REDIRECT_URL = '/'  # Redirect all logins to Home (where redirection logic exists)
+LOGOUT_REDIRECT_URL = '/accounts/login/'  # Redirect logout to login page
 # Force reload
 # Force Reload 3
 # Force Reload 4

@@ -206,7 +206,13 @@ class InvoiceSerializer(serializers.ModelSerializer):
 # 4. Sales Rep Profile
 class SalesRepSerializer(serializers.ModelSerializer):
     transactions_count = serializers.IntegerField(source='transactions.count', read_only=True)
+    recent_invoices = serializers.SerializerMethodField()
     
     class Meta:
         model = SalesRepresentative
-        fields = ['id', 'name', 'total_sales', 'total_commission', 'transactions_count']
+        fields = ['id', 'name', 'total_sales', 'total_commission', 'transactions_count', 'recent_invoices']
+
+    def get_recent_invoices(self, obj):
+        # Limit to last 10 invoices
+        invoices = obj.invoices.all().order_by('-created_at')[:10]
+        return InvoiceSerializer(invoices, many=True).data

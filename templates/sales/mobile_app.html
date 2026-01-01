@@ -301,6 +301,17 @@
             <!-- Products will be loaded here via JS -->
             <div style="text-align: center; color: #666; margin-top: 50px;">جاري تحميل الأصناف...</div>
         </div>
+
+        <!-- Recent Movements Section (New) -->
+        <div style="margin-top: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; font-size: 16px;">آخر حركات المبيعات (التحركات)</h3>
+                <span style="font-size: 11px; color: var(--primary);">أحدث 10 عمليات</span>
+            </div>
+            <div id="recent-sales-list">
+                <!-- Recent sales will be loaded here via JS -->
+            </div>
+        </div>
     </div>
 
     <!-- 3. Cart View -->
@@ -509,6 +520,9 @@
                     console.log('Profile data:', data);
                     document.getElementById('rep-name').innerText = data.name;
                     document.getElementById('sales-total').innerText = parseFloat(data.total_sales).toFixed(0) + ' ج.م';
+
+                    // Render Recent Sales
+                    renderRecentSales(data.recent_invoices);
                 } else {
                     console.error('Profile load failed with status:', res.status);
                 }
@@ -568,6 +582,43 @@
 
                 container.innerHTML = `<div style="text-align:center; padding:20px; color:red;">خطأ في تحميل البيانات: ${e.message}</div>`;
             }
+        }
+
+        function renderRecentSales(invoices) {
+            const container = document.getElementById('recent-sales-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!invoices || invoices.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:10px; color:#555; background:#1e1e1e; border-radius:10px; font-size:12px;">لا توجد حركات مبيعات مؤخراً</div>';
+                return;
+            }
+
+            invoices.forEach(inv => {
+                const el = document.createElement('div');
+                el.style.background = '#1e1e1e';
+                el.style.padding = '12px';
+                el.style.borderRadius = '12px';
+                el.style.marginBottom = '10px';
+                el.style.border = '1px solid #333';
+                el.style.display = 'flex';
+                el.style.justifyContent = 'space-between';
+                el.style.alignItems = 'center';
+
+                const date = new Date(inv.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+                el.innerHTML = `
+                    <div>
+                        <div style="font-weight:bold; font-size:14px;">فاتورة: ${inv.invoice_number}</div>
+                        <div style="font-size:11px; color:#888;">الساعة: ${date} | ${inv.customer_name || 'عميل نقدي'}</div>
+                    </div>
+                    <div style="text-align:left;">
+                        <div style="color:var(--primary); font-weight:bold;">${parseFloat(inv.grand_total).toFixed(0)} ج.م</div>
+                        <div style="font-size:10px; color:#4CAF50;">✅ مكتملة</div>
+                    </div>
+                `;
+                container.appendChild(el);
+            });
         }
 
         // --- Cart Functions ---
@@ -760,6 +811,9 @@
                         const url = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
                         window.open(url, '_blank');
                     };
+
+                    // Show success message
+                    alert("✅ تم عمل الفاتورة بنجاح!");
 
                     // Clear Cart & Switch View
                     cart = [];

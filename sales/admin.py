@@ -13,14 +13,16 @@ class InvoiceItemInline(admin.TabularInline):
     
     def total_cost_display(self, obj):
         if obj.id:
-            return format_html('<span style="color:#999; font-size: 11px;">{:.2f} ج.م</span>', obj.total_cost)
+            val = float(obj.total_cost or 0)
+            return format_html('<span style="color:#999; font-size: 11px;">{} ج.م</span>', f"{val:,.2f}")
         return "-"
     total_cost_display.short_description = "إجمالي التكلفة"
 
     def profit_display(self, obj):
         if obj.id:
-            color = "#4caf50" if obj.profit > 0 else "#f44336"
-            return format_html('<b style="color:{};">{:.2f} ج.م</b>', color, obj.profit)
+            val = float(obj.profit or 0)
+            color = "#4caf50" if val > 0 else "#f44336"
+            return format_html('<b style="color:{};">{} ج.م</b>', color, f"{val:,.2f}")
         return "-"
     profit_display.short_description = "الربح"
     
@@ -81,9 +83,9 @@ class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
     actions = ['confirm_invoices', 'reject_invoices', 'print_invoice']
 
     def total_profit_display(self, obj):
-        profit = obj.total_profit
-        color = "#2196F3" if profit > 0 else "#f44336"
-        return format_html('<span style="color:{}; font-weight:bold; font-size: 16px;">{:.2f} ج.م</span>', color, profit)
+        val = float(obj.total_profit or 0)
+        color = "#2196F3" if val > 0 else "#f44336"
+        return format_html('<span style="color:{}; font-weight:bold; font-size: 16px;">{} ج.م</span>', color, f"{val:,.2f}")
     total_profit_display.short_description = "صافي الربح"
 
     def status_badge(self, obj):

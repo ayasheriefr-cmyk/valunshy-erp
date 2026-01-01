@@ -63,13 +63,13 @@ class ItemAdmin(ExportImportMixin, admin.ModelAdmin):
     readonly_fields = ('barcode_img', 'weight_details', 'item_thumbnail', 'total_overhead_display', 'total_manufacturing_cost_display')
 
     def total_overhead_display(self, obj):
-        total = obj.total_overhead
-        return format_html('<span style="color:#FF9800; font-weight:bold;">{:.2f} ج.م</span>', total)
+        val = float(obj.total_overhead or 0)
+        return format_html('<span style="color:#FF9800; font-weight:bold;">{} ج.م</span>', f"{val:,.2f}")
     total_overhead_display.short_description = 'إجمالي التكاليف الصناعية'
 
     def total_manufacturing_cost_display(self, obj):
-        total = obj.total_manufacturing_cost
-        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:14px;">{:.2f} ج.م</span>', total)
+        val = float(obj.total_manufacturing_cost or 0)
+        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:14px;">{} ج.م</span>', f"{val:,.2f}")
     total_manufacturing_cost_display.short_description = 'التكلفة الكلية (صناعي + أجر)'
 
     def item_thumbnail(self, obj):

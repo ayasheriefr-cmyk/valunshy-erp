@@ -142,6 +142,8 @@ class CustomerOrderView(APIView):
         
         return Response({"message": "Order placed successfully", "order_number": invoice.invoice_number}, status=201)
 
+from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+
 # 7. Quick Sell API (For Dashboard)
 class QuickSellView(APIView):
     """
@@ -149,6 +151,7 @@ class QuickSellView(APIView):
     Accepts item_id and customer_id.
     Calculates price automatically based on current date.
     """
+    authentication_classes = [SessionAuthentication, BasicAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):

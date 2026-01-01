@@ -97,6 +97,13 @@
                     </a>
                 </li>
                 {% endif %}
+                <li>
+                    <a href="{% url 'sales:reservation_page' %}" class="nav-item"
+                        style="color: var(--gold-primary); border: 1px solid var(--gold-soft); background: rgba(212,175,55,0.05); margin-top: 10px; border-radius: 12px;">
+                        <i class="fa-solid fa-calendar-check"></i>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}حجز منتج{% else %}Product Reservation{% endif %}</span>
+                    </a>
+                </li>
             </ul>
         </nav>
 

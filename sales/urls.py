@@ -9,6 +9,7 @@ urlpatterns = [
     path('invoice/', views.invoice_list_view, name='invoice_list'), 
     path('mobile/', views.mobile_app_view, name='mobile_app'), # The Web App
     path('dashboard/', views.sales_dashboard_view, name='sales_dashboard'), # New Dashboard View
+    path('reports/profitability/', views.profitability_report, name='profitability_report'),
     path('shop/', views.customer_catalog_view, name='customer_catalog'), # Customer Catalog
     
     # API Endpoints (For Mobile App)

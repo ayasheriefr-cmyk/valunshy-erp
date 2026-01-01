@@ -561,8 +561,7 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     list_display = ('period_name', 'start_date', 'end_date', 'total_overhead_display', 'allocation_basis', 'status_badge', 'orders_count')
     list_filter = ('status', 'allocation_basis')
     search_fields = ('period_name',)
-    readonly_fields = ('total_production_weight_snapshot', 'total_labor_cost_snapshot', 'created_at', 'updated_at')
-    
+
     fieldsets = (
         ('الفترة الزمنية', {
             'fields': (('period_name',), ('start_date', 'end_date'))
@@ -581,7 +580,7 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
             'fields': (
                 ('total_labor_income_display', 'total_labor_cost_display'),
                 ('total_overhead_display', 'net_labor_profit_display'),
-                'total_production_weight_snapshot'
+                'total_production_weight_display'
             ),
             'description': 'يوضح هذا القسم ربحية قطاع التصنيع بعد خصم أجور الورش وكافة المصاريف التشغيلية.'
         }),
@@ -591,7 +590,12 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
         }),
     )
 
-    readonly_fields = ('total_overhead_display', 'total_labor_income_display', 'total_labor_cost_display', 'net_labor_profit_display', 'created_at', 'updated_at', 'orders_count')
+    readonly_fields = ('total_overhead_display', 'total_labor_income_display', 'total_labor_cost_display', 'net_labor_profit_display', 'total_production_weight_display', 'created_at', 'updated_at', 'orders_count')
+
+    def total_production_weight_display(self, obj):
+        return format_html('<span style="font-weight:bold;">{} جم</span>', obj.total_production_weight_snapshot)
+    total_production_weight_display.short_description = 'إجمالي الوزن المنتج'
+    
 
     def total_labor_income_display(self, obj):
         return format_html('<span style="color:#2196F3; font-weight:bold; font-size:1.2rem;">{} ج.م</span>', obj.total_labor_income_snapshot)

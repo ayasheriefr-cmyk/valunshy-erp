@@ -576,3 +576,47 @@ class CostAllocation(models.Model):
         return (self.total_electricity + self.total_water + self.total_gas + 
                 self.total_rent + self.total_salaries + self.total_other)
 
+    def fetch_expenses(self):
+        """جلب مبالغ المصاريف تلقائياً من أذون الصرف في المالية"""
+        from finance.treasury_models import ExpenseVoucher
+        from django.db.models import Sum
+        from decimal import Decimal
+        
+        # Filter for paid vouchers in the period
+        vouchers = ExpenseVoucher.objects.filter(
+            date__gte=self.start_date,
+            date__lte=self.end_date,
+            status='paid' # Only confirmed payments
+        )
+        
+        # Mapping categories to model fields
+        mapping = {
+            'electricity': 'total_electricity',
+            'water': 'total_water',
+            'gas': 'total_gas',
+            'rent': 'total_rent',
+            'salaries': 'total_salaries',
+            'other': 'total_other', # Note: mapping 'other' specifically
+        }
+        
+        updated_fields = []
+        for cat, field in mapping.items():
+            total = vouchers.filter(expense_category=cat).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+            if getattr(self, field) != total:
+                setattr(self, field, total)
+                updated_fields.append(field)
+                
+        # Also include 'transport', 'maintenance', 'supplies', 'marketing' into 'other' if not handled
+        remaining_cats = ['maintenance', 'supplies', 'transport', 'marketing']
+        extra_total = vouchers.filter(expense_category__in=remaining_cats).aggregate(total=Sum('amount'))['total'] or Decimal('0')
+        if extra_total > 0:
+            self.total_other += extra_total
+            if 'total_other' not in updated_fields:
+                updated_fields.append('total_other')
+                
+        if updated_fields:
+            self.save(update_fields=updated_fields)
+            return len(updated_fields)
+        return 0
+    
+

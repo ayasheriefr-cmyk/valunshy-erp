@@ -583,7 +583,21 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
         }),
     )
     
-    actions = ['apply_cost_allocation']
+    actions = ['fetch_expenses_action', 'apply_cost_allocation']
+
+    def fetch_expenses_action(self, request, queryset):
+        from django.contrib import messages
+        for obj in queryset:
+            if obj.status == 'applied':
+                messages.warning(request, f'لا يمكن جلب المصاريف لفترة مغلقة: {obj.period_name}')
+                continue
+            updated_count = obj.fetch_expenses()
+            if updated_count > 0:
+                messages.success(request, f'تم جلب وتحديث {updated_count} فئة مصاريف لفترة {obj.period_name} من الخزينة.')
+            else:
+                messages.info(request, f'لم يتم العثور على مصاريف جديدة مدفوعة في هذه الفترة لـ {obj.period_name}.')
+    fetch_expenses_action.short_description = '🔄 جلب المصاريف من الخزينة (تلقائياً)'
+    
     
     def total_overhead_display(self, obj):
         total = obj.total_overhead_amount

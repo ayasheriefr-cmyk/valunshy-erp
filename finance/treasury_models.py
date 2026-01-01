@@ -321,7 +321,9 @@ class ExpenseVoucher(models.Model):
                                  validators=[MinValueValidator(Decimal('0.01'))])
     
     EXPENSE_CATEGORY_CHOICES = [
-        ('utilities', 'مرافق (كهرباء/مياه/غاز)'),
+        ('electricity', 'كهرباء'),
+        ('water', 'مياه'),
+        ('gas', 'غاز'),
         ('rent', 'إيجار'),
         ('salaries', 'رواتب'),
         ('maintenance', 'صيانة'),

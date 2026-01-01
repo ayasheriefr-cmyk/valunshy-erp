@@ -26,8 +26,29 @@ class Item(models.Model):
     
     # Financials
     labor_fee_per_gram = models.DecimalField("المصنعية/جرام", max_digits=10, decimal_places=2, default=0)
-    fixed_labor_fee = models.DecimalField("مصنعية ثابتة", max_digits=10, decimal_places=2, default=0)
+    fixed_labor_fee = models.DecimalField("مصنعية ثابتة (أجور + ربح مصنع)", max_digits=10, decimal_places=2, default=0)
+    
+    # Factory Overhead Cost Breakdown (Synced from Manufacturing Order)
+    overhead_electricity = models.DecimalField("نصيب الكهرباء", max_digits=10, decimal_places=2, default=0)
+    overhead_water = models.DecimalField("نصيب المياه", max_digits=10, decimal_places=2, default=0)
+    overhead_gas = models.DecimalField("نصيب الغاز", max_digits=10, decimal_places=2, default=0)
+    overhead_rent = models.DecimalField("نصيب الإيجار", max_digits=10, decimal_places=2, default=0)
+    overhead_salaries = models.DecimalField("نصيب الرواتب", max_digits=10, decimal_places=2, default=0)
+    overhead_other = models.DecimalField("نصيب مصاريف أخرى", max_digits=10, decimal_places=2, default=0)
+    
+    @property
+    def total_overhead(self):
+        """إجمالي التكاليف الصناعية المحملة"""
+        return (self.overhead_electricity + self.overhead_water + self.overhead_gas +
+                self.overhead_rent + self.overhead_salaries + self.overhead_other)
+
+    @property
+    def total_manufacturing_cost(self):
+        """إجمالي تكلفة المصنعية (أجور + تكاليف)"""
+        return self.fixed_labor_fee + self.total_overhead
+
     retail_margin = models.DecimalField("هامش ربح التجزئة", max_digits=10, decimal_places=2, default=0)
+    
     
     # Tracking
     rfid_tag = models.CharField("كود RFID", max_length=255, blank=True, null=True, unique=True)

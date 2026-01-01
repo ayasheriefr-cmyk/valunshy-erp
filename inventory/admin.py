@@ -10,7 +10,7 @@ class CategoryAdmin(ExportImportMixin, admin.ModelAdmin):
 
 @admin.register(Item)
 class ItemAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('item_thumbnail', 'barcode_img', 'name', 'category', 'carat', 'weight_details', 'status_badge', 'current_branch')
+    list_display = ('item_thumbnail', 'barcode_img', 'name', 'category', 'carat', 'weight_details', 'total_overhead_display', 'total_manufacturing_cost_display', 'status_badge', 'current_branch')
     list_filter = ('category', 'carat', 'status', 'current_branch')
     search_fields = ('barcode', 'name', 'rfid_tag')
     list_per_page = 20
@@ -44,12 +44,33 @@ class ItemAdmin(ExportImportMixin, admin.ModelAdmin):
         ('التسعير والمصنعية', {
             'fields': (('labor_fee_per_gram', 'fixed_labor_fee'),),
         }),
+        ('تكاليف المصنع (الموزعة من أمر التصنيع)', {
+            'fields': (
+                ('overhead_electricity', 'overhead_water'),
+                ('overhead_gas', 'overhead_rent'),
+                ('overhead_salaries', 'overhead_other'),
+                'total_overhead_display',
+                'total_manufacturing_cost_display',
+            ),
+            'classes': ('collapse',),
+            'description': 'هذه القيم يتم تحديثها تلقائياً عند تطبيق توزيع التكاليف في قسم التصنيع.'
+        }),
         ('التتبع والموقع', {
             'fields': (('rfid_tag', 'current_branch'), 'image'),
         }),
     )
 
-    readonly_fields = ('barcode_img', 'weight_details', 'item_thumbnail')
+    readonly_fields = ('barcode_img', 'weight_details', 'item_thumbnail', 'total_overhead_display', 'total_manufacturing_cost_display')
+
+    def total_overhead_display(self, obj):
+        total = obj.total_overhead
+        return format_html('<span style="color:#FF9800; font-weight:bold;">{:.2f} ج.م</span>', total)
+    total_overhead_display.short_description = 'إجمالي التكاليف الصناعية'
+
+    def total_manufacturing_cost_display(self, obj):
+        total = obj.total_manufacturing_cost
+        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:14px;">{:.2f} ج.م</span>', total)
+    total_manufacturing_cost_display.short_description = 'التكلفة الكلية (صناعي + أجر)'
 
     def item_thumbnail(self, obj):
         if obj.image:

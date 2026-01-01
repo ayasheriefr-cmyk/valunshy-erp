@@ -658,6 +658,17 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
                 order.overhead_salaries = cost_allocation.total_salaries * ratio
                 order.overhead_other = cost_allocation.total_other * ratio
                 order.save()
+                
+                # Sync to Inventory Item if it was auto-generated
+                if order.resulting_item:
+                    item = order.resulting_item
+                    item.overhead_electricity = order.overhead_electricity
+                    item.overhead_water = order.overhead_water
+                    item.overhead_gas = order.overhead_gas
+                    item.overhead_rent = order.overhead_rent
+                    item.overhead_salaries = order.overhead_salaries
+                    item.overhead_other = order.overhead_other
+                    item.save()
             
             # Mark as applied
             cost_allocation.status = 'applied'

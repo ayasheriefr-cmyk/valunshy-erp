@@ -187,14 +187,8 @@ class QuickSellView(APIView):
             
             # Labor: If estimated price > gold val, diff is labor. Else custom logic (100 minimal).
             # Robust logic:
-            # labor_val = (item.gross_weight * item.labor_fee_per_gram) + item.fixed_labor_fee + item.retail_margin
-            # But simpler for legacy data:
-            est_price = item.estimated_price or 0
-            if est_price > gold_val:
-                labor_val = est_price - gold_val
-            else:
-                labor_val = Decimal('100.00')
-
+            labor_val = (item.gross_weight * item.labor_fee_per_gram) + item.fixed_labor_fee + item.retail_margin
+            
             subtotal = gold_val + labor_val
             total_with_tax = subtotal * Decimal('1.15') # VAT
             

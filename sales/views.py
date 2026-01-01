@@ -69,41 +69,59 @@ def profitability_report(request):
     from django.utils import timezone
     import datetime
 
-    # 1. Date Filtering
+    # 1. Advanced Filtering
     start_date_str = request.GET.get('start_date')
     end_date_str = request.GET.get('end_date')
+    branch_id = request.GET.get('branch')
+    sales_rep_id = request.GET.get('sales_rep')
+    category_id = request.GET.get('category')
     
     today = timezone.localtime(timezone.now()).date()
     start_date = today - datetime.timedelta(days=30)
     end_date = today
 
     if start_date_str:
-        start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        try: start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+        except: pass
     if end_date_str:
-        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        try: end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+        except: pass
 
-    # Filter confirmed invoices in range
+    # Base Query
     invoices = Invoice.objects.filter(
         created_at__date__gte=start_date, 
         created_at__date__lte=end_date, 
         status='confirmed'
     )
     
-    invoice_items = InvoiceItem.objects.filter(invoice__in=invoices)
+    # Apply Invoice Filters
+    if branch_id:
+        invoices = invoices.filter(branch_id=branch_id)
+    if sales_rep_id:
+        invoices = invoices.filter(sales_rep_id=sales_rep_id)
+        
+    invoice_items = InvoiceItem.objects.filter(invoice__in=invoices).select_related('item', 'item__category')
+    
+    # Apply Item Filters
+    if category_id:
+        invoice_items = invoice_items.filter(item__category_id=category_id)
+
+    # Re-evaluate invoices based on filtered items if category is selected
+    if category_id:
+        invoices = invoices.filter(items__item__category_id=category_id).distinct()
 
     # 2. Key Metrics
-    total_sales = invoices.aggregate(Sum('grand_total'))['grand_total__sum'] or 0
-    total_profit = sum(inv.total_profit for inv in invoices)
-    total_cost = total_sales - total_profit
-    margin_pct = (total_profit / total_sales * 100) if total_sales > 0 else 0
+    total_sales = sum(item.subtotal for item in invoice_items)
+    total_profit = sum(item.profit for item in invoice_items)
+    total_cost = float(total_sales) - float(total_profit)
+    margin_pct = (float(total_profit) / float(total_sales) * 100) if total_sales > 0 else 0
 
-    # 3. Item Ranking (Top Profitable)
-    # We manually calculate per item-type (Grouped by barcode/name)
+    # 3. Item Ranking
     item_stats = {}
     for item in invoice_items:
-        key = item.item.name
+        key = f"{item.item.name} ({item.item.barcode})"
         if key not in item_stats:
-            item_stats[key] = {'sales': 0, 'profit': 0, 'qty': 0, 'barcode': item.item.barcode}
+            item_stats[key] = {'sales': 0, 'profit': 0, 'qty': 0}
         item_stats[key]['sales'] += float(item.subtotal)
         item_stats[key]['profit'] += float(item.profit)
         item_stats[key]['qty'] += 1
@@ -121,15 +139,27 @@ def profitability_report(request):
 
     ranked_categories = sorted(category_stats.items(), key=lambda x: x[1]['profit'], reverse=True)
 
+    # 5. Metadata for Filter Dropdowns
+    from inventory.models import Branch as InvBranch
+    from .models import SalesRepresentative
+    
     context = {
         'total_sales': total_sales,
         'total_profit': total_profit,
         'total_cost': total_cost,
         'margin_pct': margin_pct,
-        'ranked_items': ranked_items[:20], # Top 20
+        'ranked_items': ranked_items[:20],
         'ranked_categories': ranked_categories,
         'start_date': start_date,
         'end_date': end_date,
+        # Filters
+        'branches': InvBranch.objects.all(),
+        'sales_reps': SalesRepresentative.objects.all(),
+        'categories': Category.objects.all(),
+        'selected_branch': branch_id,
+        'selected_rep': sales_rep_id,
+        'selected_cat': category_id,
     }
+
 
     return render(request, 'sales/profitability_report.html', context)

@@ -192,6 +192,21 @@ class QuickSellView(APIView):
             subtotal = gold_val + labor_val
             total_with_tax = subtotal * Decimal('1.15') # VAT
             
+            # Determine Branch (Critical for Invoice)
+            invoice_branch = item.current_branch
+            if not invoice_branch:
+                # Fallback: Try obtaining from SalesRep profile
+                if hasattr(request.user, 'salesrepresentative'):
+                    invoice_branch = request.user.salesrepresentative.branch
+                
+                # Fallback: Default to first branch if Admin
+                if not invoice_branch and request.user.is_superuser:
+                    from core.models import Branch
+                    invoice_branch = Branch.objects.first()
+            
+            if not invoice_branch:
+                return Response({"error": "Cannot create invoice: Item has no branch and user has no assigned branch."}, status=400)
+            
             # 4. Create Invoice
             import random
             # Invoice Number: "INV-YYYY-XXXX"
@@ -200,7 +215,7 @@ class QuickSellView(APIView):
             invoice = Invoice.objects.create(
                 invoice_number=inv_num,
                 customer=customer, # Can be Null
-                branch=item.current_branch, 
+                branch=invoice_branch, 
                 status='paid', # Direct Sale = Paid/Completed immediately? Or 'pending'? 
                                # Dashboard sales usually implied immediate handover. Let's say 'paid' or 'approved'.
                 created_by=request.user,

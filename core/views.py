@@ -13,7 +13,7 @@ import datetime
 def home_dashboard(request):
     # 0. Redirect Sales Reps
     if request.user.is_authenticated and hasattr(request.user, 'salesrepresentative'):
-        return redirect('sales_dashboard')
+        return redirect('sales:sales_dashboard')
 
     # 1. Sales Statistics (Today)
     today = timezone.localtime(timezone.now()).date()

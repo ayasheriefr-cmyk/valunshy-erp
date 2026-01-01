@@ -131,26 +131,23 @@
             position: relative;
         }
 
-        .item-info h3 {
-            margin: 0 0 5px 0;
-            font-size: 15px;
+        .item-info h4 {
+            margin: 0;
+            font-size: 14px;
             color: var(--primary);
         }
 
         .item-meta {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
-            line-height: 1.4;
+            line-height: 1.2;
         }
 
-        .item-details-row {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px hide solid #333;
+        .item-price-est {
+            color: #4CAF50;
+            font-weight: bold;
             font-size: 13px;
+            margin: 0 10px;
         }
 
         .item-weight {
@@ -526,19 +523,24 @@
         }
 
         async function loadPrices() {
+            console.log("Fetching gold prices...");
             try {
                 const res = await fetch('/sales/api/prices/', {
                     headers: { 'Authorization': `Token ${token}` }
                 });
                 if (res.ok) {
                     const data = await res.json();
+                    console.log('Gold Prices received:', data);
                     data.forEach(p => {
                         goldPrices[p.carat] = parseFloat(p.price_per_gram);
                     });
-                    console.log('Gold Prices updated:', goldPrices);
+                } else {
+                    console.error("Prices API returned error:", res.status);
+                    const errText = await res.text();
+                    console.error("Error bodies:", errText);
                 }
             } catch (e) {
-                console.error("Failed to load prices", e);
+                console.error("Failed to load prices exception:", e);
             }
         }
 
@@ -599,41 +601,25 @@
                     el.style.display = 'flex';
                     el.style.alignItems = 'center';
                     el.style.padding = '10px';
+                    el.style.marginBottom = '8px';
 
                     el.innerHTML = `
-                    <div style="width: 40px; height: 40px; background: #333; border-radius: 8px; display:flex; align-items:center; justify-content:center; color:var(--primary); margin-left: 10px;">
-                        <i class="fa-solid fa-gem"></i>
-                    </div>
-                    <div class="item-info" style="flex: 1;">
-                        <div style="display:flex; justify-content:space-between; align-items: baseline;">
+                        <div style="width: 40px; height: 40px; background: #333; border-radius: 8px; display:flex; align-items:center; justify-content:center; color:var(--primary); margin-left:10px;">
+                            <i class="fa-solid fa-gem"></i>
+                        </div>
+                        <div class="item-info" style="flex: 1;">
                             <h4 style="margin:0; font-size:14px;">${item.name}</h4>
-                            <span style="font-size:9px; color:#888;">${item.barcode}</span>
+                            <div class="item-meta">
+                                ${item.carat_name} | ${item.net_gold_weight} جم
+                            </div>
                         </div>
-                        <div class="item-meta" style="font-size:11px;">
-                            ${item.carat_name} | ${item.net_gold_weight} جم
+                        <div class="item-price-est">
+                             ${parseFloat(item.estimated_price || 0).toFixed(0)} ج.م
                         </div>
-                    </div>
-                    <div class="item-price-est" style="margin: 0 10px; font-size: 13px; font-weight: bold; color: #4CAF50; min-width: 70px; text-align: left;">
-                         ...
-                    </div>
-                    <button class="btn-add" onclick='addToCart(event, ${JSON.stringify(item)})' style="position: static; background: #4CAF50; color: white; width:30px; height:30px; font-size:14px;">
-                        <i class="fa-solid fa-plus"></i>
-                    </button>
-                `;
-
-                    // Update estimated price if goldPrices available
-                    setTimeout(() => {
-                        const priceSpan = el.querySelector('.item-price-est');
-                        const goldPrice = goldPrices[item.carat] || 0;
-                        if (goldPrice > 0) {
-                            const labor = parseFloat(item.estimated_price) - (item.net_gold_weight * goldPrice);
-                            const total = (item.net_gold_weight * goldPrice) + (labor || 100);
-                            priceSpan.innerText = total.toFixed(0) + ' ج.م';
-                        } else {
-                            priceSpan.innerText = parseFloat(item.estimated_price || 0).toFixed(0) + ' ج.م';
-                        }
-                    }, 200);
-
+                        <button class="btn-add" onclick='addToCart(event, ${JSON.stringify(item)})' style="position:static; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                            <i class="fa-solid fa-plus" style="font-size:14px;"></i>
+                        </button>
+                    `;
                     container.appendChild(el);
                 });
             }

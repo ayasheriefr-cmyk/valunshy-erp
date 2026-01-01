@@ -20,6 +20,16 @@ class ExportImportMixin:
     change_list_template = "admin/import_export_changelist.html"
     exclude_fields = ['id', 'created_at', 'updated_at'] 
     
+    def get_form(self, request, obj=None, **kwargs):
+        """Apply HTML5 date picker to all date fields"""
+        form = super().get_form(request, obj, **kwargs)
+        # Apply date picker to all DateField instances
+        for field_name, field in form.base_fields.items():
+            if isinstance(field, forms.DateField):
+                field.widget = forms.DateInput(attrs={'type': 'date', 'class': 'vDateField'})
+        return form
+     
+    
     def get_urls(self):
         urls = super().get_urls()
         my_urls = [

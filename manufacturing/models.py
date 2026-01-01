@@ -556,6 +556,10 @@ class CostAllocation(models.Model):
     ]
     status = models.CharField("الحالة", max_length=20, choices=STATUS_CHOICES, default='draft')
     
+    cost_center = models.ForeignKey('finance.CostCenter', on_delete=models.SET_NULL, null=True, blank=True, 
+                                    verbose_name="مركز التكلفة", help_text="إذا تم الاختيار، سيتم جلب المصاريف الخاصة بهذا المركز فقط (مثل: المصنع)")
+    
+    
     # Statistics
     total_production_weight_snapshot = models.DecimalField("إجمالي الوزن المنتج في الفترة", max_digits=15, decimal_places=3, default=0, editable=False)
     total_labor_cost_snapshot = models.DecimalField("إجمالي أجور التصنيع في الفترة", max_digits=15, decimal_places=2, default=0, editable=False)
@@ -583,11 +587,16 @@ class CostAllocation(models.Model):
         from decimal import Decimal
         
         # Filter for paid vouchers in the period
-        vouchers = ExpenseVoucher.objects.filter(
-            date__gte=self.start_date,
-            date__lte=self.end_date,
-            status='paid' # Only confirmed payments
-        )
+        query = {
+            'date__gte': self.start_date,
+            'date__lte': self.end_date,
+            'status': 'paid'
+        }
+        if self.cost_center:
+            query['cost_center'] = self.cost_center
+            
+        vouchers = ExpenseVoucher.objects.filter(**query)
+    
         
         # Mapping categories to model fields
         mapping = {

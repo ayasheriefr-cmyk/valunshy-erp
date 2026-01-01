@@ -575,7 +575,7 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
             )
         }),
         ('إعدادات التوزيع', {
-            'fields': (('allocation_basis', 'status'),)
+            'fields': (('allocation_basis', 'status'), ('cost_center',))
         }),
         ('إحصائيات (بعد التطبيق)', {
             'fields': (('total_production_weight_snapshot', 'total_labor_cost_snapshot'), ('created_at', 'updated_at')),

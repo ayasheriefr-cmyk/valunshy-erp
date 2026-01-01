@@ -502,12 +502,12 @@ class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
     
     def total_overhead_display(self, obj):
         total = obj.total_overhead
-        return format_html('<span style="color:#FF9800; font-weight:bold;">{:.2f} ج.م</span>', total)
+        return format_html('<span style="color:#FF9800; font-weight:bold;">{:,.2f} ج.م</span>', float(total or 0))
     total_overhead_display.short_description = 'إجمالي التكاليف الصناعية'
     
     def total_making_cost_display(self, obj):
         total = obj.total_making_cost
-        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:15px;">{:.2f} ج.م</span>', total)
+        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:15px;">{:,.2f} ج.م</span>', float(total or 0))
     total_making_cost_display.short_description = 'التكلفة الكلية للتصنيع'
     
     class Media:
@@ -561,19 +561,33 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     list_display = ('period_name', 'start_date', 'end_date', 'total_overhead_display', 'allocation_basis', 'status_badge', 'orders_count')
     list_filter = ('status', 'allocation_basis')
     search_fields = ('period_name',)
+    
+    readonly_fields = (
+        'total_overhead_display', 
+        'total_labor_income_display', 
+        'total_labor_cost_display', 
+        'net_labor_profit_display', 
+        'total_production_weight_display',
+        'total_production_weight_snapshot', # Actual non-editable field
+        'total_labor_cost_snapshot',        # Actual non-editable field
+        'total_labor_income_snapshot',      # Actual non-editable field
+        'net_labor_profit_snapshot',         # Actual non-editable field
+        'created_at', 'updated_at', 'orders_count'
+    )
 
     fieldsets = (
         ('الفترة الزمنية', {
             'fields': (('period_name',), ('start_date', 'end_date'))
         }),
-        ('إجمالي التكاليف', {
+        ('إجمالي التكاليف التشغيلية', {
             'fields': (
                 ('total_electricity', 'total_water'),
                 ('total_gas', 'total_rent'),
                 ('total_salaries', 'total_other'),
-            )
+            ),
+            'description': 'سيتم توزيع هذه المصاريف على الأوامر بناءً على أساس التوزيع المختار.'
         }),
-        ('إعدادات التوزيع', {
+        ('إعدادات التوزيع والفرع', {
             'fields': (('allocation_basis', 'status'), ('cost_center',))
         }),
         ('ميزان الأجور ونتائج التصنيع', {
@@ -590,15 +604,14 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
         }),
     )
 
-    readonly_fields = ('total_overhead_display', 'total_labor_income_display', 'total_labor_cost_display', 'net_labor_profit_display', 'total_production_weight_display', 'created_at', 'updated_at', 'orders_count')
-
+    # --- Display Methods ---
+    
     def total_production_weight_display(self, obj):
         return format_html('<span style="font-weight:bold;">{} جم</span>', obj.total_production_weight_snapshot)
     total_production_weight_display.short_description = 'إجمالي الوزن المنتج'
-    
 
     def total_labor_income_display(self, obj):
-        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:1.2rem;">{} ج.م</span>', obj.total_labor_income_snapshot)
+        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:1.1rem;">{} ج.م</span>', obj.total_labor_income_snapshot)
     total_labor_income_display.short_description = 'إجمالي دخل المصنعية'
 
     def total_labor_cost_display(self, obj):
@@ -608,20 +621,33 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     def total_overhead_display(self, obj):
         return format_html('<span style="color:#607D8B; font-weight:bold;">{} ج.م</span>', obj.total_overhead_amount)
     total_overhead_display.short_description = 'إجمالي مصاريف التشغيل'
-    
-    
+
     def net_labor_profit_display(self, obj):
         color = '#4CAF50' if obj.net_labor_profit_snapshot >= 0 else '#f44336'
         bg = 'rgba(76, 175, 80, 0.1)' if obj.net_labor_profit_snapshot >= 0 else 'rgba(244, 67, 54, 0.1)'
         return format_html(
             '<div style="background:{}; color:{}; padding:10px 20px; border-radius:10px; text-align:center; border:2px solid {};">'
-            '<span style="font-size:1.4rem; font-weight:900;">{} ج.م</span><br>'
+            '<span style="font-size:1.3rem; font-weight:900;">{} ج.م</span><br>'
             '<small style="font-weight:bold; opacity:0.8;">صافي نتيجة التصنيع</small>'
             '</div>',
             bg, color, color, obj.net_labor_profit_snapshot
         )
     net_labor_profit_display.short_description = 'صافي الربح/الخسارة'
-    
+
+    def orders_count(self, obj):
+        count = ManufacturingOrder.objects.filter(cost_allocation=obj).count()
+        return format_html('<span style="font-weight:bold;">{}</span>', count)
+    orders_count.short_description = 'عدد الأوامر'
+
+    def status_badge(self, obj):
+        colors = {'draft': '#FF9800', 'applied': '#4CAF50'}
+        color = colors.get(obj.status, '#666')
+        return format_html(
+            '<span style="background:{}22; color:{}; padding:4px 12px; border-radius:15px; font-weight:bold;">{}</span>',
+            color, color, obj.get_status_display()
+        )
+    status_badge.short_description = 'الحالة'
+
     
     actions = ['fetch_expenses_action', 'apply_cost_allocation']
 
@@ -639,28 +665,7 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     fetch_expenses_action.short_description = '🔄 جلب المصاريف من الخزينة (تلقائياً)'
     
     
-    def total_overhead_display(self, obj):
-        total = obj.total_overhead_amount
-        return format_html('<span style="color:#4CAF50; font-weight:bold;">{} ج.م</span>', total)
-    total_overhead_display.short_description = 'إجمالي التكاليف'
-    
-    def status_badge(self, obj):
-        colors = {
-            'draft': '#FF9800',
-            'applied': '#4CAF50',
-        }
-        color = colors.get(obj.status, '#666')
-        return format_html(
-            '<span style="background:{}22; color:{}; padding:4px 12px; border-radius:15px; font-weight:bold;">{}</span>',
-            color, color, obj.get_status_display()
-        )
-    status_badge.short_description = 'الحالة'
-    
-    def orders_count(self, obj):
-        count = ManufacturingOrder.objects.filter(cost_allocation=obj).count()
-        return format_html('<span style="font-weight:bold;">{}</span>', count)
-    orders_count.short_description = 'عدد الأوامر المرتبطة'
-    
+
     def apply_cost_allocation(self, request, queryset):
         from django.contrib import messages
         from django.db.models import Sum

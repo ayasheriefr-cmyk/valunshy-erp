@@ -8,4 +8,4 @@ cmds = ["python -m venv /opt/venv && /opt/venv/bin/pip install --upgrade pip && 
 cmds = ["/opt/venv/bin/python manage.py collectstatic --noinput"]
 
 [start]
-cmd = "/opt/venv/bin/gunicorn backend.wsgi"
+cmd = "/opt/venv/bin/gunicorn backend.wsgi:application"

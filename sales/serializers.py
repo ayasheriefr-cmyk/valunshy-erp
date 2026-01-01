@@ -210,7 +210,7 @@ class SalesRepSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = SalesRepresentative
-        fields = ['id', 'name', 'total_sales', 'total_commission', 'transactions_count', 'recent_invoices']
+        fields = ['id', 'name', 'total_sales', 'total_commission', 'transactions_count', 'recent_invoices', 'branch']
 
     def get_recent_invoices(self, obj):
         # Limit to last 10 invoices

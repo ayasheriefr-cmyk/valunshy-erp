@@ -365,6 +365,7 @@
     <script>
         let token = localStorage.getItem('token');
         let cart = [];
+        let repBranch = 1; // Default fallback
 
         // --- Init ---
         if (token) {
@@ -520,6 +521,7 @@
                     console.log('Profile data:', data);
                     document.getElementById('rep-name').innerText = data.name;
                     document.getElementById('sales-total').innerText = parseFloat(data.total_sales).toFixed(0) + ' ج.م';
+                    if (data.branch) repBranch = data.branch;
 
                     // Render Recent Sales
                     renderRecentSales(data.recent_invoices);
@@ -740,8 +742,8 @@
 
             // Prepare Invoice Payload
             const payload = {
-                customer: customerId || null, // Should add customer selection
-                branch: 1, // Default branch for now
+                customer: customerId || null,
+                branch: repBranch,
                 payment_method: "cash",
                 items: cart.map(item => {
                     const weight = parseFloat(item.net_gold_weight);

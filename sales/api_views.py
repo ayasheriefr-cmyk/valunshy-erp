@@ -55,6 +55,8 @@ class GoldPriceView(APIView):
     def get(self, request):
         prices = GoldPrice.objects.all()
         serializer = GoldPriceSerializer(prices, many=True)
+        return Response(serializer.data)
+
 from crm.models import Customer
 from crm.serializers import CustomerSerializer # Assuming this exists or creates a simple one
 

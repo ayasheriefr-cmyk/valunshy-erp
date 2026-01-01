@@ -501,13 +501,13 @@ class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
     scrap_percentage_display.short_description = 'نسبة الهالك (مع التنبيه)'
     
     def total_overhead_display(self, obj):
-        total = obj.total_overhead
-        return format_html('<span style="color:#FF9800; font-weight:bold;">{:,.2f} ج.م</span>', float(total or 0))
+        val = float(obj.total_overhead or 0)
+        return format_html('<span style="color:#FF9800; font-weight:bold;">{} ج.م</span>', f"{val:,.2f}")
     total_overhead_display.short_description = 'إجمالي التكاليف الصناعية'
     
     def total_making_cost_display(self, obj):
-        total = obj.total_making_cost
-        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:15px;">{:,.2f} ج.م</span>', float(total or 0))
+        val = float(obj.total_making_cost or 0)
+        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:15px;">{} ج.م</span>', f"{val:,.2f}")
     total_making_cost_display.short_description = 'التكلفة الكلية للتصنيع'
     
     class Media:
@@ -607,30 +607,35 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     # --- Display Methods ---
     
     def total_production_weight_display(self, obj):
-        return format_html('<span style="font-weight:bold;">{} جم</span>', obj.total_production_weight_snapshot)
+        val = float(obj.total_production_weight_snapshot or 0)
+        return format_html('<span style="font-weight:bold;">{} جم</span>', f"{val:,.2f}")
     total_production_weight_display.short_description = 'إجمالي الوزن المنتج'
 
     def total_labor_income_display(self, obj):
-        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:1.1rem;">{} ج.م</span>', obj.total_labor_income_snapshot)
+        val = float(obj.total_labor_income_snapshot or 0)
+        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:1.1rem;">{} ج.م</span>', f"{val:,.2f}")
     total_labor_income_display.short_description = 'إجمالي دخل المصنعية'
 
     def total_labor_cost_display(self, obj):
-        return format_html('<span style="color:#f44336; font-weight:bold;">{} ج.م</span>', obj.total_labor_cost_snapshot)
+        val = float(obj.total_labor_cost_snapshot or 0)
+        return format_html('<span style="color:#f44336; font-weight:bold;">{} ج.م</span>', f"{val:,.2f}")
     total_labor_cost_display.short_description = 'أجور الورش الخارجية'
     
     def total_overhead_display(self, obj):
-        return format_html('<span style="color:#607D8B; font-weight:bold;">{} ج.م</span>', obj.total_overhead_amount)
+        val = float(obj.total_overhead_amount or 0)
+        return format_html('<span style="color:#607D8B; font-weight:bold;">{} ج.م</span>', f"{val:,.2f}")
     total_overhead_display.short_description = 'إجمالي مصاريف التشغيل'
 
     def net_labor_profit_display(self, obj):
-        color = '#4CAF50' if obj.net_labor_profit_snapshot >= 0 else '#f44336'
-        bg = 'rgba(76, 175, 80, 0.1)' if obj.net_labor_profit_snapshot >= 0 else 'rgba(244, 67, 54, 0.1)'
+        profit = float(obj.net_labor_profit_snapshot or 0)
+        color = '#4CAF50' if profit >= 0 else '#f44336'
+        bg = 'rgba(76, 175, 80, 0.1)' if profit >= 0 else 'rgba(244, 67, 54, 0.1)'
         return format_html(
             '<div style="background:{}; color:{}; padding:10px 20px; border-radius:10px; text-align:center; border:2px solid {};">'
             '<span style="font-size:1.3rem; font-weight:900;">{} ج.م</span><br>'
             '<small style="font-weight:bold; opacity:0.8;">صافي نتيجة التصنيع</small>'
             '</div>',
-            bg, color, color, obj.net_labor_profit_snapshot
+            bg, color, color, f"{profit:,.2f}"
         )
     net_labor_profit_display.short_description = 'صافي الربح/الخسارة'
 

@@ -396,8 +396,9 @@
 
     <script>
         let token = localStorage.getItem('token');
-        let cart = [];
-        let repBranch = 1; // Default fallback
+        let customers = [];
+        let goldPrices = {}; // Initialize correctly
+        let repBranch = null;
 
         // --- Init ---
         if (token) {
@@ -607,8 +608,8 @@
                         <div style="width: 40px; height: 40px; background: #333; border-radius: 8px; display:flex; align-items:center; justify-content:center; color:var(--primary); margin-left:10px;">
                             <i class="fa-solid fa-gem"></i>
                         </div>
-                        <div class="item-info" style="flex: 1;">
-                            <h4 style="margin:0; font-size:14px;">${item.name}</h4>
+                        <div class="item-info" style="flex: 1; overflow: hidden; padding-right: 5px;">
+                            <h4 style="margin:0; font-size:14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.name}</h4>
                             <div class="item-meta">
                                 ${item.carat_name} | ${item.net_gold_weight} جم
                             </div>

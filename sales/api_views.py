@@ -141,3 +141,92 @@ class CustomerOrderView(APIView):
         # Ideally: item.status = 'reserved'
         
         return Response({"message": "Order placed successfully", "order_number": invoice.invoice_number}, status=201)
+
+# 7. Quick Sell API (For Dashboard)
+class QuickSellView(APIView):
+    """
+    Simplified Invoice Creation for Dashboard.
+    Accepts item_id and customer_id.
+    Calculates price automatically based on current date.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        item_id = request.data.get('item_id')
+        customer_id = request.data.get('customer_id') # Can be None/Empty for Cash
+
+        if not item_id:
+             return Response({"error": "Item ID is required"}, status=400)
+        
+        # 1. Get Item
+        try:
+             item = Item.objects.get(id=item_id, status='available')
+        except Item.DoesNotExist:
+             return Response({"error": "Item not found or unavailable"}, status=404)
+
+        # 2. Get Customer
+        customer = None
+        if customer_id:
+            try:
+                customer = Customer.objects.get(id=customer_id)
+            except Customer.DoesNotExist:
+                pass # Treat as Cash if invalid ID? Or error? Let's treat as Cash/None.
+        
+        # 3. Calculate Price
+        from core.models import GoldPrice
+        latest_price = GoldPrice.objects.filter(carat=item.carat).order_by('-updated_at').first()
+        if not latest_price:
+             return Response({"error": f"Gold price not set for {item.carat.name}"}, status=400)
+
+        price_per_gram = latest_price.price_per_gram
+        gold_val = item.net_gold_weight * price_per_gram
+        
+        # Labor: If estimated price > gold val, diff is labor. Else custom logic (100 minimal).
+        # Robust logic:
+        # labor_val = (item.gross_weight * item.labor_fee_per_gram) + item.fixed_labor_fee + item.retail_margin
+        # But simpler for legacy data:
+        est_price = item.estimated_price or 0
+        if est_price > gold_val:
+            labor_val = est_price - gold_val
+        else:
+            labor_val = Decimal('100.00')
+
+        subtotal = gold_val + labor_val
+        total_with_tax = subtotal * Decimal('1.15') # VAT
+        
+        # 4. Create Invoice
+        import random
+        # Invoice Number: "INV-YYYY-XXXX"
+        inv_num = f"INV-{random.randint(100000, 999999)}"
+        
+        invoice = Invoice.objects.create(
+            invoice_number=inv_num,
+            customer=customer, # Can be Null
+            branch=item.current_branch, 
+            status='paid', # Direct Sale = Paid/Completed immediately? Or 'pending'? 
+                           # Dashboard sales usually implied immediate handover. Let's say 'paid' or 'approved'.
+            created_by=request.user,
+            payment_method='cash',
+            
+            total_gold_value=gold_val,
+            total_labor_value=labor_val,
+            grand_total=total_with_tax,
+            total_tax=subtotal * Decimal('0.15')
+        )
+        
+        # Link Item
+        from .models import InvoiceItem
+        InvoiceItem.objects.create(
+            invoice=invoice,
+            item=item,
+            sold_weight=item.net_gold_weight,
+            sold_gold_price=price_per_gram,
+            sold_labor_fee=labor_val,
+            subtotal=subtotal
+        )
+        
+        # Mark Item Sold
+        item.status = 'sold'
+        item.save()
+        
+        return Response({"message": "Sale recorded", "invoice_number": inv_num}, status=201)

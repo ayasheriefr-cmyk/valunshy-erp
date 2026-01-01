@@ -1,0 +1,411 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f6f9;
+        direction: rtl;
+    }
+
+    .dashboard-container {
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 10px;
+    }
+
+    .card-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    /* Inventory Table */
+    .table-container {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    th,
+    td {
+        padding: 12px;
+        text-align: right;
+        border-bottom: 1px solid #eee;
+    }
+
+    th {
+        background-color: #f8f9fa;
+        color: #555;
+        font-weight: 600;
+    }
+
+    .btn-action {
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        border: none;
+        font-weight: bold;
+        transition: 0.2s;
+    }
+
+    .btn-sell {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .btn-sell:hover {
+        background-color: #218838;
+    }
+
+    /* Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-content {
+        background-color: #fefefe;
+        margin: 10% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 90%;
+        max-width: 500px;
+        border-radius: 10px;
+        position: relative;
+    }
+
+    .close {
+        color: #aaa;
+        float: left;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
+
+    /* Search Bar */
+    .search-box {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+
+    <!-- Welcome Section -->
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">لوحة مبيعات المندوب - {{ request.user.first_name }}</div>
+            <div style="color: #666;">
+                التاريخ: {% now "Y-m-d" %}
+            </div>
+        </div>
+        <div>
+            <strong>رصيد المبيعات اليوم:</strong>
+            <span style="color: #28a745; font-size: 1.2em; font-weight: bold;">
+                <!-- Total calculations can be added here -->
+                --- ج.م
+            </span>
+        </div>
+    </div>
+
+    <div class="row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+
+        <!-- Inventory Section -->
+        <div style="flex: 2; min-width: 300px;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fa-solid fa-boxes-stacked"></i> المنتجات المتاحة</div>
+                </div>
+
+                <input type="text" id="searchInput" class="search-box"
+                    placeholder="بحث باسم المنتج، الباركود، أو العيار..." onkeyup="filterTable()">
+
+                <div class="table-container">
+                    <table id="inventoryTable">
+                        <thead>
+                            <tr>
+                                <th>الصنف</th>
+                                <th>العيار</th>
+                                <th>الوزن</th>
+                                <th>السعر التقديري</th>
+                                <th>إجراء</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td>
+                                    <div style="font-weight: bold;">{{ item.name }}</div>
+                                    <div style="font-size: 0.85em; color: #888;">{{ item.barcode }}</div>
+                                </td>
+                                <td>{{ item.carat.name }}</td>
+                                <td>{{ item.net_gold_weight }} جم</td>
+                                <td class="price-cell" data-carat="{{ item.carat.name }}">{{
+                                    item.estimated_price|floatformat:0 }} ج.م</td>
+                                <td>
+                                    <button class="btn-action btn-sell"
+                                        onclick="openSellModal('{{ item.id }}', '{{ item.name }}', '{{ item.net_gold_weight }}', '{{ item.carat.name }}')">
+                                        <i class="fa-solid fa-cart-shopping"></i> بيع
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 20px;">لا توجد منتجات متاحة حالياً
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Invoices -->
+        <div style="flex: 1; min-width: 300px;">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> آخر الفواتير</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    {% for inv in recent_invoices %}
+                    <div style="border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between;">
+                            <strong>{{ inv.invoice_number }}</strong>
+                            <span style="color: #28a745;">{{ inv.grand_total|floatformat:0 }} ج.م</span>
+                        </div>
+                        <div style="font-size: 0.9em; color: #666;">
+                            {{ inv.customer.name|default:"عميل نقدي" }}
+                        </div>
+                        <div style="font-size: 0.8em; color: #aaa;">
+                            {{ inv.created_at|date:"H:i" }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div style="text-align: center; color: #888;">لا توجد فواتير اليوم</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Sell Modal -->
+<div id="sellModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <h3 style="margin-top: 0;">إتمام عملية البيع</h3>
+
+        <div style="background: #f9f9f9; padding: 10px; border-radius: 5px; margin-bottom: 15px;">
+            <div id="modalItemName" style="font-weight: bold;"></div>
+            <div id="modalItemDetails" style="font-size: 0.9em; color: #666;"></div>
+        </div>
+
+        <div class="form-group">
+            <label>العميل:</label>
+            <select id="customerSelect" class="form-control">
+                <option value="">-- عميل نقدي (افتراضي) --</option>
+                {% for c in customers %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <input type="hidden" id="selectedItemId">
+
+        <button id="btnConfirmSell" class="btn-action btn-sell" style="width: 100%; padding: 12px; font-size: 16px;"
+            onclick="confirmSell()">
+            تأكيد وإنشاء الفاتورة
+        </button>
+    </div>
+</div>
+
+<script>
+    // Search Function
+    function filterTable() {
+        const input = document.getElementById("searchInput");
+        const filter = input.value.toUpperCase();
+        const table = document.getElementById("inventoryTable");
+        const tr = table.getElementsByTagName("tr");
+
+        for (let i = 1; i < tr.length; i++) {
+            const tds = tr[i].getElementsByTagName("td");
+            let txtValue = "";
+            if (tds.length > 0) {
+                txtValue += tds[0].textContent || tds[0].innerText;
+                txtValue += tds[1].textContent || tds[1].innerText;
+
+                if (txtValue.toUpperCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+        }
+    }
+
+    // Modal Functions
+    const modal = document.getElementById("sellModal");
+
+    function openSellModal(id, name, weight, carat) {
+        document.getElementById('selectedItemId').value = id;
+        document.getElementById('modalItemName').innerText = name;
+        document.getElementById('modalItemDetails').innerText = `${carat} | ${weight} جم`;
+        modal.style.display = "block";
+    }
+
+    function closeModal() {
+        modal.style.display = "none";
+    }
+
+    window.onclick = function (event) {
+        if (event.target == modal) {
+            closeModal();
+        }
+    }
+
+    // Sell API Call
+    async function confirmSell() {
+        const itemId = document.getElementById('selectedItemId').value;
+        const customerId = document.getElementById('customerSelect').value;
+        const btn = document.getElementById('btnConfirmSell');
+
+        if (!itemId) return;
+
+        btn.disabled = true;
+        btn.innerText = "جاري التنفيذ...";
+
+        // Construct Payload (Mimic Mobile App Logic)
+        // Ideally we fetch price again or pass it, but simpler to use existing API
+
+        // 1. Get Live Price for the item (We check context or fetch)
+        // For simplicity, we'll let the backend validate/fetch price logic if possible
+        // But the API expects 'sold_gold_price'. We need to be careful.
+
+        // Let's use the simplest approach: Call the same API as Mobile App
+        // We need to construct the item payload.
+        // Since we are in a pure View, maybe we should have used a Django Form View?
+        // But to pass "Live" prices, JS is better.
+
+        // Quick fetch to get item details + price again? 
+        // Or assume the rendered price is close enough?
+        // Let's fetch catalog API again to be safe about price? No, that's slow.
+
+        // Let's use the prices passed in context if possible, or fetch.
+        // We actually need the 'token'.
+        // Wait, this is a Session-based view (dashboard), but the API uses Token Auth?
+        // We might need to handle Auth.
+        // If we are logged in via Django Session, we might not have a Token ready in localstorage.
+        // We should use Session Auth for the API if possible, OR just a regular Django View submit.
+
+        // PLAN B: Use standard Django POST form submission to a new view `sales_create_invoice`?
+        // OR: Use the API but ensure it accepts SessionAuthentication.
+
+        // Let's try Using fetch with X-CSRFToken for Session Auth.
+
+        try {
+            // We need price. 
+            // We can get net_weight from the row? Or fetch item data?
+            // Let's simplify: "Sell" just sends Item ID and Customer ID. Server handles the rest.
+            // But existing `CreateInvoiceView` expects full details.
+
+            // Refactoring `CreateInvoiceView` or making a new simple endpoint `api/quick-sell/`?
+            // Let's make a new endpoint in `sales/api_views.py` called `QuickSellView`.
+
+            const csrftoken = getCookie('csrftoken');
+
+            const res = await fetch('/sales/api/quick-sell/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    item_id: itemId,
+                    customer_id: customerId
+                })
+            });
+
+            if (res.ok) {
+                alert("تم بيع المنتج بنجاح!");
+                location.reload();
+            } else {
+                const err = await res.json();
+                alert("خطأ: " + JSON.stringify(err));
+                btn.disabled = false;
+                btn.innerText = "تأكيد وإنشاء الفاتورة";
+            }
+
+        } catch (e) {
+            console.error(e);
+            alert("حدث خطأ غير متوقع");
+            btn.disabled = false;
+        }
+    }
+
+    // Helper for CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

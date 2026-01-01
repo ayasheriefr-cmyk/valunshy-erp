@@ -25,6 +25,7 @@ from core.gm_views import gm_dashboard
 
 urlpatterns = [
 
+    path('accounts/login/', admin.site.login), # Redirect standard login to Admin Login
     path('admin/gm-dashboard/', gm_dashboard, name='gm_dashboard'),
     path('admin/help/', TemplateView.as_view(template_name='admin/help.html'), name='admin_help'),
     path('admin/', admin.site.urls),

@@ -89,6 +89,7 @@ class SalesRepresentative(models.Model):
     name = models.CharField("اسم المندوب", max_length=100)
     phone = models.CharField("رقم الهاتف", max_length=20, blank=True)
     email = models.EmailField("البريد الإلكتروني", blank=True)
+    address = models.CharField("العنوان", max_length=500, blank=True, null=True)
     user = models.OneToOneField('auth.User', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="حساب المستخدم المرتبط", help_text="لتمكين الدخول من التطبيق")
     
     # Commission Structure

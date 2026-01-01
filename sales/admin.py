@@ -130,7 +130,7 @@ class SalesRepresentativeAdmin(ExportImportMixin, admin.ModelAdmin):
     
     fieldsets = (
         ('البيانات الأساسية', {
-            'fields': (('name', 'phone'), ('email', 'user'), 'branch')
+            'fields': (('name', 'phone'), ('email', 'user'), ('branch', 'address'))
         }),
         ('روابط الوصول والتطبيق', {
             'fields': ('display_app_link',),

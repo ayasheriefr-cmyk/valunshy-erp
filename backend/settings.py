@@ -41,6 +41,10 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://valunshy-erp-production.up.railway.app',
+]
+
 
 # Application definition
 

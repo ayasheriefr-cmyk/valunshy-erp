@@ -563,6 +563,15 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     search_fields = ('period_name',)
     readonly_fields = ('total_production_weight_snapshot', 'total_labor_cost_snapshot', 'created_at', 'updated_at')
     
+    # Add date picker widgets
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        # Add date picker widget with calendar icon
+        form.base_fields['start_date'].widget = admin.widgets.AdminDateWidget()
+        form.base_fields['end_date'].widget = admin.widgets.AdminDateWidget()
+        return form
+    
+    
     fieldsets = (
         ('الفترة الزمنية', {
             'fields': (('period_name',), ('start_date', 'end_date'))

@@ -192,7 +192,7 @@
         </a>
 
         <!-- Stats Grid -->
-        <section class="stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem;">
+        <section class="stats-grid" style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.5rem;">
 
             <div class="stat-card glass-card"
                 style="padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);">
@@ -216,6 +216,27 @@
                     <div
                         style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
                         {% if LANGUAGE_CODE == 'ar' %}مبيعات اليوم{% else %}Today's Sales{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Profit Card -->
+            <div class="stat-card glass-card"
+                style="padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; border: 1px solid rgba(255,255,255,0.05);">
+                <div
+                    style="width: 3.5rem; height: 3.5rem; background: rgba(33, 150, 243, 0.1); color: #2196F3; border-radius: 1.2rem; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <div>
+                    <div style="display: flex; align-items: baseline; gap: 8px;">
+                        <span style="font-size: 2.2rem; font-weight: 900; letter-spacing: -1px; color: #FFF;">
+                            {{ total_profit_today|floatformat:0 }}
+                        </span>
+                        <small style="color: var(--text-muted); font-size: 0.9rem; font-weight: 700;">EGP</small>
+                    </div>
+                    <div
+                        style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.4rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+                        {% if LANGUAGE_CODE == 'ar' %}صافي الربح{% else %}Net Profit{% endif %}
                     </div>
                 </div>
             </div>
@@ -640,6 +661,7 @@
 
     {{ chart_dates|json_script:"chart-dates-data" }}
     {{ chart_sales|json_script:"chart-sales-data" }}
+    {{ chart_profit|json_script:"chart-profit-data" }}
     {{ chart_carat_labels|json_script:"chart-labels-data" }}
     {{ chart_carat_values|json_script:"chart-values-data" }}
     <script>
@@ -668,7 +690,16 @@
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false },
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#888',
+                        font: { size: 10, weight: 'bold' },
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
                 tooltip: {
                     backgroundColor: 'rgba(0,0,0,0.8)',
                     titleColor: '#D4AF37',
@@ -697,6 +728,7 @@
 
         const chartDates = JSON.parse(document.getElementById('chart-dates-data').textContent);
         const chartSales = JSON.parse(document.getElementById('chart-sales-data').textContent);
+        const chartProfit = JSON.parse(document.getElementById('chart-profit-data').textContent);
         const chartLabels = JSON.parse(document.getElementById('chart-labels-data').textContent);
         const chartValues = JSON.parse(document.getElementById('chart-values-data').textContent);
 
@@ -704,17 +736,31 @@
             type: 'line',
             data: {
                 labels: chartDates,
-                datasets: [{
-                    data: chartSales,
-                    borderColor: '#D4AF37',
-                    borderWidth: 3,
-                    pointBackgroundColor: '#D4AF37',
-                    pointBorderColor: 'rgba(255,255,255,0.1)',
-                    pointHoverRadius: 6,
-                    fill: true,
-                    backgroundColor: gradient,
-                    tension: 0.4
-                }]
+                datasets: [
+                    {
+                        label: '{% if LANGUAGE_CODE == "ar" %}المبيعات{% else %}Sales{% endif %}',
+                        data: chartSales,
+                        borderColor: '#D4AF37',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#D4AF37',
+                        pointBorderColor: 'rgba(255,255,255,0.1)',
+                        pointHoverRadius: 6,
+                        fill: true,
+                        backgroundColor: gradient,
+                        tension: 0.4
+                    },
+                    {
+                        label: '{% if LANGUAGE_CODE == "ar" %}صافي الأرباح{% else %}Net Profit{% endif %}',
+                        data: chartProfit,
+                        borderColor: '#2196F3',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#2196F3',
+                        pointBorderColor: 'rgba(255,255,255,0.1)',
+                        pointHoverRadius: 6,
+                        fill: false,
+                        tension: 0.4
+                    }
+                ]
             },
             options: chartOptions
         });

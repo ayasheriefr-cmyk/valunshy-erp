@@ -18,8 +18,10 @@ def home_dashboard(request):
     # 1. Sales Statistics (Today)
     today = timezone.localtime(timezone.now()).date()
     
-    invoices_today = Invoice.objects.filter(created_at__date=today)
+    invoices_today = Invoice.objects.filter(created_at__date=today, status='confirmed')
     total_sales_today = invoices_today.aggregate(Sum('grand_total'))['grand_total__sum'] or 0
+    total_profit_today = sum(inv.total_profit for inv in invoices_today)
+    
     
     # Calculate % increase (vs yesterday)
     yesterday = today - datetime.timedelta(days=1)
@@ -77,11 +79,17 @@ def home_dashboard(request):
     # A. Sales Trend (Last 7 Days)
     dates = []
     sales_values = []
+    profit_values = []
     for i in range(6, -1, -1):
         d = today - datetime.timedelta(days=i)
         dates.append(d.strftime('%Y-%m-%d')) # Label
-        val = Invoice.objects.filter(created_at__date=d).aggregate(Sum('grand_total'))['grand_total__sum'] or 0
+        val_invoices = Invoice.objects.filter(created_at__date=d, status='confirmed')
+        val = val_invoices.aggregate(Sum('grand_total'))['grand_total__sum'] or 0
         sales_values.append(float(val))
+        
+        profit_val = sum(inv.total_profit for inv in val_invoices)
+        profit_values.append(float(profit_val))
+    
 
     # B. Inventory Breakdown by Carat (Items + Treasury)
     inventory_data = Item.objects.all().values('carat__name').annotate(total_weight=Sum('net_gold_weight'))
@@ -183,10 +191,13 @@ def home_dashboard(request):
         'estimated_inventory_value': estimated_inventory_value,
         'today_date': today,
         
+        'total_profit_today': total_profit_today,
         'chart_dates': dates,
         'chart_sales': sales_values,
+        'chart_profit': profit_values,
         'chart_carat_labels': carat_labels,
         'chart_carat_values': carat_values,
+    
         'workshop_gold_data': workshop_gold_data,
         
         'active_orders': active_orders,

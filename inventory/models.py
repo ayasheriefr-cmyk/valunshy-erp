@@ -83,7 +83,9 @@ class Item(models.Model):
         super().save(*args, **kwargs)
 
     def calculate_total_cost(self, gold_price_per_gram):
-        return (self.net_gold_weight * gold_price_per_gram) + (self.gross_weight * self.labor_fee_per_gram) + self.fixed_labor_fee
+        """حساب التكلفة الكلية تشمل مصاريف تشغيل المصنع الموزعة"""
+        return (self.net_gold_weight * gold_price_per_gram) + (self.gross_weight * self.labor_fee_per_gram) + self.fixed_labor_fee + self.total_overhead
+    
 
     class Meta:
         verbose_name = "قطعة ذهب"

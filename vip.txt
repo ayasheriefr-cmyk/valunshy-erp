@@ -1,8 +1,0 @@
-https://github.com/ayasheriefr-cmyk/valunshy-erp.git
-
-http://127.0.0.1:51839
-
-
-
-postgresql://postgres:KtZKTedzjfXfTgYrIEhGPZugJKBYGmVe@crossover.proxy.rlwy.net:40385/railway
-postgresql://${{PGUSER}}:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/${{PGDATABASE}}

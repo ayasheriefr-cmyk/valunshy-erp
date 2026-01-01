@@ -380,7 +380,9 @@
                 location.reload();
             } else {
                 const err = await res.json();
-                alert("خطأ: " + JSON.stringify(err));
+                // Prefer 'detail' (DRF default) or 'error' (Custom)
+                const msg = err.detail || err.error || JSON.stringify(err);
+                alert("خطأ: " + msg);
                 btn.disabled = false;
                 btn.innerText = "تأكيد وإنشاء الفاتورة";
             }

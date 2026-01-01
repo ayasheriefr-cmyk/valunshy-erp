@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from .models import ManufacturingOrder, ProductionStage, Workshop, Stone, OrderStone, OrderTool, WorkshopSettlement, InstallationTool, StoneCut, StoneModel, StoneSize, StoneCategoryGroup, ManufacturingCylinder, WorkshopTransfer
+from .models import ManufacturingOrder, ProductionStage, Workshop, Stone, OrderStone, OrderTool, WorkshopSettlement, InstallationTool, StoneCut, StoneModel, StoneSize, StoneCategoryGroup, ManufacturingCylinder, WorkshopTransfer, CostAllocation
 from core.admin_mixins import ExportImportMixin
 
 class ProductionStageInline(admin.TabularInline):
@@ -316,6 +316,17 @@ class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
                 ('total_stone_weight', 'labor_rate', 'manufacturing_pay'),
             )
         }),
+        ('تكاليف المصنع (الموزعة)', {
+            'fields': (
+                'cost_allocation',
+                ('overhead_electricity', 'overhead_water'),
+                ('overhead_gas', 'overhead_rent'),
+                ('overhead_salaries', 'overhead_other'),
+                'total_overhead_display',
+                'total_making_cost_display',
+            ),
+            'classes': ('collapse',),
+        }),
         ('فحص الجودة (QC)', {
             'fields': (
                 ('qc_technician', 'qc_notes'),
@@ -332,7 +343,7 @@ class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
         }),
     )
     
-    readonly_fields = ('start_date', 'scrap_percentage_display', 'manufacturing_progress', 'resulting_item_display', 'print_job_card_link', 'final_product_image_display')
+    readonly_fields = ('start_date', 'scrap_percentage_display', 'manufacturing_progress', 'resulting_item_display', 'print_job_card_link', 'final_product_image_display', 'total_overhead_display', 'total_making_cost_display')
 
     def order_number_display(self, obj):
         return format_html(
@@ -489,6 +500,16 @@ class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
         return mark_safe('<span style="color:#555;">0%</span>')
     scrap_percentage_display.short_description = 'نسبة الهالك (مع التنبيه)'
     
+    def total_overhead_display(self, obj):
+        total = obj.total_overhead
+        return format_html('<span style="color:#FF9800; font-weight:bold;">{:.2f} ج.م</span>', total)
+    total_overhead_display.short_description = 'إجمالي التكاليف الصناعية'
+    
+    def total_making_cost_display(self, obj):
+        total = obj.total_making_cost
+        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:15px;">{:.2f} ج.م</span>', total)
+    total_making_cost_display.short_description = 'التكلفة الكلية للتصنيع'
+    
     class Media:
         js = ('js/manufacturing_alarm.js', 'js/inline_table_fix.js')
 
@@ -534,3 +555,115 @@ class WorkshopTransferAdmin(ExportImportMixin, admin.ModelAdmin):
         if obj.status == 'completed' and not obj.confirmed_by:
             obj.confirmed_by = request.user
         super().save_model(request, obj, form, change)
+
+@admin.register(CostAllocation)
+class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
+    list_display = ('period_name', 'start_date', 'end_date', 'total_overhead_display', 'allocation_basis', 'status_badge', 'orders_count')
+    list_filter = ('status', 'allocation_basis')
+    search_fields = ('period_name',)
+    readonly_fields = ('total_production_weight_snapshot', 'total_labor_cost_snapshot', 'created_at', 'updated_at')
+    
+    fieldsets = (
+        ('الفترة الزمنية', {
+            'fields': (('period_name',), ('start_date', 'end_date'))
+        }),
+        ('إجمالي التكاليف', {
+            'fields': (
+                ('total_electricity', 'total_water'),
+                ('total_gas', 'total_rent'),
+                ('total_salaries', 'total_other'),
+            )
+        }),
+        ('إعدادات التوزيع', {
+            'fields': (('allocation_basis', 'status'),)
+        }),
+        ('إحصائيات (بعد التطبيق)', {
+            'fields': (('total_production_weight_snapshot', 'total_labor_cost_snapshot'), ('created_at', 'updated_at')),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['apply_cost_allocation']
+    
+    def total_overhead_display(self, obj):
+        total = obj.total_overhead_amount
+        return format_html('<span style="color:#4CAF50; font-weight:bold;">{} ج.م</span>', total)
+    total_overhead_display.short_description = 'إجمالي التكاليف'
+    
+    def status_badge(self, obj):
+        colors = {
+            'draft': '#FF9800',
+            'applied': '#4CAF50',
+        }
+        color = colors.get(obj.status, '#666')
+        return format_html(
+            '<span style="background:{}22; color:{}; padding:4px 12px; border-radius:15px; font-weight:bold;">{}</span>',
+            color, color, obj.get_status_display()
+        )
+    status_badge.short_description = 'الحالة'
+    
+    def orders_count(self, obj):
+        count = ManufacturingOrder.objects.filter(cost_allocation=obj).count()
+        return format_html('<span style="font-weight:bold;">{}</span>', count)
+    orders_count.short_description = 'عدد الأوامر المرتبطة'
+    
+    def apply_cost_allocation(self, request, queryset):
+        from django.contrib import messages
+        from django.db.models import Sum
+        from decimal import Decimal
+        
+        for cost_allocation in queryset:
+            if cost_allocation.status == 'applied':
+                messages.warning(request, f'التكاليف "{cost_allocation.period_name}" تم ترحيلها بالفعل.')
+                continue
+            
+            # Get all completed orders in the period
+            orders = ManufacturingOrder.objects.filter(
+                status='completed',
+                end_date__gte=cost_allocation.start_date,
+                end_date__lte=cost_allocation.end_date,
+                cost_allocation__isnull=True  # Only unallocated orders
+            )
+            
+            if not orders.exists():
+                messages.warning(request, f'لا توجد أوامر مكتملة في فترة "{cost_allocation.period_name}".')
+                continue
+            
+            # Calculate basis totals
+            if cost_allocation.allocation_basis == 'weight':
+                basis_total = orders.aggregate(total=Sum('output_weight'))['total'] or Decimal('0')
+            else:  # labor
+                basis_total = orders.aggregate(total=Sum('manufacturing_pay'))['total'] or Decimal('0')
+            
+            if basis_total == 0:
+                messages.error(request, f'إجمالي الأساس (الوزن أو الأجر) = صفر. لا يمكن التوزيع.')
+                continue
+            
+            # Save snapshots
+            cost_allocation.total_production_weight_snapshot = orders.aggregate(total=Sum('output_weight'))['total'] or Decimal('0')
+            cost_allocation.total_labor_cost_snapshot = orders.aggregate(total=Sum('manufacturing_pay'))['total'] or Decimal('0')
+            
+            # Distribute costs to each order
+            for order in orders:
+                if cost_allocation.allocation_basis == 'weight':
+                    ratio = order.output_weight / basis_total
+                else:
+                    ratio = order.manufacturing_pay / basis_total
+                
+                order.cost_allocation = cost_allocation
+                order.overhead_electricity = cost_allocation.total_electricity * ratio
+                order.overhead_water = cost_allocation.total_water * ratio
+                order.overhead_gas = cost_allocation.total_gas * ratio
+                order.overhead_rent = cost_allocation.total_rent * ratio
+                order.overhead_salaries = cost_allocation.total_salaries * ratio
+                order.overhead_other = cost_allocation.total_other * ratio
+                order.save()
+            
+            # Mark as applied
+            cost_allocation.status = 'applied'
+            cost_allocation.save()
+            
+            messages.success(request, f'تم توزيع تكاليف "{cost_allocation.period_name}" على {orders.count()} أمر تصنيع.')
+    
+    apply_cost_allocation.short_description = 'احتساب وتطبيق التكاليف على الأوامر'
+

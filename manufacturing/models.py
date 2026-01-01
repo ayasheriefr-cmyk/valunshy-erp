@@ -319,6 +319,27 @@ class ManufacturingOrder(models.Model):
     labor_rate = models.DecimalField("أجر الجرام (للورش الخارجية)", max_digits=10, decimal_places=2, default=0, help_text="اتركه 0 للورش الداخلية (نظام المرتبات)")
     manufacturing_pay = models.DecimalField("إجمالي الأجر المستحق", max_digits=12, decimal_places=2, default=0, help_text="المبلغ الذي سيتم إضافته لرصيد الورشة. اتركه 0 للورش الداخلية.")
     factory_margin = models.DecimalField("هامش ربح المصنع", max_digits=12, decimal_places=2, default=0)
+    
+    # Factory Overhead Costs (Distributed)
+    cost_allocation = models.ForeignKey('CostAllocation', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="فترة التكاليف")
+    
+    overhead_electricity = models.DecimalField("نصيب الكهرباء", max_digits=10, decimal_places=2, default=0)
+    overhead_water = models.DecimalField("نصيب المياه", max_digits=10, decimal_places=2, default=0)
+    overhead_gas = models.DecimalField("نصيب الغاز", max_digits=10, decimal_places=2, default=0)
+    overhead_rent = models.DecimalField("نصيب الإيجار", max_digits=10, decimal_places=2, default=0)
+    overhead_salaries = models.DecimalField("نصيب الرواتب", max_digits=10, decimal_places=2, default=0)
+    overhead_other = models.DecimalField("نصيب مصاريف أخرى", max_digits=10, decimal_places=2, default=0)
+
+    @property
+    def total_overhead(self):
+        """إجمالي التكاليف الصناعية المحملة"""
+        return (self.overhead_electricity + self.overhead_water + self.overhead_gas +
+                self.overhead_rent + self.overhead_salaries + self.overhead_other)
+
+    @property
+    def total_making_cost(self):
+        """إجمالي تكلفة المصنعية (أجور + تكاليف + هامش)"""
+        return self.manufacturing_pay + self.total_overhead + self.factory_margin
 
     # Auto-Inventory Creation Fields
     auto_create_item = models.BooleanField("إنشاء قطعة في المخزن تلقائياً عند الاكتمال", default=True)
@@ -508,3 +529,50 @@ class WorkshopTransfer(models.Model):
 
     def __str__(self):
         return f"{self.transfer_number} ({self.weight} جم)"
+
+class CostAllocation(models.Model):
+    """توزيع تكاليف المصنع (كهرباء، مياه، إيجار...) على أوامر التصنيع"""
+    period_name = models.CharField("اسم العهدة/الفترة", max_length=100, help_text="مثال: تكاليف شهر يناير 2026")
+    start_date = models.DateField("من تاريخ")
+    end_date = models.DateField("إلى تاريخ")
+    
+    # Overhead Totals (Costs to be distributed)
+    total_electricity = models.DecimalField("إجمالي الكهرباء", max_digits=12, decimal_places=2, default=0)
+    total_water = models.DecimalField("إجمالي المياه", max_digits=12, decimal_places=2, default=0)
+    total_gas = models.DecimalField("إجمالي الغاز", max_digits=12, decimal_places=2, default=0)
+    total_rent = models.DecimalField("إجمالي الإيجار", max_digits=12, decimal_places=2, default=0)
+    total_salaries = models.DecimalField("إجمالي رواتب إدارية", max_digits=12, decimal_places=2, default=0)
+    total_other = models.DecimalField("مصروفات أخرى", max_digits=12, decimal_places=2, default=0)
+    
+    ALLOCATION_BASIS_CHOICES = [
+        ('weight', 'حسب وزن الذهب المنتج (Output Weight)'),
+        ('labor', 'حسب أجر التصنيع (Labor Cost)'),
+    ]
+    allocation_basis = models.CharField("أساس التوزيع", max_length=20, choices=ALLOCATION_BASIS_CHOICES, default='weight')
+    
+    STATUS_CHOICES = [
+        ('draft', 'مسودة'),
+        ('applied', 'تم الترحيل (مغلق)'),
+    ]
+    status = models.CharField("الحالة", max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # Statistics
+    total_production_weight_snapshot = models.DecimalField("إجمالي الوزن المنتج في الفترة", max_digits=15, decimal_places=3, default=0, editable=False)
+    total_labor_cost_snapshot = models.DecimalField("إجمالي أجور التصنيع في الفترة", max_digits=15, decimal_places=2, default=0, editable=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "توزيع تكاليف المصنع"
+        verbose_name_plural = "التصنيع - تكاليف المصنع"
+        ordering = ['-start_date']
+
+    def __str__(self):
+        return self.period_name
+
+    @property
+    def total_overhead_amount(self):
+        return (self.total_electricity + self.total_water + self.total_gas + 
+                self.total_rent + self.total_salaries + self.total_other)
+

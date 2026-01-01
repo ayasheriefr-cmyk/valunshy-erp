@@ -54,11 +54,6 @@ class FiscalYearAdmin(ExportImportMixin, admin.ModelAdmin):
     list_filter = ('is_active', 'is_closed')
     list_editable = ('is_active',)
     
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
-        form.base_fields['start_date'].help_text = "يجب إدخال التاريخ بصيغة السنة-الشهر-اليوم (مثال: 2026-01-01)"
-        form.base_fields['end_date'].help_text = "يجب إدخال التاريخ بصيغة السنة-الشهر-اليوم (مثال: 2026-12-31)"
-        return form
 
 
 @admin.register(OpeningBalance)

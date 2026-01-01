@@ -288,7 +288,7 @@ class WorkshopAdmin(ExportImportMixin, admin.ModelAdmin):
 
 @admin.register(ManufacturingOrder)
 class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('order_number_display', 'status_badge', 'carat', 'workshop', 'weight_summary', 'manufacturing_progress', 'manufacturing_pay_display', 'resulting_item_display', 'actions_column')
+    list_display = ('order_number_display', 'status_badge', 'carat', 'workshop', 'weight_summary', 'manufacturing_progress', 'total_overhead_display', 'total_making_cost_display', 'actions_column')
     list_display_links = ('order_number_display',)
     list_filter = ('status', 'carat', 'workshop')
     search_fields = ('order_number', 'assigned_technician', 'workshop__name')
@@ -562,20 +562,6 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     list_filter = ('status', 'allocation_basis')
     search_fields = ('period_name',)
     readonly_fields = ('total_production_weight_snapshot', 'total_labor_cost_snapshot', 'created_at', 'updated_at')
-    
-    # Add date picker widgets
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
-        # Use HTML5 date input type for better calendar popup
-        from django import forms
-        form.base_fields['start_date'].widget = forms.DateInput(
-            attrs={'type': 'date', 'class': 'vDateField'}
-        )
-        form.base_fields['end_date'].widget = forms.DateInput(
-            attrs={'type': 'date', 'class': 'vDateField'}
-        )
-        return form
-    
     
     fieldsets = (
         ('الفترة الزمنية', {

@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 import json
 from django.db.models import Sum, Count, Q
@@ -11,6 +11,10 @@ from finance.treasury_models import Treasury
 import datetime
 
 def home_dashboard(request):
+    # 0. Redirect Sales Reps
+    if request.user.is_authenticated and hasattr(request.user, 'salesrepresentative'):
+        return redirect('sales_dashboard')
+
     # 1. Sales Statistics (Today)
     today = timezone.localtime(timezone.now()).date()
     

@@ -122,7 +122,7 @@ class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
 
 @admin.register(SalesRepresentative)
 class SalesRepresentativeAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('name', 'user', 'phone', 'branch', 'commission_display', 'total_sales_display', 'total_commission_display', 'status_badge', 'is_active')
+    list_display = ('name', 'address', 'user', 'phone', 'branch', 'commission_display', 'total_sales_display', 'total_commission_display', 'status_badge', 'is_active')
     list_filter = ('is_active', 'branch', 'commission_type')
     search_fields = ('name', 'phone', 'email')
     list_editable = ('is_active',)

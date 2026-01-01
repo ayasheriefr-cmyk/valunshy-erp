@@ -415,5 +415,69 @@
         }
         return cookieValue;
     }
+
+    // --- GLOBAL BARCODE SCANNER LISTENER ---
+    let barcodeBuffer = "";
+    let lastKeyTime = Date.now();
+
+    document.addEventListener('keydown', async function (e) {
+        // Ignore if user is typing in an input field (search, notes, etc)
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        const currentTime = Date.now();
+
+        // Reset buffer if too much time passed (manual typing vs scanner)
+        // Scanners are fast (<50ms between keys usually)
+        if (currentTime - lastKeyTime > 100) {
+            if (e.key.length === 1) barcodeBuffer = "";
+        }
+        lastKeyTime = currentTime;
+
+        if (e.key === 'Enter') {
+            if (barcodeBuffer.length > 3) { // Min barcode length
+                console.log("Scanned:", barcodeBuffer);
+                await handleGlobalScan(barcodeBuffer);
+            }
+            barcodeBuffer = "";
+        } else if (e.key.length === 1) { // Printable chars
+            barcodeBuffer += e.key;
+        }
+    });
+
+    async function handleGlobalScan(barcode) {
+        // 1. Fetch Item Details
+        try {
+            const res = await fetch(`/sales/api/item-by-barcode/${barcode}/`);
+            if (res.ok) {
+                const item = await res.json();
+
+                if (item.status !== 'available') {
+                    alert(`هذا المنتج غير متاح للبيع (الحالة: ${item.status_display})`);
+                    playSound('error');
+                    return;
+                }
+
+                // 2. Open Sell Modal Automatically
+                openSellModal(item.id, item.name, item.net_gold_weight, item.carat);
+                playSound('success');
+
+            } else {
+                console.warn("Item not found");
+                // Optional: Play error sound
+                playSound('error');
+                // alert("المنتج غير موجود: " + barcode); 
+                // Alert might steal focus/interfere with rapid scanning, maybe just toast/log
+            }
+        } catch (e) {
+            console.error("Scan Error", e);
+        }
+    }
+
+    function playSound(type) {
+        // Optional beep feedback
+        // const audio = new Audio(type === 'success' ? '/static/beep-success.mp3' : '/static/beep-error.mp3');
+        // audio.play().catch(e => console.log("Audio play failed"));
+    }
+
 </script>
 {% endblock %}

@@ -161,3 +161,10 @@ class Partner(models.Model):
         return f"{self.name} ({self.percentage}%)"
 
 
+# Import additional specialized models to ensure they are registered with Django
+from .treasury_models import (
+    Treasury, TreasuryTransaction, CustodyHolder, Custody,
+    CustodySettlement, ExpenseVoucher, ReceiptVoucher,
+    TreasuryTransfer, DailyTreasuryReport, TreasuryTool,
+    ToolTransfer, CustodyTool
+)

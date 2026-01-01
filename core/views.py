@@ -11,8 +11,8 @@ from finance.treasury_models import Treasury
 import datetime
 
 def home_dashboard(request):
-    # 0. Redirect Sales Reps
-    if request.user.is_authenticated and hasattr(request.user, 'salesrepresentative'):
+    # 0. Redirect Sales Reps (Exclude Admins/Superusers)
+    if request.user.is_authenticated and hasattr(request.user, 'salesrepresentative') and not request.user.is_superuser:
         return redirect('sales:sales_dashboard')
 
     # 1. Sales Statistics (Today)

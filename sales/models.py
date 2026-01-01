@@ -63,6 +63,12 @@ class Invoice(models.Model):
     confirmed_by = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True, 
                                      verbose_name="تم التأكيد بواسطة", related_name='confirmed_invoices')
     confirmed_at = models.DateTimeField("تاريخ التأكيد", null=True, blank=True)
+    
+    @property
+    def total_profit(self):
+        """إجمالي ربح الفاتورة"""
+        return sum(item.profit for item in self.items.all())
+    
 
     class Meta:
         verbose_name = "فاتورة مبيعات"
@@ -76,11 +82,31 @@ class InvoiceItem(models.Model):
     item = models.ForeignKey(Item, on_delete=models.PROTECT)
     
     # Snapshot of values at time of sale
-    sold_weight = models.DecimalField(max_digits=10, decimal_places=3)
-    sold_gold_price = models.DecimalField(max_digits=10, decimal_places=2)
-    sold_labor_fee = models.DecimalField(max_digits=10, decimal_places=2)
+    sold_weight = models.DecimalField("الوزن المباع", max_digits=10, decimal_places=3)
+    sold_gold_price = models.DecimalField("سعر الذهب وقت البيع", max_digits=10, decimal_places=2)
+    sold_labor_fee = models.DecimalField("أجر المصنعية (المحصل)", max_digits=10, decimal_places=2)
+    sold_factory_cost = models.DecimalField("تكلفة المصنع (أجور + مصاريف)", max_digits=10, decimal_places=2, default=0, help_text="إجمالي التكلفة الصناعية المخزنة في القطعة وقت البيع")
     
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal = models.DecimalField("إجمالي السطر", max_digits=12, decimal_places=2)
+
+    @property
+    def total_cost(self):
+        """إجمالي تكلفة السطر = (ذهب × سعر الشراء/البيع المرجعي) + تكلفة المصنع"""
+        # Note: In gold retail, cost is often (Net Gold Weight * current price) + manufacturing
+        # Here we use the price recorded at sale for the gold component
+        gold_cost = (self.item.net_gold_weight * self.sold_gold_price)
+        return gold_cost + self.sold_factory_cost
+
+    @property
+    def profit(self):
+        """الربح = الإجمالي - التكلفة"""
+        return self.subtotal - self.total_cost
+    
+    def save(self, *args, **kwargs):
+        # Capture the manufacturing cost snapshot (Labor + Overheads) at the moment of sale
+        if self.item and (not self.sold_factory_cost or self.sold_factory_cost == 0):
+            self.sold_factory_cost = self.item.total_manufacturing_cost
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.invoice.invoice_number} - {self.item.barcode}"

@@ -7,7 +7,23 @@ from import_export import resources
 
 class InvoiceItemInline(admin.TabularInline):
     model = InvoiceItem
-    extra = 1
+    extra = 0
+    fields = ('item', 'sold_weight', 'sold_gold_price', 'sold_labor_fee', 'sold_factory_cost', 'subtotal', 'total_cost_display', 'profit_display')
+    readonly_fields = ('total_cost_display', 'profit_display')
+    
+    def total_cost_display(self, obj):
+        if obj.id:
+            return format_html('<span style="color:#999; font-size: 11px;">{:.2f} ج.م</span>', obj.total_cost)
+        return "-"
+    total_cost_display.short_description = "إجمالي التكلفة"
+
+    def profit_display(self, obj):
+        if obj.id:
+            color = "#4caf50" if obj.profit > 0 else "#f44336"
+            return format_html('<b style="color:{};">{:.2f} ج.م</b>', color, obj.profit)
+        return "-"
+    profit_display.short_description = "الربح"
+    
 
 class OldGoldReturnInline(admin.TabularInline):
     model = OldGoldReturn
@@ -28,11 +44,11 @@ class InvoiceResource(resources.ModelResource):
 @admin.register(Invoice)
 class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
     resource_class = InvoiceResource
-    list_display = ('invoice_number', 'status_badge', 'customer', 'branch', 'sales_rep', 'grand_total', 'payment_method', 'created_at')
+    list_display = ('invoice_number', 'status_badge', 'customer', 'branch', 'grand_total', 'total_profit_display', 'sales_rep', 'payment_method', 'created_at')
     list_filter = ('status', 'branch', 'payment_method', 'sales_rep', 'created_at')
     search_fields = ('invoice_number', 'customer__name', 'customer__phone', 'sales_rep__name')
     inlines = [InvoiceItemInline, OldGoldReturnInline]
-    readonly_fields = ('total_gold_value', 'total_labor_value', 'total_tax', 'grand_total', 'created_by', 'created_at', 'zatca_qr_code', 'zatca_uuid', 'confirmed_by', 'confirmed_at')
+    readonly_fields = ('total_gold_value', 'total_labor_value', 'total_tax', 'grand_total', 'total_profit_display', 'created_by', 'created_at', 'zatca_qr_code', 'zatca_uuid', 'confirmed_by', 'confirmed_at')
     autocomplete_fields = ['sales_rep', 'customer']
     
     fieldsets = (
@@ -48,8 +64,8 @@ class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
             'classes': ('collapse',),
             'description': 'في حالة استبدال ذهب قديم بجديد، يرجى تفعيل الخيار وإدخال الوزن والقيمة المخصومة.'
         }),
-        ('الملخص المالي (يحسب تلقائياً)', {
-            'fields': (('total_gold_value', 'total_labor_value'), ('total_tax', 'grand_total')),
+        ('الملخص المالي والربحية (صافي)', {
+            'fields': (('total_gold_value', 'total_labor_value'), ('total_tax', 'grand_total'), 'total_profit_display'),
             'classes': ('wide',)
         }),
         ('بيانات الفاتورة الإلكترونية (ZATCA)', {
@@ -63,6 +79,12 @@ class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
     )
 
     actions = ['confirm_invoices', 'reject_invoices', 'print_invoice']
+
+    def total_profit_display(self, obj):
+        profit = obj.total_profit
+        color = "#2196F3" if profit > 0 else "#f44336"
+        return format_html('<span style="color:{}; font-weight:bold; font-size: 16px;">{:.2f} ج.م</span>', color, profit)
+    total_profit_display.short_description = "صافي الربح"
 
     def status_badge(self, obj):
         colors = {

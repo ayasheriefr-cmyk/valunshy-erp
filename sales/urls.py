@@ -21,4 +21,9 @@ urlpatterns = [
     # Client App
     path('api/order/create/', api_views.CustomerOrderView.as_view(), name='api-order-create'),
     path('api/quick-sell/', api_views.QuickSellView.as_view(), name='api-quick-sell'),
+    
+    # Reservation Feature
+    path('reservation/', views.reservation_view, name='reservation_page'),
+    path('api/item-by-barcode/<str:barcode>/', api_views.ItemDetailByBarcodeView.as_view(), name='api-item-barcode'),
+    path('api/reserve/', api_views.CreateReservationView.as_view(), name='api-reserve'),
 ]

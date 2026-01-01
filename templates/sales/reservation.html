@@ -1,0 +1,324 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #f4f6f9;
+        direction: rtl;
+    }
+
+    .container {
+        max-width: 800px;
+        margin: 40px auto;
+        padding: 20px;
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        padding: 30px;
+        text-align: center;
+    }
+
+    .scanner-section {
+        margin-bottom: 30px;
+    }
+
+    .scanner-input {
+        width: 100%;
+        padding: 20px;
+        font-size: 24px;
+        text-align: center;
+        border: 2px solid #D4AF37;
+        border-radius: 50px;
+        outline: none;
+        transition: all 0.3s;
+        box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+    }
+
+    .scanner-input:focus {
+        box-shadow: 0 0 25px rgba(212, 175, 55, 0.5);
+        transform: scale(1.02);
+    }
+
+    .item-display {
+        display: none;
+        /* Hidden until scanned */
+        margin-top: 30px;
+        background: #fafafa;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #eee;
+    }
+
+    .item-image {
+        width: 200px;
+        height: 200px;
+        object-fit: contain;
+        /* Show full image */
+        border-radius: 8px;
+        margin-bottom: 15px;
+        background: #fff;
+        border: 1px solid #ddd;
+    }
+
+    .item-details h2 {
+        color: #333;
+        font-size: 28px;
+        margin-bottom: 10px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 40px;
+        font-size: 18px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .detail-label {
+        color: #777;
+        font-weight: bold;
+    }
+
+    .detail-value {
+        color: #000;
+        font-weight: 800;
+    }
+
+    .price-value {
+        color: #D4AF37;
+        font-size: 22px;
+    }
+
+    .action-section {
+        margin-top: 30px;
+        display: none;
+        /* Hidden until scanned */
+    }
+
+    .btn-reserve {
+        background: #D4AF37;
+        color: #000;
+        font-weight: 900;
+        padding: 15px 40px;
+        font-size: 20px;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 20px;
+        transition: background 0.2s;
+    }
+
+    .btn-reserve:hover {
+        background: #b89628;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        margin-top: 10px;
+    }
+
+    .status-available {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .status-warning {
+        background: #fff3e0;
+        color: #ef6c00;
+    }
+
+    .status-error {
+        background: #ffebee;
+        color: #c62828;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card">
+        <h1 style="color: #D4AF37; margin-bottom: 30px;">
+            <i class="fa-solid fa-calendar-check"></i> حجز منتج للعميل
+        </h1>
+
+        <div class="scanner-section">
+            <label style="display: block; margin-bottom: 10px; color: #666;">قم بمسح الباركود الآن (أو ادخله
+                يدوياً)</label>
+            <input type="text" id="barcodeInput" class="scanner-input" placeholder="SCAN BARCODE HERE..." autofocus
+                autocomplete="off">
+            <div id="scanStatus" style="margin-top: 10px; font-size: 14px; color: #888;">جاري الاستعداد للمسح...</div>
+        </div>
+
+        <div id="itemDisplay" class="item-display">
+            <img id="itemImg" src="" alt="صورة المنتج" class="item-image"
+                onerror="this.src='{% static 'img/placeholder.png' %}'">
+
+            <div class="item-details">
+                <h2 id="itemName">اسم المنتج هنا</h2>
+                <div id="itemStatusBadge" class="status-badge status-available">متاح للبيع</div>
+
+                <div class="detail-row">
+                    <span class="detail-label">العيار:</span>
+                    <span class="detail-value" id="itemCarat">21K</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">الوزن:</span>
+                    <span class="detail-value" id="itemWeight">0.00 جم</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">السعر التقريبي:</span>
+                    <span class="detail-value price-value" id="itemPrice">0 ج.م</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="actionSection" class="action-section">
+            <div style="text-align: right; margin-bottom: 10px; font-weight: bold;">بيانات الحجز:</div>
+
+            <select id="customerSelect"
+                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; background: #fafafa;">
+                <option value="">-- اختر العميل --</option>
+                {% for customer in customers %}
+                <option value="{{ customer.id }}">{{ customer.name }} ({{ customer.phone_number }})</option>
+                {% endfor %}
+            </select>
+
+            <textarea id="notes" placeholder="ملاحظات إضافية..."
+                style="width: 100%; margin-top: 10px; padding: 10px; border-radius: 8px; border: 1px solid #ccc;"></textarea>
+
+            <button class="btn-reserve" onclick="confirmReservation()">
+                <i class="fa-solid fa-check"></i> تأكيد الحجز
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    const barcodeInput = document.getElementById('barcodeInput');
+    const scanStatus = document.getElementById('scanStatus');
+    let currentItemId = null;
+
+    // Auto-focus logic for scanner
+    document.addEventListener('click', () => {
+        barcodeInput.focus();
+    });
+
+    // Handle Barcode Input (Scanner sends 'Enter' at end)
+    barcodeInput.addEventListener('keypress', async function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const barcode = this.value.trim();
+            if (barcode) {
+                await fetchItemDetails(barcode);
+                this.value = ''; // Clear for next scan
+            }
+        }
+    });
+
+    async function fetchItemDetails(barcode) {
+        scanStatus.innerText = "جاري البحث...";
+        scanStatus.style.color = "#D4AF37";
+
+        try {
+            const response = await fetch(`/sales/api/item-by-barcode/${barcode}/`);
+            if (!response.ok) throw new Error('Item not found');
+
+            const data = await response.json();
+            displayItem(data);
+            scanStatus.innerText = "تم المسح بنجاح!";
+            scanStatus.style.color = "green";
+
+        } catch (error) {
+            console.error(error);
+            scanStatus.innerText = "لم يتم العثور على المنتج!";
+            scanStatus.style.color = "red";
+            hideItem();
+        }
+    }
+
+    function displayItem(item) {
+        currentItemId = item.id;
+
+        // Update DOM
+        document.getElementById('itemName').innerText = item.name;
+        document.getElementById('itemCarat').innerText = item.carat;
+        document.getElementById('itemWeight').innerText = `${item.net_gold_weight} جم`;
+        document.getElementById('itemPrice').innerText = `${item.estimated_price} ج.م`; // Ensure API sends formatted
+
+        const img = document.getElementById('itemImg');
+        img.src = item.image_url || 'https://via.placeholder.com/200x200?text=No+Image';
+
+        const badge = document.getElementById('itemStatusBadge');
+        if (item.status === 'available' || item.status === 'mandoob') {
+            badge.className = 'status-badge status-available';
+            badge.innerText = 'متاح للحجز';
+            document.getElementById('actionSection').style.display = 'block';
+        } else {
+            badge.className = 'status-badge status-error';
+            badge.innerText = `غير متاح (${item.status_display})`;
+            document.getElementById('actionSection').style.display = 'none';
+        }
+
+        document.getElementById('itemDisplay').style.display = 'block';
+    }
+
+    function hideItem() {
+        document.getElementById('itemDisplay').style.display = 'none';
+        document.getElementById('actionSection').style.display = 'none';
+        currentItemId = null;
+    }
+
+    async function confirmReservation() {
+        const customerId = document.getElementById('customerSelect').value;
+        const notes = document.getElementById('notes').value;
+
+        if (!customerId) {
+            alert('يرجى اختيار العميل أولاً');
+            return;
+        }
+
+        if (!confirm('هل أنت متأكد من حجز هذا المنتج؟ لن يكون متاحاً للبيع.')) return;
+
+        try {
+            const response = await fetch('/sales/api/reserve/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    item_id: currentItemId,
+                    customer_id: customerId,
+                    notes: notes
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert('تم الحجز بنجاح!');
+                window.location.href = '/sales/dashboard/'; // Back to dashboard or stay?
+                // Maybe stay and clear
+                // hideItem();
+                // barcodeInput.focus();
+            } else {
+                alert('حدث خطأ: ' + (result.detail || result.error));
+            }
+
+        } catch (error) {
+            alert('فشل الاتصال الخادم');
+        }
+    }
+</script>
+{% endblock %}

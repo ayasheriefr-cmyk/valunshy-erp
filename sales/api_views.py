@@ -248,3 +248,79 @@ class QuickSellView(APIView):
             import traceback
             traceback.print_exc()
             return Response({"detail": f"Server Error: {str(e)}"}, status=500)
+
+from rest_framework.views import APIView
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from rest_framework.response import Response
+from .models import Reservation
+from django.db import transaction
+
+class ItemDetailByBarcodeView(APIView):
+    """API to fetch item details by barcode (Scanner)"""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, barcode):
+        try:
+            item = Item.objects.select_related('carat').get(barcode=barcode)
+            
+            # Simple estimation logic
+            estimated_price = 0
+            if item.carat.prices.exists():
+                estimated_price = float(item.net_gold_weight * item.carat.prices.latest('updated_at').price_per_gram)
+
+            data = {
+                'id': item.id,
+                'name': item.name,
+                'barcode': item.barcode,
+                'carat': item.carat.name,
+                'net_gold_weight': float(item.net_gold_weight),
+                'status': item.status,
+                'status_display': item.get_status_display(),
+                'image_url': item.image.url if item.image else None,
+                'estimated_price': estimated_price
+            }
+            return Response(data, status=status.HTTP_200_OK)
+        except Item.DoesNotExist:
+            return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
+
+class CreateReservationView(APIView):
+    """API to reserve an item"""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        item_id = request.data.get('item_id')
+        customer_id = request.data.get('customer_id')
+        notes = request.data.get('notes', '')
+
+        if not item_id or not customer_id:
+            return Response({'error': 'Missing item or customer'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            item = Item.objects.get(id=item_id)
+            if item.status != 'available' and item.status != 'mandoob':
+                return Response({'error': f'Item is not available (Status: {item.get_status_display()})'}, status=status.HTTP_400_BAD_REQUEST)
+
+            customer = Customer.objects.get(id=customer_id)
+
+            with transaction.atomic():
+                # 1. Create Reservation
+                Reservation.objects.create(
+                    item=item,
+                    customer=customer,
+                    sales_rep=request.user,
+                    notes=notes
+                )
+
+                # 2. Update Item Status
+                item.status = 'reserved'
+                item.save()
+
+            return Response({'message': 'Reservation successful'}, status=status.HTTP_201_CREATED)
+
+        except Item.DoesNotExist:
+            return Response({'error': 'Item not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Customer.DoesNotExist:
+            return Response({'error': 'Customer not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

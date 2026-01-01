@@ -1,5 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from inventory.models import Item
+from .models import Invoice, Reservation
+from crm.models import Customer
+from core.models import GoldPrice
 
 def invoice_list_view(request):
     return HttpResponse("Sales Invoice List - Coming Soon")
@@ -17,9 +22,16 @@ def customer_catalog_view(request):
     """
     return render(request, 'sales/customer_catalog.html')
 
-from django.contrib.auth.decorators import login_required
-from inventory.models import Item
-from .models import Invoice
+@login_required
+def reservation_view(request):
+    """View to handle product reservation for customers"""
+    # Fetch all customers for the dropdown
+    customers = Customer.objects.all().order_by('name')
+    context = {
+        'customers': customers
+    }
+    return render(request, 'sales/reservation.html', context)
+
 from crm.models import Customer
 from core.models import GoldPrice
 

@@ -143,8 +143,14 @@
     <div class="card">
         <div class="card-header">
             <div class="card-title">لوحة مبيعات المندوب - {{ request.user.first_name }}</div>
-            <div style="color: #666;">
-                التاريخ: {% now "Y-m-d" %}
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <a href="{% url 'sales:reservation_page' %}" class="btn-action"
+                    style="background: #D4AF37; color: #fff; text-decoration: none;">
+                    <i class="fa-solid fa-calendar-check"></i> حجز منتج
+                </a>
+                <div style="color: #666;">
+                    التاريخ: {% now "Y-m-d" %}
+                </div>
             </div>
         </div>
         <div>

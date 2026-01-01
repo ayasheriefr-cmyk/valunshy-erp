@@ -38,6 +38,7 @@ class Item(models.Model):
         ('sold', _('Sold')),
         ('manufacturing', _('In Manufacturing')),
         ('mandoob', _('With Delegate')),
+        ('reserved', _('Mahjouz (Reserved)')),
         ('lost', _('Lost')),
     ]
     status = models.CharField("الحالة", max_length=20, choices=status_choices, default='available')

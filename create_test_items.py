@@ -1,116 +1,112 @@
-"""
-Script to create test items for the mobile sales app
-Run this with: python manage.py shell < create_test_items.py
-"""
-
-from inventory.models import Item, Branch, Carat
+from django.conf import settings
+import django
+import os
+import sys
 from decimal import Decimal
-import random
 
+# Setup Django Environment
+sys.path.append(os.getcwd())
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+django.setup()
 
+from inventory.models import Item, Category
+from core.models import Carat, Branch, GoldPrice
 
-print("=" * 50)
-print("Creating Test Items")
-print("=" * 50)
+def create_test_data():
+    print("Starting Test Data Creation...")
 
-# Get or create Carats
-carat_21, _ = Carat.objects.get_or_create(
-    name="عيار 21",
-    defaults={'purity': Decimal('0.8750')}
-)
-
-carat_18, _ = Carat.objects.get_or_create(
-    name="عيار 18",
-    defaults={'purity': Decimal('0.7500')}
-)
-
-carat_24, _ = Carat.objects.get_or_create(
-    name="عيار 24",
-    defaults={'purity': Decimal('0.9999')}
-)
-
-print("Carats checked")
-
-# Get first branch
-branch = Branch.objects.first()
-if not branch:
-    branch = Branch.objects.create(
-        name="الفرع الرئيسي",
-        address="الرياض",
-        phone="0112345678"
+    # 1. Ensure Branch exists
+    # Branch has name, location, is_main
+    branch, created = Branch.objects.get_or_create(
+        name="Main Showroom",
+        defaults={'location': 'Downtown, Cairo', 'is_main': True}
     )
-    print(f"Created Branch")
-else:
-    print(f"Using Branch")
+    print(f"Branch: {branch.name} (Created: {created})")
 
-# Sample item data (Keep Arabic Names for Data)
-items_data = [
-    # عيار 21
-    {"name": "سلسلة ذهب", "carat": carat_21, "weight": "15.500"},
-    {"name": "خاتم نسائي", "carat": carat_21, "weight": "3.250"},
-    {"name": "أسورة", "carat": carat_21, "weight": "8.750"},
-    {"name": "حلق ذهب", "carat": carat_21, "weight": "2.100"},
-    {"name": "دبلة زواج", "carat": carat_21, "weight": "4.500"},
-    
-    # عيار 18
-    {"name": "سلسلة رفيعة", "carat": carat_18, "weight": "5.250"},
-    {"name": "خاتم رجالي", "carat": carat_18, "weight": "6.800"},
-    {"name": "حلق صغير", "carat": carat_18, "weight": "1.500"},
-    {"name": "أسورة أطفال", "carat": carat_18, "weight": "3.200"},
-    {"name": "دلاية قلب", "carat": carat_18, "weight": "2.750"},
-    
-    # عيار 24
-    {"name": "جنيه ذهب", "carat": carat_24, "weight": "8.000"},
-    {"name": "نصف جنيه", "carat": carat_24, "weight": "4.000"},
-]
+    # 2. Ensure Carats exist
+    carat_21, _ = Carat.objects.get_or_create(name="21K", defaults={'purity': 0.875})
+    carat_18, _ = Carat.objects.get_or_create(name="18K", defaults={'purity': 0.750})
+    carat_24, _ = Carat.objects.get_or_create(name="24K", defaults={'purity': 0.999})
+    print("Carats Verified")
 
-created_count = 0
-existing_count = 0
+    # 2.5 Ensure Gold Prices exist (for logical checkout)
+    # Set dummy prices if not exists: 21K=4000, 18K=3428, 24K=4571
+    GoldPrice.objects.update_or_create(carat=carat_21, defaults={'price_per_gram': Decimal('4000.00')})
+    GoldPrice.objects.update_or_create(carat=carat_18, defaults={'price_per_gram': Decimal('3428.00')})
+    GoldPrice.objects.update_or_create(carat=carat_24, defaults={'price_per_gram': Decimal('4571.00')})
+    print("Gold Prices Verified")
 
-for idx, item_data in enumerate(items_data, start=1):
-    barcode = f"GOLD-{random.randint(10000, 99999)}"
-    
-    # Check if item with similar name exists and is available
-    existing = Item.objects.filter(
-        name=item_data['name'],
-        carat=item_data['carat'],
-        status='available'
-    ).first()
-    
-    if existing:
-        existing_count += 1
-        continue
-    
-    gross_weight = Decimal(item_data['weight'])
-    net_gold_weight = gross_weight * item_data['carat'].purity
-    
-    item = Item.objects.create(
-        barcode=barcode,
-        name=item_data['name'],
-        carat=item_data['carat'],
-        gross_weight=gross_weight,
-        stone_weight=Decimal('0.000'),
-        net_gold_weight=net_gold_weight,
-        labor_fee_per_gram=Decimal('10.00'),  # رسوم صياغة للجرام
-        fixed_labor_fee=Decimal('50.00'),  # رسوم صياغة ثابتة
-        status='available',
-        current_branch=branch
-    )
-    
-    created_count += 1
-    # print(f"Created: {item.barcode}")
+    # 3. Ensure Categories exist
+    cat_ring, _ = Category.objects.get_or_create(name="Khawatim (Rings)")
+    cat_bracelet, _ = Category.objects.get_or_create(name="Ghawyesh (Bracelets)")
+    cat_necklace, _ = Category.objects.get_or_create(name="Salasel (Necklaces)")
+    print("Categories Verified")
 
-print("\n" + "=" * 50)
-print(f"Created {created_count} new items")
-if existing_count > 0:
-    print(f"{existing_count} items already existed")
-print("=" * 50)
+    # 4. Create Items
+    items_data = [
+        {
+            'barcode': 'TEST-RING-001',
+            'name': 'Lazurde Gold Ring 21K',
+            'category': cat_ring,
+            'carat': carat_21,
+            'gross_weight': Decimal('5.500'),
+            'stone_weight': Decimal('0.000'),
+            'labor_fee_per_gram': Decimal('150.00'),
+            'fixed_labor_fee': Decimal('0.00'),
+            'status': 'available',
+            'image_path': 'items/ring_test.jpg' # Placeholder
+        },
+        {
+            'barcode': 'TEST-BRACELET-002',
+            'name': 'Classic 18K Bracelet',
+            'category': cat_bracelet,
+            'carat': carat_18,
+            'gross_weight': Decimal('12.750'),
+            'stone_weight': Decimal('0.250'), # Has stones
+            'labor_fee_per_gram': Decimal('200.00'),
+            'fixed_labor_fee': Decimal('500.00'), # Premium design
+            'status': 'available',
+            'image_path': 'items/bracelet_test.jpg'
+        },
+        {
+            'barcode': 'TEST-NECKLACE-003',
+            'name': 'Royal 21K Necklace Set',
+            'category': cat_necklace,
+            'carat': carat_21,
+            'gross_weight': Decimal('45.000'),
+            'stone_weight': Decimal('0.000'),
+            'labor_fee_per_gram': Decimal('120.00'),
+            'fixed_labor_fee': Decimal('0.00'),
+            'status': 'available',
+            'image_path': 'items/necklace_test.jpg'
+        }
+    ]
 
-# Summary
-available_items = Item.objects.filter(status='available')
-print(f"\nTotal Available Items: {available_items.count()}")
+    for data in items_data:
+        # Calculate net weight automatically via save() logic or set explicitly
+        # Model save() has: net_gold = gross - (stone * 0.2)
+        
+        item, created = Item.objects.update_or_create(
+            barcode=data['barcode'],
+            defaults={
+                'name': data['name'],
+                'category': data['category'],
+                'carat': data['carat'],
+                'gross_weight': data['gross_weight'],
+                'stone_weight': data['stone_weight'],
+                'labor_fee_per_gram': data['labor_fee_per_gram'],
+                'fixed_labor_fee': data['fixed_labor_fee'],
+                'status': data['status'],
+                'current_branch': branch,
+                'retail_margin': Decimal('1.05') # 5% default margin
+            }
+        )
+        if created:
+            print(f"Created Item: {item.name}")
+        else:
+            print(f"Updated Item: {item.name}")
 
+    print("All 3 Test Items Created Successfully!")
 
-print("\n" + "=" * 50)
-print("✅ جاهز للاستخدام!")
-print("=" * 50)
+if __name__ == "__main__":
+    create_test_data()

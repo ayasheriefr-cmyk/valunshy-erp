@@ -1,7 +1,23 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from inventory.models import Item, Branch, Carat
-from crm.models import Customer # Will create this next
+from crm.models import Customer
+from django.conf import settings
+
+class Reservation(models.Model):
+    item = models.OneToOneField(Item, on_delete=models.CASCADE, related_name='reservation', verbose_name="القطعة")
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='reservations', verbose_name="العميل")
+    sales_rep = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, verbose_name="المندوب")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="تاريخ الحجز")
+    notes = models.TextField("ملاحظات", blank=True)
+
+    class Meta:
+        verbose_name = "حجز"
+        verbose_name_plural = "الحجوزات"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.item.name} - {self.customer.name}"
 
 class Invoice(models.Model):
     invoice_number = models.CharField("رقم الفاتورة", max_length=50, unique=True)

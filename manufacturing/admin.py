@@ -566,9 +566,14 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     # Add date picker widgets
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        # Add date picker widget with calendar icon
-        form.base_fields['start_date'].widget = admin.widgets.AdminDateWidget()
-        form.base_fields['end_date'].widget = admin.widgets.AdminDateWidget()
+        # Use HTML5 date input type for better calendar popup
+        from django import forms
+        form.base_fields['start_date'].widget = forms.DateInput(
+            attrs={'type': 'date', 'class': 'vDateField'}
+        )
+        form.base_fields['end_date'].widget = forms.DateInput(
+            attrs={'type': 'date', 'class': 'vDateField'}
+        )
         return form
     
     

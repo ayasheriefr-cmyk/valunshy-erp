@@ -133,18 +133,34 @@
 
         .item-info h3 {
             margin: 0 0 5px 0;
-            font-size: 16px;
+            font-size: 15px;
+            color: var(--primary);
         }
 
         .item-meta {
-            font-size: 13px;
+            font-size: 12px;
             color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        .item-details-row {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px hide solid #333;
+            font-size: 13px;
         }
 
         .item-weight {
-            color: var(--primary);
+            color: #fff;
             font-weight: bold;
-            margin-top: 5px;
+        }
+
+        .item-price-est {
+            color: #4CAF50;
+            font-weight: bold;
         }
 
         .btn-add {
@@ -202,15 +218,34 @@
             justify-content: center;
         }
 
-        /* Cart Items */
+        /* Cart Items Improved */
         .cart-item {
             background: #252525;
             padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border: 1px solid #333;
+        }
+
+        .cart-item-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+        }
+
+        .cart-item-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .cart-detail-val {
+            color: #fff;
+            font-weight: bold;
         }
 
         /* Invoice View Styles */
@@ -414,7 +449,8 @@
                     localStorage.setItem('token', data.token);
                     token = data.token;
                     btn.innerText = "تم بنجاح!";
-                    showApp(); // Direct switch instead of reload
+                    errorMsg.style.display = 'none'; // Clear previous error
+                    setTimeout(showApp, 500); // Slight delay for visual feedback
                 }
 
                 else {
@@ -560,20 +596,44 @@
                 data.forEach(item => {
                     const el = document.createElement('div');
                     el.className = 'product-card';
+                    el.style.display = 'flex';
+                    el.style.alignItems = 'center';
+                    el.style.padding = '10px';
 
                     el.innerHTML = `
-                    <div style="width: 60px; height: 60px; background: #333; border-radius: 10px; display:flex; align-items:center; justify-content:center; color:#555;">
+                    <div style="width: 40px; height: 40px; background: #333; border-radius: 8px; display:flex; align-items:center; justify-content:center; color:var(--primary); margin-left: 10px;">
                         <i class="fa-solid fa-gem"></i>
                     </div>
-                    <div class="item-info">
-                        <h3>${item.name} <small style="color:#888;">(${item.barcode})</small></h3>
-                        <div class="item-meta">${item.carat_name} | نقاء: ${item.purity}</div>
-                        <div class="item-weight">${item.net_gold_weight} جم</div>
+                    <div class="item-info" style="flex: 1;">
+                        <div style="display:flex; justify-content:space-between; align-items: baseline;">
+                            <h4 style="margin:0; font-size:14px;">${item.name}</h4>
+                            <span style="font-size:9px; color:#888;">${item.barcode}</span>
+                        </div>
+                        <div class="item-meta" style="font-size:11px;">
+                            ${item.carat_name} | ${item.net_gold_weight} جم
+                        </div>
                     </div>
-                    <button class="btn-add" onclick='addToCart(event, ${JSON.stringify(item)})'>
+                    <div class="item-price-est" style="margin: 0 10px; font-size: 13px; font-weight: bold; color: #4CAF50; min-width: 70px; text-align: left;">
+                         ...
+                    </div>
+                    <button class="btn-add" onclick='addToCart(event, ${JSON.stringify(item)})' style="position: static; background: #4CAF50; color: white; width:30px; height:30px; font-size:14px;">
                         <i class="fa-solid fa-plus"></i>
                     </button>
                 `;
+
+                    // Update estimated price if goldPrices available
+                    setTimeout(() => {
+                        const priceSpan = el.querySelector('.item-price-est');
+                        const goldPrice = goldPrices[item.carat] || 0;
+                        if (goldPrice > 0) {
+                            const labor = parseFloat(item.estimated_price) - (item.net_gold_weight * goldPrice);
+                            const total = (item.net_gold_weight * goldPrice) + (labor || 100);
+                            priceSpan.innerText = total.toFixed(0) + ' ج.م';
+                        } else {
+                            priceSpan.innerText = parseFloat(item.estimated_price || 0).toFixed(0) + ' ج.م';
+                        }
+                    }, 200);
+
                     container.appendChild(el);
                 });
             }
@@ -679,31 +739,32 @@
             cart.forEach((item, index) => {
                 const weight = parseFloat(item.net_gold_weight);
                 const pricePerGram = goldPrices[item.carat] || 0;
-                const laborVal = parseFloat(item.labor_fee || 100); // Default labor if missing
 
-                // Item Value = (Weight * GoldPrice) + Labor
-                const itemGoldValue = weight * pricePerGram;
-                const itemTotal = itemGoldValue + laborVal;
+                // Get labor from estimated price or default
+                const itemTotalEst = parseFloat(item.estimated_price || 0);
+                const itemGoldValEst = weight * pricePerGram;
+                const laborVal = (itemTotalEst > itemGoldValEst) ? (itemTotalEst - itemGoldValEst) : 100;
+
+                const itemTotal = (weight * pricePerGram) + laborVal;
 
                 totalWeight += weight;
-                if (pricePerGram > 0) totalValue += itemTotal;
+                totalValue += itemTotal;
 
                 const el = document.createElement('div');
                 el.className = 'cart-item';
 
                 el.innerHTML = `
-                    <div>
-                        <div style="font-weight:bold;">${item.name}</div>
-                        <div style="font-size:12px; color:#aaa;">
-                             ${weight} جم | ${item.carat_name} <br>
-                             <span style="color:var(--accent);">سعر اليوم: ${pricePerGram ? pricePerGram.toFixed(2) : 'غير محدد'} ج.م</span>
-                        </div>
+                    <div class="cart-item-header">
+                        <span style="font-weight:bold;">${item.name}</span>
+                        <span style="color:var(--primary); cursor:pointer;" onclick="removeFromCart(${index})">
+                            <i class="fa-solid fa-trash-can"></i> حذف
+                        </span>
                     </div>
-                    <div style="text-align:left;">
-                        <div style="font-weight:bold;">${pricePerGram ? itemTotal.toFixed(0) : '---'} ج.م</div>
-                        <div style="color: var(--primary); cursor:pointer; margin-top:5px;" onclick="removeFromCart(${index})">
-                            <i class="fa-solid fa-trash"></i>
-                        </div>
+                    <div class="cart-item-details">
+                        <div>الوزن: <span class="cart-detail-val">${weight} جم</span></div>
+                        <div>سعر الجرام: <span class="cart-detail-val">${pricePerGram.toFixed(0)} ج.م</span></div>
+                        <div>المصنعية: <span class="cart-detail-val">${laborVal.toFixed(0)} ج.م</span></div>
+                        <div style="font-size:14px; border-top:1px dashed #444; padding-top:5px; margin-top:5px;">الإجمالي: <span class="cart-detail-val" style="color:#4CAF50;">${itemTotal.toFixed(0)} ج.م</span></div>
                     </div>
                 `;
                 container.appendChild(el);

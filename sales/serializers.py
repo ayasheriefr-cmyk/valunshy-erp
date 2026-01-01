@@ -12,11 +12,13 @@ class GoldPriceSerializer(serializers.ModelSerializer):
         model = GoldPrice
         fields = ['carat', 'carat_name', 'price_per_gram', 'updated_at']
 
+from .models import Invoice, InvoiceItem, SalesRepresentative, OldGoldReturn
+
 class OldGoldReturnSerializer(serializers.ModelSerializer):
     carat_name = serializers.CharField(source='carat.name', read_only=True)
     
     class Meta:
-        model = Invoice.returned_gold.rel.related_model  # Dynamic reference to OldGoldReturn
+        model = OldGoldReturn
         fields = ['carat', 'carat_name', 'weight', 'value']
 
 

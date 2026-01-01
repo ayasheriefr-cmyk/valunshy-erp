@@ -5,7 +5,7 @@ from django.db.models import Sum, Count, Q
 from django.utils import timezone
 from sales.models import Invoice
 from inventory.models import Item, Branch
-from manufacturing.models import ManufacturingOrder, Workshop, WorkshopSettlement
+from manufacturing.models import ManufacturingOrder, Workshop, WorkshopSettlement, CostAllocation
 from core.models import GoldPrice, Notification
 from finance.treasury_models import Treasury
 import datetime
@@ -176,6 +176,15 @@ def home_dashboard(request):
         total_count=Count('id'),
         total_weight=Sum('input_weight')
     )
+    
+    # 7. Labor Audit Metrics
+    latest_allocation = CostAllocation.objects.filter(status='applied').first()
+    labor_efficiency = 0
+    if latest_allocation and latest_allocation.total_labor_income_snapshot > 0:
+        labor_efficiency = int((latest_allocation.net_labor_profit_snapshot / latest_allocation.total_labor_income_snapshot) * 100)
+    
+    latest_manufacturing_profit = latest_allocation.net_labor_profit_snapshot if latest_allocation else 0
+    
 
     context = {
         'total_sales_today': total_sales_today,
@@ -208,7 +217,11 @@ def home_dashboard(request):
         'total_active_count': active_summary['total_count'] or 0,
         'total_active_weight': active_summary['total_weight'] or 0,
         
+        'labor_efficiency': labor_efficiency,
+        'latest_manufacturing_profit': latest_manufacturing_profit,
+        
         'total_workshop_gold_18': total_workshop_gold_18,
+    
         'total_workshop_gold_21': total_workshop_gold_21,
         'total_workshop_gold_24': total_workshop_gold_24,
         'total_workshop_gold_combined': total_workshop_gold_combined,

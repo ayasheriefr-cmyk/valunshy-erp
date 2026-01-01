@@ -302,6 +302,55 @@
             </div>
         </section>
 
+        <!-- Labor Audit & Manufacturing Performance -->
+        <section class="section-card glass-card"
+            style="padding: 1.5rem; margin-top: 2rem; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.05); background: linear-gradient(90deg, rgba(255,255,255,0.03) 0%, rgba(212,175,55,0.02) 100%);">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+                <div
+                    style="width: 3rem; height: 3rem; background: rgba(76, 175, 80, 0.1); color: #4CAF50; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </div>
+                <div>
+                    <h3 style="font-size: 1rem; font-weight: 800; color: #FFF; margin-bottom: 0.2rem;">
+                        {% if LANGUAGE_CODE == 'ar' %}ميزان الأجور وكفاءة التصنيع{% else %}Labor Audit & Production
+                        Efficiency{% endif %}
+                    </h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">
+                        {% if LANGUAGE_CODE == 'ar' %}آخر تحليل ربحية للمصنع: {% else %}Latest production profit
+                        analysis: {% endif %}
+                        <span
+                            style="color: {% if latest_manufacturing_profit >= 0 %}#4CAF50{% else %}#f44336{% endif %}; font-weight: 800;">
+                            {{ latest_manufacturing_profit|floatformat:0 }} EGP
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <div
+                style="display: flex; align-items: center; gap: 2rem; flex: 1; max-width: 400px; justify-content: flex-end;">
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted);">{% if
+                            LANGUAGE_CODE == 'ar' %}كفاءة تغطية التكاليف{% else %}Cost Coverage Efficiency{% endif
+                            %}</span>
+                        <span style="font-size: 0.75rem; font-weight: 900; color: var(--gold-primary);">{{
+                            labor_efficiency }}%</span>
+                    </div>
+                    <div
+                        style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
+                        <div
+                            style="width: {{ labor_efficiency }}%; height: 100%; background: linear-gradient(90deg, #D4AF37, #4CAF50); border-radius: 10px;">
+                        </div>
+                    </div>
+                </div>
+                <a href="/admin/manufacturing/costallocation/" class="button-small"
+                    style="background: var(--gold-dust); color: var(--gold-primary); font-weight: 800; border: 1px solid var(--gold-soft);">
+                    {% if LANGUAGE_CODE == 'ar' %}التفاصيل{% else %}Details{% endif %}
+                </a>
+            </div>
+        </section>
+
+
         <!-- CSS for new elements -->
         <style>
             .gold-price-bar {

@@ -577,11 +577,47 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
         ('إعدادات التوزيع', {
             'fields': (('allocation_basis', 'status'), ('cost_center',))
         }),
-        ('إحصائيات (بعد التطبيق)', {
-            'fields': (('total_production_weight_snapshot', 'total_labor_cost_snapshot'), ('created_at', 'updated_at')),
+        ('ميزان الأجور ونتائج التصنيع', {
+            'fields': (
+                ('total_labor_income_display', 'total_labor_cost_display'),
+                ('total_overhead_display', 'net_labor_profit_display'),
+                'total_production_weight_snapshot'
+            ),
+            'description': 'يوضح هذا القسم ربحية قطاع التصنيع بعد خصم أجور الورش وكافة المصاريف التشغيلية.'
+        }),
+        ('إحصائيات النظام (تقني)', {
+            'fields': (('created_at', 'updated_at'),),
             'classes': ('collapse',)
         }),
     )
+
+    readonly_fields = ('total_overhead_display', 'total_labor_income_display', 'total_labor_cost_display', 'net_labor_profit_display', 'created_at', 'updated_at', 'orders_count')
+
+    def total_labor_income_display(self, obj):
+        return format_html('<span style="color:#2196F3; font-weight:bold; font-size:1.2rem;">{} ج.م</span>', obj.total_labor_income_snapshot)
+    total_labor_income_display.short_description = 'إجمالي دخل المصنعية'
+
+    def total_labor_cost_display(self, obj):
+        return format_html('<span style="color:#f44336; font-weight:bold;">{} ج.م</span>', obj.total_labor_cost_snapshot)
+    total_labor_cost_display.short_description = 'أجور الورش الخارجية'
+    
+    def total_overhead_display(self, obj):
+        return format_html('<span style="color:#607D8B; font-weight:bold;">{} ج.م</span>', obj.total_overhead_amount)
+    total_overhead_display.short_description = 'إجمالي مصاريف التشغيل'
+    
+    
+    def net_labor_profit_display(self, obj):
+        color = '#4CAF50' if obj.net_labor_profit_snapshot >= 0 else '#f44336'
+        bg = 'rgba(76, 175, 80, 0.1)' if obj.net_labor_profit_snapshot >= 0 else 'rgba(244, 67, 54, 0.1)'
+        return format_html(
+            '<div style="background:{}; color:{}; padding:10px 20px; border-radius:10px; text-align:center; border:2px solid {};">'
+            '<span style="font-size:1.4rem; font-weight:900;">{} ج.م</span><br>'
+            '<small style="font-weight:bold; opacity:0.8;">صافي نتيجة التصنيع</small>'
+            '</div>',
+            bg, color, color, obj.net_labor_profit_snapshot
+        )
+    net_labor_profit_display.short_description = 'صافي الربح/الخسارة'
+    
     
     actions = ['fetch_expenses_action', 'apply_cost_allocation']
 
@@ -653,11 +689,21 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
                 messages.error(request, f'إجمالي الأساس (الوزن أو الأجر) = صفر. لا يمكن التوزيع.')
                 continue
             
-            # Save snapshots
-            cost_allocation.total_production_weight_snapshot = orders.aggregate(total=Sum('output_weight'))['total'] or Decimal('0')
-            cost_allocation.total_labor_cost_snapshot = orders.aggregate(total=Sum('manufacturing_pay'))['total'] or Decimal('0')
+            # Save snapshots (Labor Audit)
+            total_output_weight = orders.aggregate(total=Sum('output_weight'))['total'] or Decimal('0')
+            total_external_pay = orders.filter(workshop__workshop_type='external').aggregate(total=Sum('manufacturing_pay'))['total'] or Decimal('0')
+            total_factory_margin = orders.aggregate(total=Sum('factory_margin'))['total'] or Decimal('0')
+            # Total Manufacturing Income from customers = (Pay to workshops) + (Margin for factory)
+            total_income_from_labor = (orders.aggregate(total=Sum('manufacturing_pay'))['total'] or Decimal('0')) + total_factory_margin
+            
+            cost_allocation.total_production_weight_snapshot = total_output_weight
+            cost_allocation.total_labor_cost_snapshot = total_external_pay
+            cost_allocation.total_labor_income_snapshot = total_income_from_labor
+            # Net Labor Profit = Marginal Income - Operational Overheads (Salaries, Rent, etc.)
+            cost_allocation.net_labor_profit_snapshot = total_factory_margin - cost_allocation.total_overhead_amount
             
             # Distribute costs to each order
+    
             for order in orders:
                 if cost_allocation.allocation_basis == 'weight':
                     ratio = order.output_weight / basis_total

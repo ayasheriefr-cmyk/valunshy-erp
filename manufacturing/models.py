@@ -562,7 +562,10 @@ class CostAllocation(models.Model):
     
     # Statistics
     total_production_weight_snapshot = models.DecimalField("إجمالي الوزن المنتج في الفترة", max_digits=15, decimal_places=3, default=0, editable=False)
-    total_labor_cost_snapshot = models.DecimalField("إجمالي أجور التصنيع في الفترة", max_digits=15, decimal_places=2, default=0, editable=False)
+    total_labor_cost_snapshot = models.DecimalField("إجمالي أجور الورش (الخارجية)", max_digits=15, decimal_places=2, default=0, editable=False)
+    total_labor_income_snapshot = models.DecimalField("إجمالي الدخل من أجور التصنيع (شامل الهامش)", max_digits=15, decimal_places=2, default=0, editable=False)
+    net_labor_profit_snapshot = models.DecimalField("صافي ربح قطاع التصنيع (بعد الأجور والمصاريف)", max_digits=15, decimal_places=2, default=0, editable=False)
+    
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

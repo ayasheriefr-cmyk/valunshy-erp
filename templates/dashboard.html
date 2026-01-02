@@ -108,8 +108,7 @@
                     <a href="{% url 'sales:profitability_report' %}" class="nav-item"
                         style="color: #4CAF50; border: 1px solid rgba(76, 175, 80, 0.2); background: rgba(76, 175, 80, 0.05); margin-top: 10px; border-radius: 12px;">
                         <i class="fa-solid fa-chart-pie"></i>
-                        <span>{% if LANGUAGE_CODE == 'ar' %}تقارير الأرباح{% else %}Profitability Reports{% endif
-                            %}</span>
+                        <span>{% if LANGUAGE_CODE == 'ar' %}تقارير الأرباح{% else %}Profitability Reports{% endif %}</span>
                     </a>
                 </li>
 
@@ -341,8 +340,7 @@
                 <div style="flex: 1;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted);">
-                            {% if LANGUAGE_CODE == 'ar' %}كفاءة تغطية التكاليف{% else %}Cost Coverage Efficiency{% endif
-                            %}
+                            {% if LANGUAGE_CODE == 'ar' %}كفاءة تغطية التكاليف{% else %}Cost Coverage Efficiency{% endif %}
                         </span>
                         <span style="font-size: 0.75rem; font-weight: 900; color: var(--gold-primary);">
                             {{ labor_efficiency }}%

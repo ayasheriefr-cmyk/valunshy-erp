@@ -109,7 +109,8 @@
                         style="background: #111; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 8px; min-width: 120px;">
                         <option value="">كل الفروع</option>
                         {% for b in branches %}
-                        <option value="{{ b.id }}" {% if selected_branch|stringformat:"i" == b.id|stringformat:"i" %}selected{% endif %}>{{ b.name }}</option>
+                        <option value="{{ b.id }}" {% if selected_branch|stringformat:"i"==b.id|stringformat:"i"
+                            %}selected{% endif %}>{{ b.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -120,7 +121,8 @@
                         style="background: #111; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 8px; min-width: 120px;">
                         <option value="">كل المندوبين</option>
                         {% for r in sales_reps %}
-                        <option value="{{ r.id }}" {% if selected_rep|stringformat:"i" == r.id|stringformat:"i" %}selected{% endif %}>{{ r.name }}</option>
+                        <option value="{{ r.id }}" {% if selected_rep|stringformat:"i"==r.id|stringformat:"i"
+                            %}selected{% endif %}>{{ r.name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -131,7 +133,8 @@
                         style="background: #111; color: #fff; border: 1px solid #444; padding: 8px; border-radius: 8px; min-width: 120px;">
                         <option value="">كل التصنيفات</option>
                         {% for c in categories %}
-                        <option value="{{ c.id }}" {% if selected_cat|stringformat:"i" == c.id|stringformat:"i" %}selected{% endif %}>{{ c.name }}</option>
+                        <option value="{{ c.id }}" {% if selected_cat|stringformat:"i"==c.id|stringformat:"i"
+                            %}selected{% endif %}>{{ c.name }}</option>
                         {% endfor %}
                     </select>
                 </div>

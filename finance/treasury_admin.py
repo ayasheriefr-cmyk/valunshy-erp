@@ -11,7 +11,7 @@ from .treasury_models import (
     Treasury, TreasuryTransaction, CustodyHolder, Custody, 
     CustodySettlement, ExpenseVoucher, ReceiptVoucher, 
     TreasuryTransfer, DailyTreasuryReport,
-    TreasuryTool, ToolTransfer, CustodyTool
+    TreasuryTool, ToolTransfer, CustodyTool, TreasuryType
 )
 from core.admin_mixins import ExportImportMixin
 
@@ -31,6 +31,19 @@ class TreasuryTransactionInline(admin.TabularInline):
 class TreasuryToolInline(admin.TabularInline):
     model = TreasuryTool
     extra = 1
+
+@admin.register(TreasuryType)
+class TreasuryTypeAdmin(admin.ModelAdmin):
+    list_display = ('name', 'code', 'color_badge', 'description')
+    search_fields = ('name', 'code')
+    prepopulated_fields = {'code': ('name',)}
+    
+    def color_badge(self, obj):
+        return format_html(
+            '<div style="width: 20px; height: 20px; background-color: {}; border-radius: 50%; border: 1px solid #ccc;"></div>',
+            obj.color
+        )
+    color_badge.short_description = "اللون"
 
 @admin.register(Treasury)
 class TreasuryAdmin(ExportImportMixin, admin.ModelAdmin):
@@ -62,22 +75,13 @@ class TreasuryAdmin(ExportImportMixin, admin.ModelAdmin):
                        'gold_casting_balance', 'stones_balance')
     
     def treasury_type_badge(self, obj):
-        colors = {
-            'main': '#4CAF50',
-            'branch': '#2196F3',
-            'petty': '#FF9800',
-            'gold': '#D4AF37',
-            'laser_powder': '#9C27B0',
-            'laser_scrap': '#f44336',
-            'casting_powder': '#607D8B',
-            'casting_scrap': '#795548',
-            'laser': '#E91E63',
-        }
-        color = colors.get(obj.treasury_type, '#666')
+        if not obj.treasury_type:
+            return "-"
+        color = obj.treasury_type.color
         return format_html(
             '<span style="background:{}22; color:{}; padding:4px 12px; border-radius:15px; '
             'font-size:12px; font-weight:bold;">{}</span>',
-            color, color, obj.get_treasury_type_display()
+            color, color, obj.treasury_type.name
         )
     treasury_type_badge.short_description = 'النوع'
     

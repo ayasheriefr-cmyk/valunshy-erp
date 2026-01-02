@@ -9,6 +9,21 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 
 
+
+class TreasuryType(models.Model):
+    """أنواع الخزائم - يمكن للمستخدم إضافتها وتعديلها"""
+    name = models.CharField("اسم النوع", max_length=100)
+    code = models.SlugField("كود النوع", max_length=50, unique=True)
+    color = models.CharField("لون التمييز", max_length=20, default='#666666', help_text="كود اللون Hex (مثال: #4CAF50)")
+    description = models.TextField("وصف", blank=True)
+    
+    class Meta:
+        verbose_name = "نوع خزينة"
+        verbose_name_plural = "أنواع الخزائن"
+    
+    def __str__(self):
+        return self.name
+
 class Treasury(models.Model):
     """الخزائن - يمكن أن يكون هناك أكثر من خزينة"""
     name = models.CharField("اسم الخزينة", max_length=100)
@@ -16,25 +31,10 @@ class Treasury(models.Model):
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, 
                                related_name='sub_treasuries', verbose_name="الخزينة الأم")
     
-    TREASURY_TYPE_CHOICES = [
-        ('main', 'الخزينة الرئيسية'),
-        ('branch', 'خزينة فرع'),
-        ('petty', 'خزينة مصروفات نثرية'),
-        ('sales', 'خزينة مبيعات'),
-        ('workshop', 'خزينة ورشة'),
-        ('gold_raw', 'خزينة ذهب خام (للسبك)'),
-        ('stones', 'خزينة أحجار للتصنيع'),
-        ('finished', 'خزينة إنتاج تام'),
-        ('gold_tools', 'خزينة أدوات تصنيع (ذهب)'),
-        ('production', 'خزينة قسم الإنتاج'),
-        ('casting', 'خزينة قسم السبك'),
-        ('laser_powder', 'خزينة بودر ليزر'),
-        ('laser_scrap', 'خزينة خسية الليزر'),
-        ('casting_powder', 'خزينة بودر سبك'),
-        ('casting_scrap', 'خزينة خسية سبك'),
-        ('laser', 'خزينة ليزر'),
-    ]
-    treasury_type = models.CharField("نوع الخزينة", max_length=20, choices=TREASURY_TYPE_CHOICES, default='main')
+    # Old static choices removed
+    
+    # New dynamic foreign key
+    treasury_type = models.ForeignKey(TreasuryType, on_delete=models.PROTECT, verbose_name="نوع الخزينة")
     
     # الأرصدة الحالية
     cash_balance = models.DecimalField("رصيد النقدية", max_digits=15, decimal_places=2, default=0)

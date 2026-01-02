@@ -327,8 +327,9 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">
                         {% if LANGUAGE_CODE == 'ar' %}آخر تحليل ربحية للمصنع: {% else %}Latest production profit
                         analysis: {% endif %}
-                        <span {% if latest_manufacturing_profit>= 0 %}style="color: #4CAF50; font-weight: 800;"{% else
-                            %}style="color: #f44336; font-weight: 800;"{% endif %}>
+                        <span
+                            class="{% if latest_manufacturing_profit >= 0 %}text-success{% else %}text-danger{% endif %}"
+                            style="font-weight: 800;">
                             {{ latest_manufacturing_profit|floatformat:0 }} EGP
                         </span>
                     </p>
@@ -339,16 +340,17 @@
                 style="display: flex; align-items: center; gap: 2rem; flex: 1; max-width: 400px; justify-content: flex-end;">
                 <div style="flex: 1;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted);">{% if
-                            LANGUAGE_CODE == 'ar' %}كفاءة تغطية التكاليف{% else %}Cost Coverage Efficiency{% endif
-                            %}</span>
+                        <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted);">
+                            {% if LANGUAGE_CODE == 'ar' %}كفاءة تغطية التكاليف{% else %}Cost Coverage Efficiency{% endif
+                            %}
+                        </span>
                         <span style="font-size: 0.75rem; font-weight: 900; color: var(--gold-primary);">{{
                             labor_efficiency }}%</span>
                     </div>
                     <div
                         style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
                         <div
-                            style="width: {{ labor_efficiency|default:0 }}%; height: 100%; background: linear-gradient(90deg, #D4AF37, #4CAF50); border-radius: 10px;">
+                            style="--eff: {{ labor_efficiency|default:0 }}%; width: var(--eff); height: 100%; background: linear-gradient(90deg, #D4AF37, #4CAF50); border-radius: 10px;">
                         </div>
                     </div>
                 </div>
@@ -382,6 +384,14 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
+            }
+
+            .text-success {
+                color: #4CAF50;
+            }
+
+            .text-danger {
+                color: #f44336;
             }
 
             .ticker-item .carat {

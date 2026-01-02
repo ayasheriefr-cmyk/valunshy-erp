@@ -45,6 +45,7 @@ class InvoiceResource(resources.ModelResource):
 
 @admin.register(Invoice)
 class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
+    change_list_template = "admin/sales/invoice/change_list.html"
     resource_class = InvoiceResource
     list_display = ('invoice_number', 'status_badge', 'customer', 'branch', 'grand_total', 'total_profit_display', 'sales_rep', 'payment_method', 'created_at')
     list_filter = ('status', 'branch', 'payment_method', 'sales_rep', 'created_at')

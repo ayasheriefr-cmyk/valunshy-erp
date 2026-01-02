@@ -1,0 +1,14 @@
+{% extends "admin/import_export_changelist.html" %}
+{% load i18n admin_urls static %}
+
+{% block object-tools-items %}
+{{ block.super }}
+
+<li class="custom-report-btn" style="margin-inline-start: 12px;">
+    <a href="{% url 'sales:profitability_report' %}" class="btn-premium"
+        style="background: linear-gradient(135deg, #FF9800, #E65100) !important; color: #fff !important;">
+        <i class="fa-solid fa-chart-pie"></i> {% if LANGUAGE_CODE == 'ar' %}تقرير الربحية{% else %}Profitability
+        Report{% endif %}
+    </a>
+</li>
+{% endblock %}

@@ -1,0 +1,130 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static %}
+
+{% block extrahead %}
+{{ block.super }}
+<style>
+    .merge-container {
+        max-width: 800px;
+        margin: 20px auto;
+        background: #1a1a1a;
+        padding: 30px;
+        border-radius: 12px;
+        border: 1px solid #333;
+    }
+
+    .order-item {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid #333;
+        transition: background 0.3s;
+        cursor: pointer;
+    }
+
+    .order-item:hover {
+        background: rgba(212, 175, 55, 0.05);
+    }
+
+    .order-item input[type="radio"] {
+        margin-inline-end: 20px;
+        transform: scale(1.5);
+        accent-color: #D4AF37;
+    }
+
+    .order-info {
+        flex: 1;
+    }
+
+    .order-number {
+        font-weight: 800;
+        color: #D4AF37;
+        font-size: 1.1rem;
+    }
+
+    .order-details {
+        font-size: 0.9rem;
+        color: #999;
+        margin-top: 5px;
+    }
+
+    .merge-actions {
+        margin-top: 30px;
+        display: flex;
+        gap: 15px;
+        justify-content: flex-end;
+    }
+
+    .btn {
+        padding: 10px 25px;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        border: none;
+    }
+
+    .btn-cancel {
+        background: #333;
+        color: #fff;
+        text-decoration: none;
+    }
+
+    .btn-confirm {
+        background: linear-gradient(135deg, #D4AF37, #B8860B);
+        color: #000;
+    }
+
+    .alert-warning {
+        background: rgba(255, 152, 0, 0.1);
+        color: #FF9800;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 152, 0, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="merge-container">
+    <h1 style="color: #fff; margin-bottom: 10px;">{% if LANGUAGE_CODE == 'ar' %}دمج أوامر التصنيع{% else %}Merge
+        Manufacturing Orders{% endif %}</h1>
+    <p style="color: #999; margin-bottom: 25px;">{% if LANGUAGE_CODE == 'ar' %}يرجى اختيار الأمر الذي سيكون هو
+        "الأساسي". سيتم نقل كافة الأوزان والتفاصيل إليه.{% else %}Please select which order will be the "Main" one. All
+        weights and details will be transferred to it.{% endif %}</p>
+
+    <div class="alert-warning">
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {% if LANGUAGE_CODE == 'ar' %}تحذير: الأوامر غير المختارة سيتم اعتبارها "مدمجة" ولن تظهر في القوائم النشطة.{%
+        else %}Warning: Non-selected orders will be marked as "Merged" and won't appear in active lists.{% endif %}
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for order in orders %}
+        <input type="hidden" name="_selected_action" value="{{ order.pk }}">
+        <label class="order-item" for="main_order_{{ order.pk }}">
+            <input type="radio" name="main_order_id" value="{{ order.pk }}" id="main_order_{{ order.pk }}" {% if
+                forloop.first %}checked{% endif %}>
+            <div class="order-info">
+                <div class="order-number">{{ order.order_number }}</div>
+                <div class="order-details">
+                    {% if LANGUAGE_CODE == 'ar' %}الوزن الداخل:{% else %}Input Weight:{% endif %} {{ order.input_weight
+                    }} جم |
+                    {% if LANGUAGE_CODE == 'ar' %}الورشة:{% else %}Workshop:{% endif %} {{ order.workshop.name }}
+                </div>
+            </div>
+        </label>
+        {% endfor %}
+
+        <input type="hidden" name="action" value="merge_orders_action">
+        <input type="hidden" name="confirm" value="yes">
+
+        <div class="merge-actions">
+            <a href="." class="btn btn-cancel">{% if LANGUAGE_CODE == 'ar' %}إلغاء{% else %}Cancel{% endif %}</a>
+            <button type="submit" class="btn btn-confirm">{% if LANGUAGE_CODE == 'ar' %}تأكيد الدمج والربط{% else
+                %}Confirm Merge & Link{% endif %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -357,6 +357,8 @@ class ManufacturingOrder(models.Model):
         ('casting', 'سبك'),
         ('crafting', 'صياغة'),
         ('polishing', 'تلميع / واجهة'),
+        ('tribolish', 'الترابولش'),
+        ('merged', 'مدمج مع أمر آخر'),
         ('qc_pending', 'قيد فحص الجودة'),
         ('completed', 'مكتمل / جاهز'),
         ('qc_failed', 'فحص جودة مرفوض'),
@@ -462,6 +464,7 @@ class ProductionStage(models.Model):
         ('stamping', 'الدمغة / Stamping'),
         ('repair', 'الصيانة / Repairs'),
         ('qc', 'مراقبة الجودة / Quality Control'),
+        ('tribolish', 'الترابولش (Tribolish)'),
     ]
     stage_name = models.CharField("اسم المرحلة", max_length=20, choices=STAGE_CHOICES, default='tazgah_qasem')
     

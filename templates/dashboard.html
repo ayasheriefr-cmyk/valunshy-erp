@@ -327,8 +327,8 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">
                         {% if LANGUAGE_CODE == 'ar' %}آخر تحليل ربحية للمصنع: {% else %}Latest production profit
                         analysis: {% endif %}
-                        <span
-                            style="color: {% if latest_manufacturing_profit >= 0 %}#4CAF50{% else %}#f44336{% endif %}; font-weight: 800;">
+                        <span {% if latest_manufacturing_profit>= 0 %}style="color: #4CAF50; font-weight: 800;"{% else
+                            %}style="color: #f44336; font-weight: 800;"{% endif %}>
                             {{ latest_manufacturing_profit|floatformat:0 }} EGP
                         </span>
                     </p>
@@ -348,7 +348,7 @@
                     <div
                         style="height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden;">
                         <div
-                            style="width: {{ labor_efficiency }}%; height: 100%; background: linear-gradient(90deg, #D4AF37, #4CAF50); border-radius: 10px;">
+                            style="width: {{ labor_efficiency|default:0 }}%; height: 100%; background: linear-gradient(90deg, #D4AF37, #4CAF50); border-radius: 10px;">
                         </div>
                     </div>
                 </div>

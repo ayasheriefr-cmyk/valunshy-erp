@@ -513,6 +513,77 @@ class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
     class Media:
         js = ('js/manufacturing_alarm.js', 'js/inline_table_fix.js')
 
+    actions = ['merge_orders_action']
+
+    def merge_orders_action(self, request, queryset):
+        """
+        Custom action to merge multiple manufacturing orders into one main order.
+        """
+        if 'confirm' in request.POST:
+            main_order_id = request.POST.get('main_order_id')
+            if not main_order_id:
+                self.message_user(request, "يرجى اختيار الأمر الأساسي.", level='error')
+                return None
+
+            try:
+                main_order = ManufacturingOrder.objects.get(id=main_order_id)
+                other_orders = queryset.exclude(id=main_order_id)
+                
+                if not other_orders.exists():
+                    self.message_user(request, "يجب اختيار أمرين على الأقل للدمج.", level='error')
+                    return None
+
+                total_added_input = 0
+                merged_numbers = []
+
+                for order in other_orders:
+                    # 1. Sum Weights
+                    total_added_input += (order.input_weight or 0)
+                    merged_numbers.append(order.order_number)
+
+                    # 2. Transfer Stones
+                    for stone in order.orderstone_set.all():
+                        stone.order = main_order
+                        stone.save()
+
+                    # 3. Transfer Tools
+                    for tool in order.order_tools_list.all():
+                        tool.order = main_order
+                        tool.save()
+
+                    # 4. Transfer Production Stages
+                    for stage in order.stages.all():
+                        stage.order = main_order
+                        stage.save()
+
+                    # 5. Mark as Merged
+                    order.status = 'merged'
+                    order.save()
+
+                # Update Main Order
+                main_order.input_weight += total_added_input
+                merge_note = f"\n[دمج]: تم دمج الأوامر التالية في هذا الأمر: {', '.join(merged_numbers)}"
+                main_order.qc_notes = (main_order.qc_notes or "") + merge_note
+                main_order.save()
+
+                self.message_user(request, f"تم دمج {other_orders.count()} أمر في الأمر {main_order.order_number} بنجاح.")
+                return None
+
+            except Exception as e:
+                self.message_user(request, f"خطأ أثناء الدمج: {str(e)}", level='error')
+                return None
+
+        # If not confirmed, show confirmation page
+        from django.template.response import TemplateResponse
+        context = {
+            'orders': queryset,
+            'title': "دمج أوامر التصنيع",
+            'LANGUAGE_CODE': getattr(request, 'LANGUAGE_CODE', 'ar'),
+        }
+        return TemplateResponse(request, "admin/manufacturing/merge_confirmation.html", context)
+    
+    merge_orders_action.short_description = "🔗 دمج الأوامر المختارة (منتج واحد)"
+
 @admin.register(WorkshopTransfer)
 class WorkshopTransferAdmin(ExportImportMixin, admin.ModelAdmin):
     list_display = ('transfer_number', 'from_workshop', 'to_workshop', 'carat', 'weight_display', 'status_badge', 'date')
@@ -654,76 +725,7 @@ class CostAllocationAdmin(ExportImportMixin, admin.ModelAdmin):
     status_badge.short_description = 'الحالة'
 
     
-    actions = ['fetch_expenses_action', 'apply_cost_allocation', 'merge_orders_action']
-
-    def merge_orders_action(self, request, queryset):
-        """
-        Custom action to merge multiple manufacturing orders into one main order.
-        """
-        if 'confirm' in request.POST:
-            main_order_id = request.POST.get('main_order_id')
-            if not main_order_id:
-                self.message_user(request, "يرجى اختيار الأمر الأساسي.", level='error')
-                return None
-
-            try:
-                main_order = ManufacturingOrder.objects.get(id=main_order_id)
-                other_orders = queryset.exclude(id=main_order_id)
-                
-                if not other_orders.exists():
-                    self.message_user(request, "يجب اختيار أمرين على الأقل للدمج.", level='error')
-                    return None
-
-                total_added_input = 0
-                merged_numbers = []
-
-                for order in other_orders:
-                    # 1. Sum Weights
-                    total_added_input += (order.input_weight or 0)
-                    merged_numbers.append(order.order_number)
-
-                    # 2. Transfer Stones
-                    for stone in order.orderstone_set.all():
-                        stone.order = main_order
-                        stone.save()
-
-                    # 3. Transfer Tools
-                    for tool in order.order_tools_list.all():
-                        tool.order = main_order
-                        tool.save()
-
-                    # 4. Transfer Production Stages
-                    for stage in order.stages.all():
-                        stage.order = main_order
-                        stage.save()
-
-                    # 5. Mark as Merged
-                    order.status = 'merged'
-                    order.save()
-
-                # Update Main Order
-                main_order.input_weight += total_added_input
-                merge_note = f"\n[دمج]: تم دمج الأوامر التالية في هذا الأمر: {', '.join(merged_numbers)}"
-                main_order.qc_notes = (main_order.qc_notes or "") + merge_note
-                main_order.save()
-
-                self.message_user(request, f"تم دمج {other_orders.count()} أمر في الأمر {main_order.order_number} بنجاح.")
-                return None
-
-            except Exception as e:
-                self.message_user(request, f"خطأ أثناء الدمج: {str(e)}", level='error')
-                return None
-
-        # If not confirmed, show confirmation page
-        from django.template.response import TemplateResponse
-        context = {
-            'orders': queryset,
-            'title': "دمج أوامر التصنيع",
-            'LANGUAGE_CODE': getattr(request, 'LANGUAGE_CODE', 'ar'),
-        }
-        return TemplateResponse(request, "admin/manufacturing/merge_confirmation.html", context)
-    
-    merge_orders_action.short_description = "🔗 دمج الأوامر المختارة (منتج واحد)"
+    actions = ['fetch_expenses_action', 'apply_cost_allocation']
 
     def fetch_expenses_action(self, request, queryset):
         from django.contrib import messages

@@ -228,6 +228,7 @@ class Stone(models.Model):
     
     UNIT_CHOICES = [
         ('carat', 'قيراط (Carat)'),
+        ('gram', 'جرام (Gram)'),
         ('cm', 'سنتيمتر (CM)'),
     ]
     unit = models.CharField("الوحدة", max_length=20, choices=UNIT_CHOICES, default='carat')
@@ -419,11 +420,25 @@ class OrderStone(models.Model):
     def weight_in_gold(self):
         """تحويل وزن الأحجار (قيراط) إلى ما يعادله ذهب (جرام) - التحييف"""
         from decimal import Decimal
-        # Only apply conversion if unit is 'carat'
-        if self.stone and self.stone.unit == 'carat':
-            return (self.quantity or Decimal('0')) * Decimal('0.2')
-        else:
-            return Decimal('0')  # No conversion for CM or other units
+        
+        if not self.stone:
+            return Decimal('0')
+            
+        # Normalize unit string
+        unit = str(self.stone.unit).lower().strip()
+        qty = self.quantity or Decimal('0')
+        
+        # 1. Grams (Direct Weight)
+        if unit in ['gram', 'g', 'gm', 'جرام']:
+            return qty
+            
+        # 2. Carats (Convert to Grams: 1 ct = 0.2 g)
+        # Handle 'carat', 'ct', and the Arabic 'قيراط' which caused the issue
+        if unit in ['carat', 'ct'] or 'قيراط' in unit:
+             return qty * Decimal('0.2')
+             
+        # 3. Others (CM, etc.) -> 0 weight contribution
+        return Decimal('0')
     
     class Meta:
         verbose_name = "فص في أمر"

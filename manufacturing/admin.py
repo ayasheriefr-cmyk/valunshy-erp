@@ -35,6 +35,25 @@ class OrderStoneInline(admin.TabularInline):
             return mark_safe('<span style="color:#4CAF50;">✓ لا يوجد</span>')
         return '-'
     quantity_broken_display.short_description = 'الكسر/الفقد'
+    
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "production_stage":
+            try:
+                # Attempt to retrieve the order ID from height in the usage context (URL)
+                # Note: This works for the change view of the parent model
+                resolved = request.resolver_match
+                if resolved and resolved.kwargs.get('object_id'):
+                    order_id = resolved.kwargs.get('object_id')
+                    kwargs["queryset"] = ProductionStage.objects.filter(order_id=order_id)
+                else:
+                    # If this is a new order (add view), no stages exist yet usually, 
+                    # or we can't filter easily. Return empty or all?
+                    # Usually better to return none or all. But practically, distinct stages are created *with* the order.
+                    # If it's an add view, we might not be able to filter effectively until saved.
+                    pass
+            except Exception:
+                pass
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 class OrderToolInline(admin.TabularInline):
     model = OrderTool

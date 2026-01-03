@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Customer, Supplier, CustomerTransaction
+from .models import Customer, Supplier, CustomerTransaction, SupplierTransaction
 from core.admin_mixins import ExportImportMixin
 
 from django.utils.html import format_html
@@ -60,11 +60,33 @@ class CustomerAdmin(ExportImportMixin, admin.ModelAdmin):
         )
     gold_balance_list.short_description = "أرصدة الذهب"
 
+class SupplierTransactionInline(admin.TabularInline):
+    model = SupplierTransaction
+    extra = 0
+    fields = ('date', 'transaction_type', 'cash_debit', 'cash_credit', 'gold_debit', 'gold_credit', 'carat')
+    readonly_fields = ('created_at',)
+    can_delete = False
+
+@admin.register(SupplierTransaction)
+class SupplierTransactionAdmin(admin.ModelAdmin):
+    list_display = ('supplier', 'transaction_type', 'date', 'cash_debit', 'cash_credit', 'gold_movement')
+    list_filter = ('transaction_type', 'date', 'carat')
+    search_fields = ('supplier__name', 'description')
+    
+    def gold_movement(self, obj):
+        if obj.gold_debit > 0:
+            return format_html('<span style="color:red;">-{} جم ({})</span>', obj.gold_debit, obj.carat)
+        elif obj.gold_credit > 0:
+            return format_html('<span style="color:green;">+{} جم ({})</span>', obj.gold_credit, obj.carat)
+        return "-"
+    gold_movement.short_description = "حركة الذهب"
+
 @admin.register(Supplier)
 class SupplierAdmin(ExportImportMixin, admin.ModelAdmin):
     list_display = ('supplier_code', 'name', 'primary_carat', 'phone', 'address', 'money_balance_display', 'gold_balance_list')
     list_filter = ('supplier_type', 'primary_carat')
     search_fields = ('name', 'phone', 'contact_person', 'address')
+    inlines = [SupplierTransactionInline]
     
     fieldsets = (
         ('بيانات المورد', {

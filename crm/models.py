@@ -135,3 +135,70 @@ class Supplier(models.Model):
     class Meta:
         verbose_name = "مورد"
         verbose_name_plural = "الموردين"
+
+    def update_balances(self):
+        """إعادة حساب أرصدة المورد بناءً على الحركات"""
+        from django.db.models import Sum
+        from decimal import Decimal
+        
+        # Cash Balance
+        totals = self.ledger_transactions.aggregate(
+            total_debit=Sum('cash_debit'),
+            total_credit=Sum('cash_credit')
+        )
+        # الرصيد = الدائن (له) - المدين (عليه)
+        # للمورد: "له" يعني ورد لنا بضاعة، "عليه" يعني استلم منا دفعة
+        self.money_balance = (totals['total_credit'] or Decimal('0')) - (totals['total_debit'] or Decimal('0'))
+        
+        # Gold Balances
+        for carat_val in [18, 21, 24]:
+            gold_totals = self.ledger_transactions.filter(carat__base_weight=carat_val).aggregate(
+                total_gold_debit=Sum('gold_debit'),
+                total_gold_credit=Sum('gold_credit')
+            )
+            # رصيد الذهب بنفس المنطقة: له (إيداع/شراء منه) - عليه (سحب/بيع له)
+            balance = (gold_totals['total_gold_credit'] or Decimal('0')) - (gold_totals['total_gold_debit'] or Decimal('0'))
+            setattr(self, f'gold_balance_{carat_val}', balance)
+            
+        self.save(update_fields=['money_balance', 'gold_balance_18', 'gold_balance_21', 'gold_balance_24'])
+
+
+class SupplierTransaction(models.Model):
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name='ledger_transactions', verbose_name="المورد")
+    
+    TRANSACTION_TYPES = [
+        ('purchase', 'مشتريات/توريد'),
+        ('payment', 'دفعة نقدية (له)'),
+        ('return_cash', 'رد نقدية (منه)'),
+        ('gold_in', 'توريد ذهب (له)'),
+        ('gold_out', 'صرف ذهب (عليه)'),
+        ('adjustment', 'تسوية رصيد'),
+    ]
+    transaction_type = models.CharField("نوع الحركة", max_length=20, choices=TRANSACTION_TYPES)
+    
+    cash_debit = models.DecimalField("مدين (عليه)", max_digits=15, decimal_places=2, default=0, help_text="المبالغ التي استلمها المورد (دفعة)")
+    cash_credit = models.DecimalField("دائن (له)", max_digits=15, decimal_places=2, default=0, help_text="قيمة البضاعة الموردة")
+    
+    gold_debit = models.DecimalField("وزن مدين (سحب)", max_digits=15, decimal_places=3, default=0, help_text="وزن أخذه المورد")
+    gold_credit = models.DecimalField("وزن دائن (إيداع)", max_digits=15, decimal_places=3, default=0, help_text="وزن ورده المورد")
+    carat = models.ForeignKey(Carat, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="العيار")
+    
+    date = models.DateField("تاريخ الحركة", default=timezone.now)
+    description = models.TextField("البيان / الوصف", blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "حركة حساب مورد"
+        verbose_name_plural = "حركات حسابات الموردين"
+        ordering = ['-date', '-created_at']
+
+    def __str__(self):
+        return f"{self.supplier.name} - {self.get_transaction_type_display()} - {self.date}"
+    
+    def save(self, *args, **kwargs):
+        is_new = self.pk is None
+        super().save(*args, **kwargs)
+        if is_new:
+             self.supplier.update_balances()
+

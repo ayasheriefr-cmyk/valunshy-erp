@@ -32,7 +32,7 @@ class OrderStoneInline(admin.TabularInline):
             broken = obj.quantity_broken
             if broken > 0:
                 return format_html('<span style="color:#f44336; font-weight:bold;">⚠️ {} كسر</span>', broken)
-            return format_html('<span style="color:#4CAF50;">✓ لا يوجد</span>')
+            return mark_safe('<span style="color:#4CAF50;">✓ لا يوجد</span>')
         return '-'
     quantity_broken_display.short_description = 'الكسر/الفقد'
 

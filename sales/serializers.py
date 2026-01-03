@@ -57,7 +57,7 @@ class InvoiceItemSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = InvoiceItem
-        fields = ['item', 'item_barcode', 'sold_weight', 'sold_gold_price', 'sold_labor_fee', 'subtotal']
+        fields = ['item', 'item_barcode', 'sold_weight', 'sold_gold_price', 'sold_labor_fee', 'sold_stone_fee', 'subtotal']
         read_only_fields = ['subtotal']
 
 # 3. Invoice Serializer (Main Transaction)
@@ -105,60 +105,50 @@ class InvoiceSerializer(serializers.ModelSerializer):
         with transaction.atomic():
             invoice = Invoice.objects.create(**validated_data)
             
-            total_gold_value = 0
-            total_labor_value = 0
-            
             # 1. Process Invoice Items
             for item_data in items_data:
                 item = item_data['item']
                 if item.status != 'available':
                     raise serializers.ValidationError(f"Item {item.barcode} is not available!")
                 
+                # Mark as sold
                 item.status = 'sold'
                 item.save()
                 
-                sold_weight = item_data.get('sold_weight', item.net_gold_weight)
-                gold_price = item_data.get('sold_gold_price', 3500)
-                # Default labor fee = Item's fixed fee (Factory Price) + Retail Margin
-                default_labor = (item.gross_weight * item.labor_fee_per_gram) + item.fixed_labor_fee + item.retail_margin
-                labor_fee = item_data.get('sold_labor_fee', default_labor)
-                subtotal = (sold_weight * gold_price) + labor_fee
-                
-                item_data['subtotal'] = subtotal
-                total_gold_value += sold_weight * gold_price
-                total_labor_value += labor_fee
+                # Default values if missing
+                if 'sold_weight' not in item_data:
+                    item_data['sold_weight'] = item.net_gold_weight
+                if 'sold_gold_price' not in item_data:
+                    item_data['sold_gold_price'] = 3500 # Fallback or get latest
+                if 'sold_labor_fee' not in item_data:
+                    item_data['sold_labor_fee'] = (item.gross_weight * item.labor_fee_per_gram) + item.fixed_labor_fee + item.retail_margin
                 
                 InvoiceItem.objects.create(invoice=invoice, **item_data)
             
             # 2. Process Old Gold Return (Exchange)
-            exchange_gold_weight = 0
-            exchange_value_deducted = 0
-            
             if returned_gold_data:
                 from .models import OldGoldReturn
                 invoice.is_exchange = True
                 
                 for gold_data in returned_gold_data:
                     OldGoldReturn.objects.create(invoice=invoice, **gold_data)
-                    exchange_gold_weight += gold_data['weight']
-                    exchange_value_deducted += gold_data['value']
             
-            # 3. Calculate Totals
-            from decimal import Decimal
-            invoice.total_gold_value = total_gold_value
-            invoice.total_labor_value = total_labor_value
-            invoice.exchange_gold_weight = exchange_gold_weight
-            invoice.exchange_value_deducted = exchange_value_deducted
+            # 3. Calculate Totals (Centralized in Model)
+            invoice.calculate_totals()
             
-            # Calculate Tax (Assuming 15% VAT on Total Value)
-            # CHECK: Is VAT applied before or after exchange? strict VAT is usually on total sales value.
-            gross_total = Decimal(total_gold_value) + Decimal(total_labor_value)
-            total_tax = gross_total * Decimal('0.15')
-            invoice.total_tax = total_tax
-            
-            # Grand Total = Gross + Tax
-            invoice.grand_total = gross_total + total_tax
-            invoice.save()
+            # Note: exchange values are handled by the model's calculation or by 
+            # updating fields manually if they aren't computed from items.
+            # However, calculate_totals handles the Sale part. 
+            # We must ensure exchange fields are updated if passed.
+            if returned_gold_data:
+                from django.db.models import Sum
+                totals = invoice.returned_gold.aggregate(
+                    weight=Sum('weight'),
+                    value=Sum('value')
+                )
+                invoice.exchange_gold_weight = totals['weight'] or 0
+                invoice.exchange_value_deducted = totals['value'] or 0
+                invoice.save(update_fields=['is_exchange', 'exchange_gold_weight', 'exchange_value_deducted'])
             
             # We REMOVED the duplicate Commission Calculation here.
             # It is now handled EXCLUSIVELY by signals.py to avoid double counting.

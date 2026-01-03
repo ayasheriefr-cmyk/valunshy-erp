@@ -27,6 +27,7 @@ class Invoice(models.Model):
     # Financial Totals
     total_gold_value = models.DecimalField("قيمة الذهب", max_digits=12, decimal_places=2, default=0)
     total_labor_value = models.DecimalField("قيمة المصنعية", max_digits=12, decimal_places=2, default=0)
+    total_stones_value = models.DecimalField("قيمة الأحجار", max_digits=12, decimal_places=2, default=0)
     total_tax = models.DecimalField("ضريبة القيمة المضافة", max_digits=12, decimal_places=2, default=0)
     grand_total = models.DecimalField("الإجمالي النهائي", max_digits=12, decimal_places=2, default=0)
     
@@ -64,11 +65,64 @@ class Invoice(models.Model):
                                      verbose_name="تم التأكيد بواسطة", related_name='confirmed_invoices')
     confirmed_at = models.DateTimeField("تاريخ التأكيد", null=True, blank=True)
     
+    def save(self, *args, **kwargs):
+        # Prevent recursion and only calculate if instance already exists (pk is set)
+        if self.pk and not kwargs.get('update_fields'):
+             self.calculate_totals(save=False)
+        super().save(*args, **kwargs)
+
     @property
     def total_profit(self):
         """إجمالي ربح الفاتورة"""
         return sum(item.profit for item in self.items.all())
     
+    def calculate_totals(self, save=True):
+        """
+        إعادة حساب كافة المبالغ المالية للفاتورة
+        """
+        from decimal import Decimal
+        
+        items = self.items.all()
+        
+        total_gold = Decimal('0')
+        total_labor = Decimal('0')
+        total_stones = Decimal('0')
+        
+        for item in items:
+            total_gold += (item.sold_weight * item.sold_gold_price)
+            total_labor += item.sold_labor_fee
+            total_stones += item.sold_stone_fee
+            
+        self.total_gold_value = total_gold
+        self.total_labor_value = total_labor
+        self.total_stones_value = total_stones
+        
+        # Aggregate Exchange (Old Gold Return)
+        if self.is_exchange:
+            from django.db.models import Sum
+            exch_totals = self.returned_gold.aggregate(
+                w=Sum('weight'), v=Sum('value')
+            )
+            self.exchange_gold_weight = exch_totals['w'] or Decimal('0')
+            self.exchange_value_deducted = exch_totals['v'] or Decimal('0')
+        else:
+            self.exchange_gold_weight = Decimal('0')
+            self.exchange_value_deducted = Decimal('0')
+
+        # Tax Calculation (15% VAT on Net Sale)
+        net_sale = total_gold + total_labor + total_stones
+        self.total_tax = (net_sale * Decimal('0.15')).quantize(Decimal('0.01'))
+        
+        # Grand Total
+        self.grand_total = net_sale + self.total_tax
+        
+        if save:
+            self.save(update_fields=[
+                'total_gold_value', 'total_labor_value', 'total_stones_value', 
+                'total_tax', 'grand_total', 'exchange_gold_weight', 'exchange_value_deducted'
+            ])
+        
+        return self.grand_total
 
     class Meta:
         verbose_name = "فاتورة مبيعات"
@@ -85,6 +139,7 @@ class InvoiceItem(models.Model):
     sold_weight = models.DecimalField("الوزن المباع", max_digits=10, decimal_places=3)
     sold_gold_price = models.DecimalField("سعر الذهب وقت البيع", max_digits=10, decimal_places=2)
     sold_labor_fee = models.DecimalField("أجر المصنعية (المحصل)", max_digits=10, decimal_places=2)
+    sold_stone_fee = models.DecimalField("قيمة الفصوص/الأحجار", max_digits=10, decimal_places=2, default=0)
     sold_factory_cost = models.DecimalField("تكلفة المصنع (أجور + مصاريف)", max_digits=10, decimal_places=2, default=0, help_text="إجمالي التكلفة الصناعية المخزنة في القطعة وقت البيع")
     
     subtotal = models.DecimalField("إجمالي السطر", max_digits=12, decimal_places=2)
@@ -95,7 +150,7 @@ class InvoiceItem(models.Model):
         # Note: In gold retail, cost is often (Net Gold Weight * current price) + manufacturing
         # Here we use the price recorded at sale for the gold component
         gold_cost = (self.item.net_gold_weight * self.sold_gold_price)
-        return gold_cost + self.sold_factory_cost
+        return gold_cost + self.sold_factory_cost + self.sold_stone_fee
 
     @property
     def profit(self):
@@ -104,9 +159,22 @@ class InvoiceItem(models.Model):
     
     def save(self, *args, **kwargs):
         # Capture the manufacturing cost snapshot (Labor + Overheads) at the moment of sale
-        if self.item and (not self.sold_factory_cost or self.sold_factory_cost == 0):
-            self.sold_factory_cost = self.item.total_manufacturing_cost
+        if self.item:
+            if not self.sold_factory_cost or self.sold_factory_cost == 0:
+                self.sold_factory_cost = self.item.total_manufacturing_cost
+            
+            # Auto-populate stone fee from item default if not set
+            if not self.sold_stone_fee or self.sold_stone_fee == 0:
+                self.sold_stone_fee = self.item.default_stone_fee
+
+        # Ensure subtotal is calculated before save
+        self.subtotal = (self.sold_weight * self.sold_gold_price) + self.sold_labor_fee + self.sold_stone_fee
+        
         super().save(*args, **kwargs)
+        
+        # Trigger invoice recalculation
+        if self.invoice:
+            self.invoice.calculate_totals()
 
     def __str__(self):
         return f"{self.invoice.invoice_number} - {self.item.barcode}"
@@ -124,6 +192,11 @@ class OldGoldReturn(models.Model):
 
     def __str__(self):
         return f"تبديل: {self.weight} جرام - {self.carat.name}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.invoice:
+            self.invoice.calculate_totals()
 
 
 class SalesRepresentative(models.Model):

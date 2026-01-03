@@ -1,7 +1,8 @@
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Invoice, SalesRepresentative, SalesRepTransaction
+from .models import Invoice, SalesRepresentative, SalesRepTransaction, OldGoldReturn
 from finance.models import JournalEntry, LedgerEntry, FinanceSettings, Account
+from crm.models import CustomerTransaction
 from django.db import transaction
 from decimal import Decimal
 
@@ -149,4 +150,59 @@ def calculate_sales_rep_commission(sender, instance, created, **kwargs):
         sales_rep.total_sales = (sales_rep.total_sales or Decimal('0')) + instance.grand_total
         sales_rep.total_commission = (sales_rep.total_commission or Decimal('0')) + commission_amount
         sales_rep.save(update_fields=['total_sales', 'total_commission'])
+
+
+@receiver(post_save, sender=Invoice)
+def record_customer_ledger_on_confirmation(sender, instance, created, **kwargs):
+    """
+    Automatically record the invoice and any gold barter/exchange in the customer ledger.
+    """
+    if instance.status != 'confirmed' or not instance.customer:
+        return
+
+    # Prevent duplicate ledger entries for the same invoice
+    if CustomerTransaction.objects.filter(invoice=instance, transaction_type='sale').exists():
+        return
+
+    with transaction.atomic():
+        # 1. Record the Sale (Full Invoice Debt)
+        CustomerTransaction.objects.create(
+            customer=instance.customer,
+            invoice=instance,
+            transaction_type='sale',
+            cash_debit=instance.grand_total,
+            date=instance.created_at.date(),
+            description=f"فاتورة مبيعات رقم {instance.invoice_number}"
+        )
+
+        # 2. Record Gold Barter (Exchange)
+        if instance.is_exchange:
+            exchanges = instance.returned_gold.all()
+            for exchange in exchanges:
+                CustomerTransaction.objects.create(
+                    customer=instance.customer,
+                    invoice=instance,
+                    transaction_type='barter',
+                    cash_credit=exchange.value,
+                    gold_credit=exchange.weight,
+                    carat=exchange.carat,
+                    date=instance.created_at.date(),
+                    description=f"مقايضة ذهب عيار {exchange.carat.name} - فاتورة {instance.invoice_number}"
+                )
+
+        # 3. Record Payment if paid immediately (Not mixed or debt)
+        # Note: If payment_method is cash/card, we assume it's paid.
+        if instance.payment_method in ['cash', 'card']:
+            exchange_val = instance.exchange_value_deducted if instance.is_exchange else Decimal('0')
+            net_cash = instance.grand_total - exchange_val
+            
+            if net_cash > 0:
+                CustomerTransaction.objects.create(
+                    customer=instance.customer,
+                    invoice=instance,
+                    transaction_type='payment',
+                    cash_credit=net_cash,
+                    date=instance.created_at.date(),
+                    description=f"سداد نقدي/بطاقة - فاتورة {instance.invoice_number}"
+                )
 

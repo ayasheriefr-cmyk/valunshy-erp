@@ -34,8 +34,8 @@ class CostAllocationAdmin(admin.ModelAdmin):
     
     def total_overhead_display(self, obj):
         from django.utils.html import format_html
-        total = obj.total_overhead_amount
-        return format_html('<span style="color:#4CAF50; font-weight:bold;">{} ج.م</span>', total)
+        val = float(obj.total_overhead_amount or 0)
+        return format_html('<span style="color:#4CAF50; font-weight:bold;">{} ج.م</span>', f"{val:,.2f}")
     total_overhead_display.short_description = 'إجمالي التكاليف'
     
     def status_badge(self, obj):

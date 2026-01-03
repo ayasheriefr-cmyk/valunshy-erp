@@ -27,6 +27,7 @@ class Item(models.Model):
     # Financials
     labor_fee_per_gram = models.DecimalField("المصنعية/جرام", max_digits=10, decimal_places=2, default=0)
     fixed_labor_fee = models.DecimalField("مصنعية ثابتة (أجور + ربح مصنع)", max_digits=10, decimal_places=2, default=0)
+    default_stone_fee = models.DecimalField("قيمة الأحجار الافتراضية", max_digits=10, decimal_places=2, default=0)
     
     # Factory Overhead Cost Breakdown (Synced from Manufacturing Order)
     overhead_electricity = models.DecimalField("نصيب الكهرباء", max_digits=10, decimal_places=2, default=0)
@@ -79,7 +80,11 @@ class Item(models.Model):
 
     def save(self, *args, **kwargs):
         """تطبيق منطق التحييف تلقائياً (صافي الذهب = القائم - تحييف الأحجار)"""
-        self.net_gold_weight = self.gross_weight - self.stone_weight_in_gold
+        from decimal import Decimal
+        if self.gross_weight is not None:
+             # Ensure we subtract decimal from decimal
+             gross = Decimal(str(self.gross_weight))
+             self.net_gold_weight = gross - self.stone_weight_in_gold
         super().save(*args, **kwargs)
 
     def calculate_total_cost(self, gold_price_per_gram):

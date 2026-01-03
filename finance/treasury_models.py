@@ -34,7 +34,7 @@ class Treasury(models.Model):
     # Old static choices removed
     
     # New dynamic foreign key
-    treasury_type = models.ForeignKey(TreasuryType, on_delete=models.PROTECT, verbose_name="نوع الخزينة")
+    treasury_type = models.ForeignKey(TreasuryType, on_delete=models.PROTECT, verbose_name="نوع الخزينة", null=True, blank=True)
     
     # الأرصدة الحالية
     cash_balance = models.DecimalField("رصيد النقدية", max_digits=15, decimal_places=2, default=0)

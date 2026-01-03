@@ -1,13 +1,35 @@
 from django.contrib import admin
-from .models import Customer, Supplier
+from .models import Customer, Supplier, CustomerTransaction
 from core.admin_mixins import ExportImportMixin
 
 from django.utils.html import format_html
+
+class CustomerTransactionInline(admin.TabularInline):
+    model = CustomerTransaction
+    extra = 0
+    fields = ('date', 'transaction_type', 'cash_debit', 'cash_credit', 'gold_debit', 'gold_credit', 'carat', 'invoice')
+    readonly_fields = ('created_at',)
+    can_delete = False
+
+@admin.register(CustomerTransaction)
+class CustomerTransactionAdmin(admin.ModelAdmin):
+    list_display = ('customer', 'transaction_type', 'date', 'cash_debit', 'cash_credit', 'gold_movement', 'invoice')
+    list_filter = ('transaction_type', 'date', 'carat')
+    search_fields = ('customer__name', 'description', 'invoice__invoice_number')
+    
+    def gold_movement(self, obj):
+        if obj.gold_debit > 0:
+            return format_html('<span style="color:red;">-{} جم ({})</span>', obj.gold_debit, obj.carat)
+        elif obj.gold_credit > 0:
+            return format_html('<span style="color:green;">+{} جم ({})</span>', obj.gold_credit, obj.carat)
+        return "-"
+    gold_movement.short_description = "حركة الذهب"
 
 @admin.register(Customer)
 class CustomerAdmin(ExportImportMixin, admin.ModelAdmin):
     list_display = ('name', 'phone', 'money_balance_display', 'gold_balance_list', 'total_purchases_value')
     search_fields = ('name', 'phone')
+    inlines = [CustomerTransactionInline]
     
     fieldsets = (
         ('بيانات العميل', {

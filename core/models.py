@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 class Carat(models.Model):
     name = models.CharField("اسم العيار", max_length=50)  # e.g., 24K, 21K, 18K
     purity = models.DecimalField("نسبة النقاء", max_digits=5, decimal_places=4)  # e.g., 0.875 for 21K
+    base_weight = models.PositiveSmallIntegerField("وزن العيار الأساسي", default=21, help_text="مثال: 18، 21، 24")
     is_active = models.BooleanField("نشط", default=True)
 
     def __str__(self):

@@ -500,6 +500,10 @@ class ProductionStage(models.Model):
             return self.end_datetime - self.start_datetime
         return None
 
+    def __str__(self):
+        ws = self.workshop.name if self.workshop else "غير محدد"
+        return f"{self.get_stage_name_display()} ({ws})"
+
 
 class WorkshopTransfer(models.Model):
     transfer_number = models.CharField("رقم التحويل", max_length=50, unique=True)

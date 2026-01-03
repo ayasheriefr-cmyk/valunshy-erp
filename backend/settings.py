@@ -69,7 +69,7 @@ INSTALLED_APPS = [
     # Local apps
     'manufacturing',
     'inventory',
-    'crm',
+    'crm.apps.CrmConfig',
     'sales',
     'finance',
 ]

@@ -148,15 +148,27 @@ class StoneSizeAdmin(admin.ModelAdmin):
 
 @admin.register(StoneInventoryAudit)
 class StoneInventoryAuditAdmin(admin.ModelAdmin):
-    list_display = ('audit_date', 'stone', 'system_stock', 'physical_stock', 'difference', 'audited_by')
+    list_display = ('audit_date', 'stone', 'system_stock', 'physical_stock', 'difference', 'system_quantity', 'physical_quantity', 'difference_quantity', 'audited_by')
     list_filter = ('audit_date', 'stone__stone_cut__category_group')
     search_fields = ('stone__name', 'notes')
-    readonly_fields = ('difference',)
+    readonly_fields = ('difference', 'difference_quantity')
     date_hierarchy = 'audit_date'
+    
+    fieldsets = (
+        ('البيانات الأساسية', {
+            'fields': ('audit_date', 'stone', 'audited_by', 'notes')
+        }),
+        ('جرد الوزن (قيراط/جرام)', {
+            'fields': (('system_stock', 'physical_stock'), 'difference')
+        }),
+        ('جرد العدد (قطعة)', {
+            'fields': (('system_quantity', 'physical_quantity'), 'difference_quantity')
+        }),
+    )
 
 @admin.register(Stone)
 class StoneAdmin(admin.ModelAdmin):
-    list_display = ('name', 'stone_type', 'stone_cut', 'stone_size', 'current_stock', 'unit')
+    list_display = ('name', 'stone_type', 'stone_cut', 'stone_size', 'current_stock', 'current_quantity', 'unit')
     list_filter = ('stone_type', 'unit', 'stone_cut__category_group')
     search_fields = ('name',)
 

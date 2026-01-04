@@ -235,7 +235,8 @@ class Stone(models.Model):
         ('cm', 'سنتيمتر (CM)'),
     ]
     unit = models.CharField("الوحدة", max_length=20, choices=UNIT_CHOICES, default='carat')
-    current_stock = models.DecimalField("الرصيد الحالي", max_digits=10, decimal_places=3, default=0)
+    current_stock = models.DecimalField("الرصيد الحالي (وزن)", max_digits=10, decimal_places=3, default=0)
+    current_quantity = models.PositiveIntegerField("العدد الحالي (قطعة)", default=0)
 
     class Meta:
         verbose_name = "حجر كريم / فص"
@@ -243,21 +244,27 @@ class Stone(models.Model):
 
     def __str__(self):
         size_info = f" - {self.stone_size.size_mm}mm" if self.stone_size else ""
-        return f"{self.name}{size_info} ({self.current_stock} {self.unit})"
+        return f"{self.name}{size_info} ({self.current_stock} {self.unit} / {self.current_quantity} قطعة)"
 
 class StoneInventoryAudit(models.Model):
     """نظام جرد الأحجار"""
     audit_date = models.DateField("تاريخ الجرد", default=timezone.now)
     stone = models.ForeignKey(Stone, on_delete=models.CASCADE, verbose_name="الحجر", related_name='audits')
-    system_stock = models.DecimalField("الرصيد الدفتري", max_digits=10, decimal_places=3)
-    physical_stock = models.DecimalField("الرصيد الفعلي", max_digits=10, decimal_places=3)
-    difference = models.DecimalField("الفرق", max_digits=10, decimal_places=3, editable=False)
+    
+    system_stock = models.DecimalField("الرصيد الدفتري (وزن)", max_digits=10, decimal_places=3)
+    physical_stock = models.DecimalField("الرصيد الفعلي (وزن)", max_digits=10, decimal_places=3)
+    difference = models.DecimalField("الفرق (وزن)", max_digits=10, decimal_places=3, editable=False)
+    
+    system_quantity = models.PositiveIntegerField("العدد الدفتري", default=0)
+    physical_quantity = models.PositiveIntegerField("العدد الفعلي", default=0)
+    difference_quantity = models.IntegerField("الفرق (عدد)", editable=False, default=0)
     
     notes = models.TextField("ملاحظات الجرد", blank=True)
     audited_by = models.ForeignKey('auth.User', on_delete=models.PROTECT, verbose_name="بواسطة")
 
     def save(self, *args, **kwargs):
         self.difference = self.physical_stock - self.system_stock
+        self.difference_quantity = int(self.physical_quantity) - int(self.system_quantity)
         super().save(*args, **kwargs)
         
         # Optionally update stone stock upon audit confirmation

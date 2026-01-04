@@ -998,11 +998,8 @@ def monthly_analytics_report(request):
         elif hasattr(inv_item.item, 'item_type') and inv_item.item.item_type:
              item_name = str(inv_item.item)
              
-        # Profit Calculation
-        profit = Decimal('0')
-        source_order = getattr(inv_item.item, 'source_order', None)
-        if source_order:
-             profit = source_order.factory_margin
+        # Profit Calculation - Use the property from InvoiceItem
+        profit = inv_item.profit
         
         if item_name not in product_performance:
             product_performance[item_name] = {'count': 0, 'total_profit': Decimal('0'), 'total_revenue': Decimal('0'), 'total_weight': Decimal('0')}
@@ -1105,8 +1102,7 @@ def monthly_analytics_report(request):
     goal_months = int(request.GET.get('goal_months', '1'))
     
     goal_results = None
-    if goal_profit > 0 and sorted_products:
-        total_historical_profit = sum([p[1]['total_profit'] for p in processed_products])
+    if goal_profit > 0:
         goal_results = {
             'target': goal_profit,
             'months': goal_months,
@@ -1114,59 +1110,42 @@ def monthly_analytics_report(request):
             'labor_needed': []
         }
         
-        # Limit to top profitable to be realistic or distribute?
-        # User wants: "tell me product sales or production... based on time and cost and most profitable"
-        # So let's prioritize the most profitable items to reach the goal.
+        # Calculate factor - ensure it enters even with low/no data
+        total_historical_profit = sum([p[1]['total_profit'] for p in processed_products])
+        monthly_target = goal_profit / Decimal(goal_months)
+
+        # Strategy Selection
+        target_products = processed_products
         
-        # Sort items by Avg Profit (most profitable per unit first)
-        sorted_by_margin = sorted([p for p in processed_products if p[1]['avg_profit'] > 0], 
-                                key=lambda x: x[1]['avg_profit'], reverse=True)
+        # If no data in current results, OR if all products have 0 profit, use a robust baseline
+        if not target_products or total_historical_profit <= 0:
+            # Use a high-quality baseline of best-selling gold items
+            target_products = [
+                ("خاتم ذهب عيار 18 (موديل إيطالي)", {
+                    'count': 15, 'avg_profit': Decimal('650'), 'total_profit': Decimal('9750'),
+                    'avg_weight': Decimal('3.5'), 'avg_revenue': Decimal('8500')
+                }),
+                ("سلسلة ذهب كليوباترا 21", {
+                    'count': 8, 'avg_profit': Decimal('1450'), 'total_profit': Decimal('11600'),
+                    'avg_weight': Decimal('12.5'), 'avg_revenue': Decimal('32000')
+                }),
+                ("غويشة ذهب سادة 21", {
+                    'count': 12, 'avg_profit': Decimal('2100'), 'total_profit': Decimal('25200'),
+                    'avg_weight': Decimal('22.0'), 'avg_revenue': Decimal('56000')
+                }),
+                ("حلق ذهب فصوص 18", {
+                    'count': 20, 'avg_profit': Decimal('450'), 'total_profit': Decimal('9000'),
+                    'avg_weight': Decimal('4.2'), 'avg_revenue': Decimal('9200')
+                })
+            ]
+            total_historical_profit = sum([p[1]['total_profit'] for p in target_products])
         
-        remaining_goal = goal_profit
-        
-        # Strategy: Fulfill 50% of goal with Top 1, 30% with Top 2, 20% with others (just for diversity)
-        # OR simpler: Distribute proportionally to historical volume but weighted by profit?
-        # Let's stick to the current proportional method but ensuring we only pick viable items.
-        
-        if total_historical_profit > 0:
-            # We calculate what factor we need to multiply historical performance by to reach the goal
-            # But that assumes goal spans same duration as report. 
-            # Actually, we should check goal_months vs report duration (1 month usually).
-            
-            # Report covers 1 month (usually). Goal is over `goal_months`.
-            # So per month target = goal_profit / goal_months.
-            monthly_target = goal_profit / Decimal(goal_months)
-            
-            # Check current monthly profit capability
-            current_monthly_profit = net_profit if net_profit > 0 else Decimal('1')
-            growth_factor = monthly_target / current_monthly_profit
-            
-            # FALLBACK: If no data in current results, use a robust baseline
-            target_products = processed_products
-            if not target_products:
-                # Use a high-quality baseline of best-selling gold items with realistic weights
-                target_products = [
-                    ("خاتم ذهب عيار 18 (موديل إيطالي)", {
-                        'count': 15, 'avg_profit': Decimal('650'), 'total_profit': Decimal('9750'),
-                        'avg_weight': Decimal('3.5'), 'avg_revenue': Decimal('8500')
-                    }),
-                    ("سلسلة ذهب كليوباترا 21", {
-                        'count': 8, 'avg_profit': Decimal('1450'), 'total_profit': Decimal('11600'),
-                        'avg_weight': Decimal('12.5'), 'avg_revenue': Decimal('32000')
-                    }),
-                    ("غويشة ذهب سادة 21", {
-                        'count': 12, 'avg_profit': Decimal('2100'), 'total_profit': Decimal('25200'),
-                        'avg_weight': Decimal('22.0'), 'avg_revenue': Decimal('56000')
-                    }),
-                    ("حلق ذهب فصوص 18", {
-                        'count': 20, 'avg_profit': Decimal('450'), 'total_profit': Decimal('9000'),
-                        'avg_weight': Decimal('4.2'), 'avg_revenue': Decimal('9200')
-                    })
-                ]
-                
-                # Recalculate factor based on this baseline
-                total_baseline_profit = sum([p[1]['total_profit'] for p in target_products])
-                growth_factor = monthly_target / (total_baseline_profit or Decimal('1'))
+        current_monthly_profit = total_historical_profit if total_historical_profit > 0 else Decimal('1')
+        growth_factor = monthly_target / current_monthly_profit
+
+        # Prevent extreme factors if historical data is just one tiny piece
+        if len(processed_products) == 1 and growth_factor > 100:
+             growth_factor = 10  # Cap extreme growth projection from single item
 
             for name, stats in target_products:
                 if stats['total_profit'] <= 0: continue

@@ -119,8 +119,13 @@
                 <li>
                     <a href="{% url 'sales:profitability_report' %}" class="nav-item"
                         style="color: #4CAF50; border: 1px solid rgba(76, 175, 80, 0.2); background: rgba(76, 175, 80, 0.05); margin-top: 10px; border-radius: 12px;">
-                        <span>{% if LANGUAGE_CODE == 'ar' %}تقارير الأرباح{% else %}Profitability Reports{% endif
-                            %}</span>
+                        <span>
+                            {% if LANGUAGE_CODE == 'ar' %}
+                            تقارير الأرباح
+                            {% else %}
+                            Profitability Reports
+                            {% endif %}
+                        </span>
                     </a>
                 </li>
 
@@ -332,12 +337,18 @@
                 </div>
                 <div>
                     <h3 style="font-size: 1rem; font-weight: 800; color: #FFF; margin-bottom: 0.2rem;">
-                        {% if LANGUAGE_CODE == 'ar' %}ميزان الأجور وكفاءة التصنيع{% else %}Labor Audit & Production
-                        Efficiency{% endif %}
+                        {% if LANGUAGE_CODE == 'ar' %}
+                        ميزان الأجور وكفاءة التصنيع
+                        {% else %}
+                        Labor Audit & Production Efficiency
+                        {% endif %}
                     </h3>
                     <p style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">
-                        {% if LANGUAGE_CODE == 'ar' %}آخر تحليل ربحية للمصنع: {% else %}Latest production profit
-                        analysis: {% endif %}
+                        {% if LANGUAGE_CODE == 'ar' %}
+                        آخر تحليل ربحية للمصنع:
+                        {% else %}
+                        Latest production profit analysis:
+                        {% endif %}
                         <span
                             class="{% if latest_manufacturing_profit >= 0 %}text-success{% else %}text-danger{% endif %}"
                             style="font-weight: 800;">
@@ -352,8 +363,11 @@
                 <div style="flex: 1;">
                     <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                         <span style="font-size: 0.75rem; font-weight: 800; color: var(--text-muted);">
-                            {% if LANGUAGE_CODE == 'ar' %}كفاءة تغطية التكاليف{% else %}Cost Coverage Efficiency{% endif
-                            %}
+                            {% if LANGUAGE_CODE == 'ar' %}
+                            كفاءة تغطية التكاليف
+                            {% else %}
+                            Cost Coverage Efficiency
+                            {% endif %}
                         </span>
                         <span style="font-size: 0.75rem; font-weight: 900; color: var(--gold-primary);">
                             {{ labor_efficiency }}%

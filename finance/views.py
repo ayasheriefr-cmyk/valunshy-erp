@@ -152,7 +152,7 @@ def balance_sheet(request):
     revenue_accounts = Account.objects.filter(account_type='revenue')
     total_revenue = sum(get_bal(acc) for acc in revenue_accounts)
 
-    cogs_accounts = Account.objects.filter(account_type='expense', Q(code__startswith='51') | Q(code__startswith='52'))
+    cogs_accounts = Account.objects.filter(Q(code__startswith='51') | Q(code__startswith='52'), account_type='expense')
     total_cogs = sum(get_bal(acc) for acc in cogs_accounts)
 
     other_expenses = Account.objects.filter(account_type='expense').exclude(id__in=cogs_accounts.values_list('id', flat=True))
@@ -232,7 +232,7 @@ def balance_sheet(request):
 def income_statement(request):
     """قائمة الدخل - بيان الأرباح والخسائر - Optimized"""
     from decimal import Decimal
-    from django.db.models import Sum
+    from django.db.models import Sum, Q
     from django.db.models.functions import Coalesce
     
     # Pre-fetch all entry sums grouped by account type
@@ -254,7 +254,7 @@ def income_statement(request):
             total_revenue += balance
 
     # 2. تكلفة المبيعات
-    cogs_accounts = Account.objects.filter(account_type='expense', Q(code__startswith='51') | Q(code__startswith='52'))
+    cogs_accounts = Account.objects.filter(Q(code__startswith='51') | Q(code__startswith='52'), account_type='expense')
     total_cogs = Decimal('0')
     cogs_details = []
     for acc in cogs_accounts:

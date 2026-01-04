@@ -139,11 +139,15 @@ class StoneModelAdmin(admin.ModelAdmin):
 
 @admin.register(StoneSize)
 class StoneSizeAdmin(admin.ModelAdmin):
-    list_display = ('code', 'stone_cut', 'stone_model', 'size_mm', 'color', 'clarity', 'price_per_carat')
-    list_filter = ('stone_cut', 'color', 'clarity')
-    search_fields = ('code',)
-    ordering = ('code',)
+    list_display = ('code', 'stone_cut', 'stone_model', 'weight_range', 'size_mm', 'color', 'clarity', 'price_per_carat')
+    list_filter = ('stone_cut', 'stone_model', 'color', 'clarity')
+    search_fields = ('code', 'stone_type', 'short_code')
+    ordering = ('stone_cut', 'code')
     list_per_page = 50
+
+    def weight_range(self, obj):
+        return f"{obj.weight_from} - {obj.weight_to}"
+    weight_range.short_description = 'نطاق الوزن'
     
 
 @admin.register(StoneInventoryAudit)

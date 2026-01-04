@@ -8,9 +8,11 @@ from .models import Partner
 
 @staff_member_required
 def trial_balance(request):
-    """ميزان المراجعة بالمجاميع والأرصدة طبقا للمحاسبة المصرية"""
+    """ميزان المراجعة بالمجاميع والأرصدة - Optimized"""
     from django.utils import timezone
     import datetime
+    from django.db.models import Sum, Q
+    from django.db.models.functions import Coalesce
     
     # Date filters
     start_date_str = request.GET.get('start_date')
@@ -19,7 +21,6 @@ def trial_balance(request):
     if start_date_str:
         start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
     else:
-        # Default to start of current fiscal year or month
         today = timezone.now().date()
         start_date = today.replace(day=1)
         
@@ -29,9 +30,33 @@ def trial_balance(request):
         end_date = timezone.now().date()
 
     accounts = Account.objects.all().order_by('code')
-    
     active_year = FiscalYear.objects.filter(is_active=True).first()
     
+    # 1. Bulk Aggregate Opening Entries (BEFORE start_date)
+    opening_aggr = LedgerEntry.objects.filter(
+        journal_entry__date__lt=start_date
+    ).values('account_id').annotate(
+        op_debit=Coalesce(Sum('debit'), Decimal('0')),
+        op_credit=Coalesce(Sum('credit'), Decimal('0'))
+    )
+    opening_map = {item['account_id']: item for item in opening_aggr}
+    
+    # 2. Bulk Aggregate Period Entries (BETWEEN start_date AND end_date)
+    period_aggr = LedgerEntry.objects.filter(
+        journal_entry__date__gte=start_date,
+        journal_entry__date__lte=end_date
+    ).values('account_id').annotate(
+        p_debit=Coalesce(Sum('debit'), Decimal('0')),
+        p_credit=Coalesce(Sum('credit'), Decimal('0'))
+    )
+    period_map = {item['account_id']: item for item in period_aggr}
+    
+    # 3. Fetch static opening balances
+    static_opening_map = {}
+    if active_year:
+        static_openings = OpeningBalance.objects.filter(fiscal_year=active_year)
+        static_opening_map = {item.account_id: item for item in static_openings}
+
     data = []
     total_opening_debit = Decimal('0')
     total_opening_credit = Decimal('0')
@@ -41,32 +66,24 @@ def trial_balance(request):
     total_closing_credit = Decimal('0')
     
     for account in accounts:
-        # 1. Opening Balance (Entries BEFORE start_date)
-        opening_entries = LedgerEntry.objects.filter(account=account, journal_entry__date__lt=start_date)
-        op_debit = opening_entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        op_credit = opening_entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
+        # Get from maps
+        op_data = opening_map.get(account.id, {'op_debit': Decimal('0'), 'op_credit': Decimal('0')})
+        op_debit = op_data['op_debit']
+        op_credit = op_data['op_credit']
         
-        # Add static opening balance from opening balances table if any
-        if active_year:
-            opening = OpeningBalance.objects.filter(fiscal_year=active_year, account=account).first()
-            if opening:
-                op_debit += opening.debit_balance
-                op_credit += opening.credit_balance
+        # Add static opening
+        static_op = static_opening_map.get(account.id)
+        if static_op:
+            op_debit += static_op.debit_balance
+            op_credit += static_op.credit_balance
         
-        # 2. Period Transactions (Entries BETWEEN start_date AND end_date)
-        period_entries = LedgerEntry.objects.filter(
-            account=account, 
-            journal_entry__date__gte=start_date,
-            journal_entry__date__lte=end_date
-        )
-        p_debit = period_entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        p_credit = period_entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
+        p_data = period_map.get(account.id, {'p_debit': Decimal('0'), 'p_credit': Decimal('0')})
+        p_debit = p_data['p_debit']
+        p_credit = p_data['p_credit']
         
-        # 3. Totals (Opening + Period)
         total_debit = op_debit + p_debit
         total_credit = op_credit + p_credit
         
-        # 4. Closing Balance
         net_balance = total_debit - total_credit
         cl_debit = net_balance if net_balance > 0 else Decimal('0')
         cl_credit = abs(net_balance) if net_balance < 0 else Decimal('0')
@@ -110,37 +127,40 @@ def trial_balance(request):
 
 @staff_member_required
 def balance_sheet(request):
-    """الميزانية العمومية طبقاً للمعايير المصرية (EAS)"""
+    """الميزانية العمومية - Optimized"""
     from decimal import Decimal
-    from django.db.models import Sum
+    from django.db.models import Sum, Q
+    from django.db.models.functions import Coalesce
     
-    # 1. حساب صافي الربح للفترة (لإدراجه في حقوق الملكية)
-    revenue_accounts = Account.objects.filter(account_type='revenue')
-    total_revenue = Decimal('0')
-    for acc in revenue_accounts:
-        entries = LedgerEntry.objects.filter(account=acc)
-        total_revenue += (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')) - \
-                         (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0'))
+    # Pre-fetch all entry sums grouped by account to avoid loop queries
+    entries_aggr = LedgerEntry.objects.values('account_id').annotate(
+        total_debit=Coalesce(Sum('debit'), Decimal('0')),
+        total_credit=Coalesce(Sum('credit'), Decimal('0'))
+    )
+    entries_map = {item['account_id']: item for item in entries_aggr}
 
-    cogs_accounts = Account.objects.filter(account_type='expense', code__startswith='51') | \
-                    Account.objects.filter(account_type='expense', code__startswith='52')
-    total_cogs = Decimal('0')
-    for acc in cogs_accounts:
-        entries = LedgerEntry.objects.filter(account=acc)
-        total_cogs += (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) - \
-                      (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0'))
+    # Helper to calculate balance
+    def get_bal(acc):
+        data = entries_map.get(acc.id, {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+        if acc.account_type in ['asset', 'expense']:
+            v = data['total_debit'] - data['total_credit'] + acc.balance
+        else:
+            v = data['total_credit'] - data['total_debit'] + acc.balance
+        return v
+
+    # 1. Net Income Calculation
+    revenue_accounts = Account.objects.filter(account_type='revenue')
+    total_revenue = sum(get_bal(acc) for acc in revenue_accounts)
+
+    cogs_accounts = Account.objects.filter(account_type='expense', Q(code__startswith='51') | Q(code__startswith='52'))
+    total_cogs = sum(get_bal(acc) for acc in cogs_accounts)
 
     other_expenses = Account.objects.filter(account_type='expense').exclude(id__in=cogs_accounts.values_list('id', flat=True))
-    total_other_expenses = Decimal('0')
-    for acc in other_expenses:
-        entries = LedgerEntry.objects.filter(account=acc)
-        total_other_expenses += (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) - \
-                                (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0'))
+    total_other_expenses = sum(get_bal(acc) for acc in other_expenses)
 
     net_income = total_revenue - total_cogs - total_other_expenses
 
-    # 2. تصنيف الأصول (Assets)
-    # أصول غير متداولة (11) وأصول متداولة (12)
+    # 2. Classification
     assets = Account.objects.filter(account_type='asset').order_by('code')
     fixed_assets = []
     current_assets = []
@@ -148,20 +168,16 @@ def balance_sheet(request):
     total_current_assets = Decimal('0')
 
     for acc in assets:
-        entries = LedgerEntry.objects.filter(account=acc)
-        balance = (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) - \
-                  (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')) + acc.balance
-        
+        balance = get_bal(acc)
         if balance != 0:
             item = {'account': acc, 'balance': balance}
-            if acc.code.startswith('11'): # فرضاً 11 للأصول الثابتة
+            if acc.code.startswith('11'): 
                 fixed_assets.append(item)
                 total_fixed_assets += balance
             else:
                 current_assets.append(item)
                 total_current_assets += balance
 
-    # 3. تصنيف الالتزامات وحقوق الملكية (Liabilities & Equity)
     liabilities = Account.objects.filter(account_type='liability').order_by('code')
     long_term_liabilities = []
     current_liabilities = []
@@ -169,27 +185,21 @@ def balance_sheet(request):
     total_current_liabilities = Decimal('0')
 
     for acc in liabilities:
-        entries = LedgerEntry.objects.filter(account=acc)
-        balance = (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')) - \
-                  (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) + acc.balance
-        
+        balance = get_bal(acc)
         if balance != 0:
             item = {'account': acc, 'balance': balance}
-            if acc.code.startswith('22'): # فرضاً 22 للالتزامات طويلة الأجل
+            if acc.code.startswith('22'):
                 long_term_liabilities.append(item)
                 total_lt_liabilities += balance
             else:
                 current_liabilities.append(item)
                 total_current_liabilities += balance
 
-    # حقوق الملكية (Equity)
     equity_accounts = Account.objects.filter(account_type='equity').order_by('code')
     equity_data = []
     total_base_equity = Decimal('0')
     for acc in equity_accounts:
-        entries = LedgerEntry.objects.filter(account=acc)
-        balance = (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')) - \
-                  (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) + acc.balance
+        balance = get_bal(acc)
         if balance != 0:
             equity_data.append({'account': acc, 'balance': balance})
             total_base_equity += balance
@@ -204,16 +214,13 @@ def balance_sheet(request):
         'total_fixed_assets': total_fixed_assets,
         'total_current_assets': total_current_assets,
         'total_assets': total_assets,
-        
         'long_term_liabilities': long_term_liabilities,
         'current_liabilities': current_liabilities,
         'total_lt_liabilities': total_lt_liabilities,
         'total_current_liabilities': total_current_liabilities,
-        
         'equity_data': equity_data,
         'net_income': net_income,
         'total_equity': total_equity,
-        
         'total_liabilities_equity': total_liabilities + total_equity,
         'is_balanced': abs(total_assets - (total_liabilities + total_equity)) < Decimal('0.01'),
         'title': 'الميزانية العمومية (EAS)'
@@ -223,60 +230,55 @@ def balance_sheet(request):
 
 @staff_member_required
 def income_statement(request):
-    """قائمة الدخل - بيان الأرباح والخسائر (EAS)"""
+    """قائمة الدخل - بيان الأرباح والخسائر - Optimized"""
     from decimal import Decimal
     from django.db.models import Sum
+    from django.db.models.functions import Coalesce
     
-    # 1. الإيرادات التشغيلية (Revenues)
-    # تشمل المبيعات (ذهب، مصنعية، أحجار)
+    # Pre-fetch all entry sums grouped by account type
+    entries_aggr = LedgerEntry.objects.values('account_id').annotate(
+        total_debit=Coalesce(Sum('debit'), Decimal('0')),
+        total_credit=Coalesce(Sum('credit'), Decimal('0'))
+    )
+    entries_map = {item['account_id']: item for item in entries_aggr}
+
+    # 1. الإيرادات التشغيلية
     revenue_accounts = Account.objects.filter(account_type='revenue')
     total_revenue = Decimal('0')
     revenue_details = []
-    
     for acc in revenue_accounts:
-        entries = LedgerEntry.objects.filter(account=acc)
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        balance = credit - debit
+        data = entries_map.get(acc.id, {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+        balance = data['total_credit'] - data['total_debit']
         if balance != 0:
             revenue_details.append({'name': acc.name, 'balance': balance})
             total_revenue += balance
 
-    # 2. تكلفة المبيعات (COGS)
-    # تشمل تكلفة الخام + مصاريف تشغيل المصنع (أكواد 51 و 52)
-    cogs_accounts = Account.objects.filter(account_type='expense', code__startswith='51') | \
-                    Account.objects.filter(account_type='expense', code__startswith='52')
-    
+    # 2. تكلفة المبيعات
+    cogs_accounts = Account.objects.filter(account_type='expense', Q(code__startswith='51') | Q(code__startswith='52'))
     total_cogs = Decimal('0')
     cogs_details = []
     for acc in cogs_accounts:
-        entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        balance = debit - credit
+        data = entries_map.get(acc.id, {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+        balance = data['total_debit'] - data['total_credit']
         if balance != 0:
             cogs_details.append({'name': acc.name, 'balance': balance})
             total_cogs += balance
 
-    # 3. مجمل الربح (Gross Profit)
+    # 3. مجمل الربح
     gross_profit = total_revenue - total_cogs
 
-    # 4. المصروفات الإدارية والعمومية (Operating Expenses)
-    # باقي المصروفات التي لا تندرج تحت التكلفة المباشرة (أكواد 53 وما بعدها)
+    # 4. المصروفات التشغيلية
     operating_expense_accounts = Account.objects.filter(account_type='expense').exclude(id__in=cogs_accounts.values_list('id', flat=True))
-    
     total_operating_expenses = Decimal('0')
     operating_expense_details = []
     for acc in operating_expense_accounts:
-        entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        balance = debit - credit
+        data = entries_map.get(acc.id, {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+        balance = data['total_debit'] - data['total_credit']
         if balance != 0:
             operating_expense_details.append({'name': acc.name, 'balance': balance})
             total_operating_expenses += balance
 
-    # 5. صافي الربح (Net Income)
+    # 5. صافي الربح
     net_income = gross_profit - total_operating_expenses
     
     context = {
@@ -439,119 +441,121 @@ def daily_close(request):
 
 @staff_member_required
 def finance_dashboard(request):
-    """Financial Dashboard - Comprehensive View"""
+    """Financial Dashboard - Comprehensive View - Optimized"""
     from decimal import Decimal
     from .treasury_models import Treasury, TreasuryTransaction
     from django.utils import timezone
+    from django.db.models import Sum, Q, Value
+    from django.db.models.functions import Coalesce
     
     today = timezone.now().date()
     
-    # ===== 1. INCOME STATEMENT (P&L) =====
-    revenue_accounts = Account.objects.filter(account_type='revenue')
-    total_revenue = Decimal('0')
-    for acc in revenue_accounts:
-        entries = LedgerEntry.objects.filter(account=acc)
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        total_revenue += (credit - debit)
+    # Pre-fetch all entry sums grouped by account type
+    # This avoids doing a loop of queries for each account
+    type_sums = LedgerEntry.objects.values('account__account_type').annotate(
+        total_debit=Coalesce(Sum('debit'), Decimal('0')),
+        total_credit=Coalesce(Sum('credit'), Decimal('0'))
+    )
+    type_map = {item['account__account_type']: item for item in type_sums}
     
-    expense_accounts = Account.objects.filter(account_type='expense')
-    total_expenses = Decimal('0')
-    for acc in expense_accounts:
-        entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        total_expenses += (debit - credit)
+    # Pre-fetch base balances from Account model
+    account_base_balances = Account.objects.values('account_type').annotate(
+        base_balance=Coalesce(Sum('balance'), Decimal('0'))
+    )
+    base_map = {item['account_type']: item['base_balance'] for item in account_base_balances}
+
+    # 1. INCOME STATEMENT (P&L)
+    rev = type_map.get('revenue', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+    total_revenue = rev['total_credit'] - rev['total_debit']
+    
+    exp = type_map.get('expense', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+    total_expenses = exp['total_debit'] - exp['total_credit']
     
     net_income = total_revenue - total_expenses
     
-    # ===== 2. BALANCE SHEET =====
-    assets = Account.objects.filter(account_type='asset')
-    total_assets = Decimal('0')
-    for acc in assets:
-        entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        total_assets += (debit - credit + acc.balance)
+    # 2. BALANCE SHEET
+    # Note: Assets, Liabilities and Equity usually include the static 'balance' from the Account model
+    ast = type_map.get('asset', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+    total_assets = (ast['total_debit'] - ast['total_credit']) + base_map.get('asset', Decimal('0'))
     
-    liabilities = Account.objects.filter(account_type='liability')
-    total_liabilities = Decimal('0')
-    for acc in liabilities:
-        entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        total_liabilities += (credit - debit + acc.balance)
+    lia = type_map.get('liability', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+    total_liabilities = (lia['total_credit'] - lia['total_debit']) + base_map.get('liability', Decimal('0'))
     
-    equity = Account.objects.filter(account_type='equity')
-    total_equity = Decimal('0')
-    for acc in equity:
-        entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        total_equity += (credit - debit + acc.balance)
+    equ = type_map.get('equity', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
+    total_equity = (equ['total_credit'] - equ['total_debit']) + base_map.get('equity', Decimal('0'))
     
-    # ===== 3. TREASURY STATUS =====
+    # 3. TREASURY STATUS
     treasuries = Treasury.objects.all()
-    total_cash = treasuries.aggregate(Sum('cash_balance'))['cash_balance__sum'] or Decimal('0')
-    total_gold_21 = treasuries.aggregate(Sum('gold_balance_21'))['gold_balance_21__sum'] or Decimal('0')
-    total_gold_18 = treasuries.aggregate(Sum('gold_balance_18'))['gold_balance_18__sum'] or Decimal('0')
+    treasury_totals = treasuries.aggregate(
+        t_cash=Coalesce(Sum('cash_balance'), Decimal('0')),
+        t_gold_21=Coalesce(Sum('gold_balance_21'), Decimal('0')),
+        t_gold_18=Coalesce(Sum('gold_balance_18'), Decimal('0'))
+    )
+    total_cash = treasury_totals['t_cash']
+    total_gold_21 = treasury_totals['t_gold_21']
+    total_gold_18 = treasury_totals['t_gold_18']
     
-    # ===== 4. RECENT TRANSACTIONS =====
+    # 4. RECENT TRANSACTIONS
     recent_journal_entries = JournalEntry.objects.order_by('-date', '-created_at')[:5]
     
-    # ===== 5. TOP ACCOUNTS BY BALANCE =====
-    top_revenue = revenue_accounts.order_by('-balance')[:3]
-    top_expense = expense_accounts.order_by('-balance')[:3]
+    # 5. TOP ACCOUNTS
+    top_revenue = Account.objects.filter(account_type='revenue').order_by('-balance')[:3]
+    top_expense = Account.objects.filter(account_type='expense').order_by('-balance')[:3]
     
     context = {
-        # P&L
         'total_revenue': total_revenue,
         'total_expenses': total_expenses,
         'net_income': net_income,
         'is_profit': net_income > 0,
         
-        # Balance Sheet
         'total_assets': total_assets,
         'total_liabilities': total_liabilities,
         'total_equity': total_equity,
         'total_liabilities_equity': total_liabilities + total_equity,
         'is_balanced': abs(total_assets - (total_liabilities + total_equity)) < Decimal('0.01'),
         
-        # Treasury
         'total_cash': total_cash,
         'total_gold_21': total_gold_21,
         'total_gold_18': total_gold_18,
         'treasuries': treasuries,
         
-        # Recent Activity
         'recent_entries': recent_journal_entries,
-        
-        # Top Accounts
         'top_revenue': top_revenue,
         'top_expense': top_expense,
-        
-        # Balance Difference
         'balance_difference': total_assets - (total_liabilities + total_equity),
-        
         'title': 'لوحة التحكم المالية',
         'today': today,
     }
-    
     return render(request, 'finance/dashboard.html', context)
 
 
 @staff_member_required
+@staff_member_required
 def treasuries_dashboard(request):
-    """داشبورد الخزائن التفاعلية"""
+    """داشبورد الخزائن التفاعلية - Optimized"""
     from decimal import Decimal
     from .treasury_models import Treasury, TreasuryTransaction, TreasuryTransfer
     from django.utils import timezone
-    from django.db.models import Sum, Count
+    from django.db.models import Sum, Count, Q
+    from django.db.models.functions import Coalesce
     
     today = timezone.now().date()
     
-    # Get all treasuries with aggregated data
+    # Get all treasuries
     treasuries = Treasury.objects.filter(is_active=True)
+    
+    # Bulk aggregate today's transactions for ALL treasuries at once
+    # Filter only for today and relevant treasuries
+    today_aggregates = TreasuryTransaction.objects.filter(
+        date=today,
+        treasury__is_active=True
+    ).values('treasury_id').annotate(
+        cash_in=Coalesce(Sum('cash_amount', filter=Q(transaction_type='cash_in')), Decimal('0')),
+        cash_out=Coalesce(Sum('cash_amount', filter=Q(transaction_type='cash_out')), Decimal('0'))
+    )
+    
+    # Map to treasury_id
+    today_map = {item['treasury_id']: item for item in today_aggregates}
     
     treasury_data = []
     totals = {
@@ -564,10 +568,9 @@ def treasuries_dashboard(request):
     }
     
     for treasury in treasuries:
-        # Today's transactions
-        today_txs = TreasuryTransaction.objects.filter(treasury=treasury, date=today)
-        cash_in_today = today_txs.filter(transaction_type='cash_in').aggregate(Sum('cash_amount'))['cash_amount__sum'] or Decimal('0')
-        cash_out_today = today_txs.filter(transaction_type='cash_out').aggregate(Sum('cash_amount'))['cash_amount__sum'] or Decimal('0')
+        item = today_map.get(treasury.id, {'cash_in': Decimal('0'), 'cash_out': Decimal('0')})
+        cash_in_today = item['cash_in']
+        cash_out_today = item['cash_out']
         
         treasury_info = {
             'treasury': treasury,
@@ -593,7 +596,7 @@ def treasuries_dashboard(request):
         totals['stones'] += treasury.stones_balance
     
     # Recent transfers
-    recent_transfers = TreasuryTransfer.objects.order_by('-date', '-created_at')[:5]
+    recent_transfers = TreasuryTransfer.objects.select_related('from_treasury', 'to_treasury', 'gold_carat').order_by('-date', '-created_at')[:5]
     
     # Treasury type distribution
     type_distribution = Treasury.objects.filter(is_active=True).values('treasury_type').annotate(count=Count('id'))

@@ -178,23 +178,18 @@
 <div class="dashboard-container">
     {% if stone_alert_level != 'safe' %}
     <div class="stone-alert-banner"
-        style="margin-bottom: 25px; padding: 20px; border-radius: 12px; background: {% if stone_alert_level == 'critical' %}rgba(255, 82, 82, 0.2){% else %}rgba(255, 152, 0, 0.2){% endif %}; border: 1px solid {% if stone_alert_level == 'critical' %}#ff5252{% else %}#ff9800{% endif %}; position: relative; overflow: hidden;">
+        style="margin-bottom: 25px; padding: 20px; border-radius: 12px; background: {{ alert_bg }}; border: 1px solid {{ alert_border }}; position: relative; overflow: hidden;">
         <div style="display: flex; align-items: center; gap: 20px;">
-            <div
-                style="font-size: 2.5rem; color: {% if stone_alert_level == 'critical' %}#ff5252{% else %}#ff9800{% endif %}; animation: pulse 1.5s infinite;">
+            <div style="font-size: 2.5rem; color: {{ alert_color }}; animation: pulse 1.5s infinite;">
                 <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
             <div>
                 <h2 style="margin: 0; color: #fff; font-size: 1.4rem;">
-                    {% if stone_alert_level == 'critical' %}
-                    تنبيه حرج جداً: رصيد الحجارة تجاوز الحد القانوني!
-                    {% else %}
-                    تنبيه: رصيد الحجارة يقترب من الحد الأقصى
-                    {% endif %}
+                    {{ alert_title }}
                 </h2>
                 <p style="margin: 5px 0 0; color: #ddd; font-size: 1rem;">
                     إجمالي الرصيد الحالي:
-                    <b style="color: {% if stone_alert_level == 'critical' %}#ff5252{% else %}#ff9800{% endif %};">
+                    <b style="color: {{ alert_color }};">
                         {{ total_stone_carats|floatformat:2 }}
                         قيراط
                     </b>.
@@ -270,18 +265,17 @@
                 </b>
             </div>
         </div>
-        <div class="glass-card"
-            style="padding: 20px; border-right: 4px solid {% if stone_alert_level == 'critical' %}#ff5252{% elif stone_alert_level == 'warning' %}#ff9800{% else %}#2196F3{% endif %};">
+        <div class="glass-card" style="padding: 20px; border-right: 4px solid {{ alert_border }};">
             <div style="color: var(--text-muted); font-size: 0.9rem;">إجمالي وزن الألماس (قيراط)</div>
-            <div
-                style="font-size: 2rem; font-weight: 800; color: {% if stone_alert_level != 'safe' %}#ff5252{% endif %};">
-                <span dir="ltr">{{ total_stone_carats|floatformat:2 }}</span>
+            <div style="font-size: 2rem; font-weight: 800; color: {{ alert_border }};">
+                <span dir="ltr">
+                    {{ total_stone_carats|floatformat:2 }}
+                </span>
                 <small style="font-size: 0.9rem;">ct</small>
             </div>
             <div
                 style="margin-top: 10px; width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
-                <div
-                    style="width: {{ stone_percentage }}%; height: 100%; background: {% if stone_alert_level == 'critical' %}#ff5252{% elif stone_alert_level == 'warning' %}#ff9800{% else %}#2196F3{% endif %};">
+                <div style="width: {{ stone_percentage }}%; height: 100%; background: {{ alert_border }};">
                 </div>
             </div>
             <div style="margin-top: 5px; font-size: 0.75rem; color: var(--text-muted); text-align: left;">

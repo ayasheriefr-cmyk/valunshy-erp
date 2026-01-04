@@ -181,16 +181,29 @@ def manufacturing_dashboard(request):
                 'carats': ct_weight
             })
     
-    # Alert Level Logic
+    # Alert Level Logic (Vibrant UI Tokens)
     stone_alert_level = 'safe'
     stone_percentage = 0
+    alert_bg = "rgba(255, 255, 255, 0.05)"
+    alert_border = "rgba(255, 255, 255, 0.1)"
+    alert_color = "#ccc"
+    alert_title = ""
+    
     if total_stone_carats > 0:
         stone_percentage = min((total_stone_carats / 150) * 100, 100)
         
     if total_stone_carats >= 150:
         stone_alert_level = 'critical'
+        alert_bg = "rgba(255, 82, 82, 0.2)"
+        alert_border = "#ff5252"
+        alert_color = "#ff5252"
+        alert_title = "تنبيه حرج جداً: رصيد الحجارة تجاوز الحد القانوني!"
     elif total_stone_carats >= 140:
         stone_alert_level = 'warning'
+        alert_bg = "rgba(255, 152, 0, 0.2)"
+        alert_border = "#ff9800"
+        alert_color = "#ff9800"
+        alert_title = "تنبيه: رصيد الحجارة يقترب من الحد الأقصى"
 
     context = {
         'title': 'لوحة تحكم الإنتاج والجرد',
@@ -215,6 +228,10 @@ def manufacturing_dashboard(request):
         'stone_details': stone_details,
         'stone_alert_level': stone_alert_level,
         'stone_percentage': stone_percentage,
+        'alert_bg': alert_bg,
+        'alert_border': alert_border,
+        'alert_color': alert_color,
+        'alert_title': alert_title,
 
         # Charts Data
         'chart_dates': dates,

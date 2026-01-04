@@ -110,6 +110,32 @@ def create_invoice_journal_entry(sender, instance, created, **kwargs):
             gold_credit=0
         )
 
+        # 6. Debit: COGS & Credit: Inventory
+        if settings.cost_of_gold_account and settings.inventory_gold_account:
+            total_cogs = sum(item.total_cost for item in instance.items.all())
+            total_weight = sum(item.sold_weight for item in instance.items.all())
+
+            if total_cogs > 0:
+                # Debit: COGS
+                LedgerEntry.objects.create(
+                    journal_entry=journal,
+                    account=settings.cost_of_gold_account,
+                    debit=total_cogs,
+                    credit=0,
+                    gold_debit=0,
+                    gold_credit=0
+                )
+                
+                # Credit: Inventory
+                LedgerEntry.objects.create(
+                    journal_entry=journal,
+                    account=settings.inventory_gold_account,
+                    debit=0,
+                    credit=total_cogs,
+                    gold_debit=0,
+                    gold_credit=total_weight
+                )
+
 
 @receiver(post_save, sender=Invoice)
 def calculate_sales_rep_commission(sender, instance, created, **kwargs):

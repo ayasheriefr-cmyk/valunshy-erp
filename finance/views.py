@@ -1,18 +1,18 @@
 from django.shortcuts import render
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, Value, Count
+from django.db.models.functions import Coalesce
 from django.contrib.admin.views.decorators import staff_member_required
-from .models import Account, JournalEntry, LedgerEntry, FiscalYear, OpeningBalance
-from manufacturing.models import Workshop, ManufacturingOrder, WorkshopTransfer, ProductionStage
+from django.utils import timezone
+import datetime
 from decimal import Decimal
-from .models import Partner
+
+from .models import Account, JournalEntry, LedgerEntry, FiscalYear, OpeningBalance, Partner
+from .treasury_models import Treasury, TreasuryTransaction, TreasuryTransfer
+from manufacturing.models import Workshop, ManufacturingOrder, WorkshopTransfer, ProductionStage
 
 @staff_member_required
 def trial_balance(request):
     """ميزان المراجعة بالمجاميع والأرصدة - Optimized"""
-    from django.utils import timezone
-    import datetime
-    from django.db.models import Sum, Q
-    from django.db.models.functions import Coalesce
     
     # Date filters
     start_date_str = request.GET.get('start_date')
@@ -128,9 +128,6 @@ def trial_balance(request):
 @staff_member_required
 def balance_sheet(request):
     """الميزانية العمومية - Optimized"""
-    from decimal import Decimal
-    from django.db.models import Sum, Q
-    from django.db.models.functions import Coalesce
     
     # Pre-fetch all entry sums grouped by account to avoid loop queries
     entries_aggr = LedgerEntry.objects.values('account_id').annotate(
@@ -442,60 +439,49 @@ def daily_close(request):
 @staff_member_required
 def finance_dashboard(request):
     """Financial Dashboard - Comprehensive View - Optimized"""
-    from decimal import Decimal
-    from .treasury_models import Treasury, TreasuryTransaction
-    from django.utils import timezone
-    from django.db.models import Sum, Q, Value
-    from django.db.models.functions import Coalesce
-    
     today = timezone.now().date()
     
-    # Pre-fetch all entry sums grouped by account type
-    # This avoids doing a loop of queries for each account
-    type_sums = LedgerEntry.objects.values('account__account_type').annotate(
-        total_debit=Coalesce(Sum('debit'), Decimal('0')),
-        total_credit=Coalesce(Sum('credit'), Decimal('0'))
+    # 1. Consolidated Ledger Metrics in ONE query
+    # This replaces multiple value/annotate groupings
+    ledger_metrics = LedgerEntry.objects.aggregate(
+        rev_debit=Coalesce(Sum('debit', filter=Q(account__account_type='revenue')), Decimal('0')),
+        rev_credit=Coalesce(Sum('credit', filter=Q(account__account_type='revenue')), Decimal('0')),
+        exp_debit=Coalesce(Sum('debit', filter=Q(account__account_type='expense')), Decimal('0')),
+        exp_credit=Coalesce(Sum('credit', filter=Q(account__account_type='expense')), Decimal('0')),
+        ast_debit=Coalesce(Sum('debit', filter=Q(account__account_type='asset')), Decimal('0')),
+        ast_credit=Coalesce(Sum('credit', filter=Q(account__account_type='asset')), Decimal('0')),
+        lia_debit=Coalesce(Sum('debit', filter=Q(account__account_type='liability')), Decimal('0')),
+        lia_credit=Coalesce(Sum('credit', filter=Q(account__account_type='liability')), Decimal('0')),
+        equ_debit=Coalesce(Sum('debit', filter=Q(account__account_type='equity')), Decimal('0')),
+        equ_credit=Coalesce(Sum('credit', filter=Q(account__account_type='equity')), Decimal('0')),
     )
-    type_map = {item['account__account_type']: item for item in type_sums}
     
-    # Pre-fetch base balances from Account model
-    account_base_balances = Account.objects.values('account_type').annotate(
-        base_balance=Coalesce(Sum('balance'), Decimal('0'))
+    # 2. Consolidated Account Base Metrics in ONE query
+    account_base = Account.objects.aggregate(
+        ast_base=Coalesce(Sum('balance', filter=Q(account_type='asset')), Decimal('0')),
+        lia_base=Coalesce(Sum('balance', filter=Q(account_type='liability')), Decimal('0')),
+        equ_base=Coalesce(Sum('balance', filter=Q(account_type='equity')), Decimal('0')),
     )
-    base_map = {item['account_type']: item['base_balance'] for item in account_base_balances}
 
-    # 1. INCOME STATEMENT (P&L)
-    rev = type_map.get('revenue', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
-    total_revenue = rev['total_credit'] - rev['total_debit']
-    
-    exp = type_map.get('expense', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
-    total_expenses = exp['total_debit'] - exp['total_credit']
-    
+    # Calculate derived values
+    total_revenue = ledger_metrics['rev_credit'] - ledger_metrics['rev_debit']
+    total_expenses = ledger_metrics['exp_debit'] - ledger_metrics['exp_credit']
     net_income = total_revenue - total_expenses
     
-    # 2. BALANCE SHEET
-    # Note: Assets, Liabilities and Equity usually include the static 'balance' from the Account model
-    ast = type_map.get('asset', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
-    total_assets = (ast['total_debit'] - ast['total_credit']) + base_map.get('asset', Decimal('0'))
-    
-    lia = type_map.get('liability', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
-    total_liabilities = (lia['total_credit'] - lia['total_debit']) + base_map.get('liability', Decimal('0'))
-    
-    equ = type_map.get('equity', {'total_debit': Decimal('0'), 'total_credit': Decimal('0')})
-    total_equity = (equ['total_credit'] - equ['total_debit']) + base_map.get('equity', Decimal('0'))
+    total_assets = (ledger_metrics['ast_debit'] - ledger_metrics['ast_credit']) + account_base['ast_base']
+    total_liabilities = (ledger_metrics['lia_credit'] - ledger_metrics['lia_debit']) + account_base['lia_base']
+    total_equity = (ledger_metrics['equ_credit'] - ledger_metrics['equ_debit']) + account_base['equ_base']
     
     # 3. TREASURY STATUS
-    treasuries = Treasury.objects.all()
-    treasury_totals = treasuries.aggregate(
+    # Pre-select all treasuries (useful for loop in template)
+    treasuries = list(Treasury.objects.all())
+    treasury_totals = Treasury.objects.aggregate(
         t_cash=Coalesce(Sum('cash_balance'), Decimal('0')),
         t_gold_21=Coalesce(Sum('gold_balance_21'), Decimal('0')),
         t_gold_18=Coalesce(Sum('gold_balance_18'), Decimal('0'))
     )
-    total_cash = treasury_totals['t_cash']
-    total_gold_21 = treasury_totals['t_gold_21']
-    total_gold_18 = treasury_totals['t_gold_18']
     
-    # 4. RECENT TRANSACTIONS
+    # 4. RECENT TRANSACTIONS (Indexes should handle this)
     recent_journal_entries = JournalEntry.objects.order_by('-date', '-created_at')[:5]
     
     # 5. TOP ACCOUNTS
@@ -514,9 +500,9 @@ def finance_dashboard(request):
         'total_liabilities_equity': total_liabilities + total_equity,
         'is_balanced': abs(total_assets - (total_liabilities + total_equity)) < Decimal('0.01'),
         
-        'total_cash': total_cash,
-        'total_gold_21': total_gold_21,
-        'total_gold_18': total_gold_18,
+        'total_cash': treasury_totals['t_cash'],
+        'total_gold_21': treasury_totals['t_gold_21'],
+        'total_gold_18': treasury_totals['t_gold_18'],
         'treasuries': treasuries,
         
         'recent_entries': recent_journal_entries,
@@ -533,11 +519,6 @@ def finance_dashboard(request):
 @staff_member_required
 def treasuries_dashboard(request):
     """داشبورد الخزائن التفاعلية - Optimized"""
-    from decimal import Decimal
-    from .treasury_models import Treasury, TreasuryTransaction, TreasuryTransfer
-    from django.utils import timezone
-    from django.db.models import Sum, Count, Q
-    from django.db.models.functions import Coalesce
     
     today = timezone.now().date()
     

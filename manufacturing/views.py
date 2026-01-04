@@ -183,6 +183,10 @@ def manufacturing_dashboard(request):
     
     # Alert Level Logic
     stone_alert_level = 'safe'
+    stone_percentage = 0
+    if total_stone_carats > 0:
+        stone_percentage = min((total_stone_carats / 150) * 100, 100)
+        
     if total_stone_carats >= 150:
         stone_alert_level = 'critical'
     elif total_stone_carats >= 140:
@@ -210,6 +214,7 @@ def manufacturing_dashboard(request):
         'total_stone_carats': total_stone_carats,
         'stone_details': stone_details,
         'stone_alert_level': stone_alert_level,
+        'stone_percentage': stone_percentage,
 
         # Charts Data
         'chart_dates': dates,

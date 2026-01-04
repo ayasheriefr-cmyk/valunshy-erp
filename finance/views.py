@@ -4,7 +4,6 @@ from django.contrib.admin.views.decorators import staff_member_required
 from .models import Account, JournalEntry, LedgerEntry, FiscalYear, OpeningBalance
 from manufacturing.models import Workshop, ManufacturingOrder, WorkshopTransfer, ProductionStage
 from decimal import Decimal
-from sales.models import InvoiceItem
 from .models import Partner
 
 @staff_member_required
@@ -914,7 +913,7 @@ def monthly_analytics_report(request):
         else:
             end_date = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
         title = f"التقرير التحليلي الشهري - {start_date.strftime('%B %Y')}"
-        
+    
     # 1. Financial Analysis
     # Revenue
     revenue_accounts = Account.objects.filter(account_type='revenue')
@@ -973,7 +972,7 @@ def monthly_analytics_report(request):
         })
         
     # 4. Target & Business Plan (Forecast)
-    # Analyze Best Selling Items by Profit (Factory Margin)
+    from sales.models import InvoiceItem
     invoices = InvoiceItem.objects.filter(invoice__created_at__date__range=[start_date, end_date])
     
     # 5. Stone & Tahyif Analysis
@@ -989,7 +988,6 @@ def monthly_analytics_report(request):
     ).order_by('-total_qty')
 
     product_performance = {}
-    
     for inv_item in invoices:
         # Try to find the item classification
         item_name = "قطعة عامة"
@@ -1096,6 +1094,8 @@ def monthly_analytics_report(request):
                 'expected_profit': stats['total_profit'] * Decimal(str(growth_base)),
                 'period': period_name
             })
+
+    # 6. Advanced Profit Goal Planner (Calculator)
 
     # 6. Advanced Profit Goal Planner (Calculator)
     goal_profit = Decimal(request.GET.get('goal_profit', '0'))

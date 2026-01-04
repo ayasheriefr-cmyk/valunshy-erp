@@ -205,6 +205,9 @@ def manufacturing_dashboard(request):
         alert_color = "#ff9800"
         alert_title = "تنبيه: رصيد الحجارة يقترب من الحد الأقصى"
 
+    # Calculate Difference from 150ct limit
+    stone_diff = total_stone_carats - 150
+
     context = {
         'title': 'لوحة تحكم الإنتاج والجرد',
         'workshops': workshops,
@@ -232,6 +235,8 @@ def manufacturing_dashboard(request):
         'alert_border': alert_border,
         'alert_color': alert_color,
         'alert_title': alert_title,
+        'stone_diff': stone_diff,
+        'stone_diff_abs': abs(stone_diff),
 
         # Charts Data
         'chart_dates': dates,

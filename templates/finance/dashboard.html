@@ -123,10 +123,14 @@
                 <tbody>
                     {% for treasury in treasuries %}
                     <tr>
-                        <td><a href="/admin/finance/treasury/{{ treasury.id }}/change/" class="link-gold">{{
-                                treasury.name }}</a></td>
-                        <td style="text-align: center;"><b class="text-green">{{ treasury.cash_balance|floatformat:2 }}
-                                ج.م</b></td>
+                        <td>
+                            <a href="/admin/finance/treasury/{{ treasury.id }}/change/" class="link-gold">
+                                {{ treasury.name }}
+                            </a>
+                        </td>
+                        <td style="text-align: center;">
+                            <b class="text-green">{{ treasury.cash_balance|floatformat:2 }} ج.م</b>
+                        </td>
                         <td style="text-align: center;">{{ treasury.gold_balance_21|floatformat:3 }} جم</td>
                         <td style="text-align: center;">{{ treasury.gold_balance_18|floatformat:3 }} جم</td>
                     </tr>
@@ -160,8 +164,9 @@
                     <tr>
                         <td><b>{{ entry.reference }}</b></td>
                         <td style="max-width: 300px;">{{ entry.description|truncatewords:10 }}</td>
-                        <td style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">{{
-                            entry.date|date:"Y-m-d" }}</td>
+                        <td style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                            {{ entry.date|date:"Y-m-d" }}
+                        </td>
                         <td style="text-align: center;">
                             <a href="/admin/finance/journalentry/{{ entry.id }}/change/" class="link-gold">
                                 <i class="fa-solid fa-eye"></i> عرض

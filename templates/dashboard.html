@@ -71,6 +71,30 @@
                     </a>
                 </li>
                 <li>
+                    <a href="{% url 'manufacturing:dashboard' %}" class="nav-item">
+                        <i class="fa-solid fa-gauge-high"></i>
+                        <span>
+                            {% if LANGUAGE_CODE == 'ar' %}
+                            لوحة تحكم الإنتاج
+                            {% else %}
+                            Production Dashboard
+                            {% endif %}
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/manufacturing/stone/" class="nav-item">
+                        <i class="fa-solid fa-gem"></i>
+                        <span>
+                            {% if LANGUAGE_CODE == 'ar' %}
+                            مخزن الأحجار والفصوص
+                            {% else %}
+                            Stones Inventory
+                            {% endif %}
+                        </span>
+                    </a>
+                </li>
+                <li>
                     <a href="/admin/crm/customer/" class="nav-item">
                         <i class="fa-solid fa-users"></i>
                         <span>{% if LANGUAGE_CODE == 'ar' %}العملاء{% else %}Customers{% endif %}</span>
@@ -80,6 +104,18 @@
                     <a href="/admin/crm/supplier/" class="nav-item">
                         <i class="fa-solid fa-truck-field"></i>
                         <span>{% if LANGUAGE_CODE == 'ar' %}الموردين{% else %}Suppliers{% endif %}</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/finance/treasury/" class="nav-item">
+                        <i class="fa-solid fa-vault"></i>
+                        <span>
+                            {% if LANGUAGE_CODE == 'ar' %}
+                            الخزائن والعهد
+                            {% else %}
+                            Treasuries & Safes
+                            {% endif %}
+                        </span>
                     </a>
                 </li>
                 <li>

@@ -316,14 +316,29 @@
                 <tbody>
                     {% for order in active_orders %}
                     <tr>
-                        <td><b><a href="/admin/manufacturing/manufacturingorder/{{ order.id }}/change/"
-                                    style="color: var(--gold-primary);">{{ order.order_number }}</a></b></td>
-                        <td>{{ order.workshop.name }}</td>
-                        <td style="text-align: center;"><span dir="ltr">{{ order.input_weight|floatformat:3 }}</span> جم
+                        <td>
+                            <b>
+                                <a href="/admin/manufacturing/manufacturingorder/{{ order.id }}/change/"
+                                    style="color: var(--gold-primary);">
+                                    {{ order.order_number }}
+                                </a>
+                            </b>
                         </td>
-                        <td style="text-align: center;"><span
-                                style="background: rgba(212,175,55,0.1); border: 1px solid var(--gold-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">{{
-                                order.get_status_display }}</span></td>
+                        <td>
+                            {{ order.workshop.name }}
+                        </td>
+                        <td style="text-align: center;">
+                            <span dir="ltr">
+                                {{ order.input_weight|floatformat:3 }}
+                            </span>
+                            جم
+                        </td>
+                        <td style="text-align: center;">
+                            <span
+                                style="background: rgba(212,175,55,0.1); border: 1px solid var(--gold-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                {{ order.get_status_display }}
+                            </span>
+                        </td>
                         <td style="text-align: center;">
                             <div class="progress-container">
                                 {% if order.status == 'draft' %}

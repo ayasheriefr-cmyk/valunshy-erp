@@ -1,6 +1,8 @@
 from core.models import GoldPrice, Carat
 from manufacturing.models import ManufacturingOrder
 from django.db.models import Sum, Count, Q
+from django.db.models.functions import Coalesce as DbCoalesce
+from decimal import Decimal
 
 def gold_prices(request):
     # 1. Get latest price per carat in ONE query using Postgres distinct
@@ -22,13 +24,9 @@ def gold_prices(request):
         casting_count=Count('id', filter=Q(status='casting')),
         crafting_count=Count('id', filter=Q(status='crafting')),
         polishing_count=Count('id', filter=Q(status='polishing')),
-        total_weight=Coalesce(Sum('input_weight'), 0)
+        total_weight=DbCoalesce(Sum('input_weight'), Decimal('0'))
     )
     
-    # Add Coalesce if needed or just use stats
-    # We need Coalesce for Sum
-    from django.db.models.functions import Coalesce
-
     mfg_stats = {
         'count': mfg_stats_aggr['total_count'],
         'casting': mfg_stats_aggr['casting_count'],

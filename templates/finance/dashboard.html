@@ -109,6 +109,13 @@
             </div>
         </div>
 
+        <div style="padding: 0 20px; margin-bottom: 10px;">
+            <div
+                style="background: rgba(212,175,55,0.1); border-right: 4px solid var(--gold-primary); padding: 10px 15px; border-radius: 5px; font-size: 0.9rem;">
+                <i class="fa-solid fa-circle-info" style="color: var(--gold-primary); margin-left: 5px;"></i>
+                ملاحظة: <b>الخزينة الرئيسية</b> هي المسؤولة عن النقدية، باقي الخزائن للأصول والذهب والورش.
+            </div>
+        </div>
         <!-- List of Treasuries -->
         <div class="table-responsive" style="margin-top: 20px;">
             <table class="custom-table">
@@ -123,9 +130,15 @@
                 <tbody>
                     {% for treasury in treasuries %}
                     <tr>
-                        <td>
+                        <td {% if treasury.name=="الخزينة الرئيسية" %}style="background: rgba(212,175,55,0.05);" {%
+                            endif %}>
                             <a href="/admin/finance/treasury/{{ treasury.id }}/change/" class="link-gold">
                                 {{ treasury.name }}
+                                {% if treasury.name == "الخزينة الرئيسية" %}
+                                <span
+                                    style="background: var(--gold-primary); color: #000; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; margin-right: 5px; font-weight: bold;">الرئيسية
+                                    (نقدية)</span>
+                                {% endif %}
                             </a>
                         </td>
                         <td style="text-align: center;">

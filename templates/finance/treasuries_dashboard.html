@@ -255,6 +255,17 @@
         <div class="today-date">📅 {{ today }}</div>
     </div>
 
+    <div
+        style="background: rgba(212,175,55,0.1); border-right: 5px solid #D4AF37; padding: 15px 20px; border-radius: 10px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px;">
+        <i class="fa-solid fa-building-columns" style="font-size: 1.5rem; color: #D4AF37;"></i>
+        <div>
+            <h4 style="margin: 0; color: #D4AF37;">قاعدة عمل الخزائن</h4>
+            <p style="margin: 5px 0 0; color: #888; font-size: 14px;">تُستخدم <b>الخزينة الرئيسية</b> فقط للعمليات
+                النقدية والسيولة. الخزائن الأخرى (ورش، فنيين، إلخ) تُستخدم لمتابعة أرصدة الذهب، الأحجار، والعهد العينية.
+            </p>
+        </div>
+    </div>
+
     <!-- Summary Cards -->
     <div class="summary-cards">
         <div class="summary-card cash">
@@ -286,9 +297,17 @@
     <!-- Treasury Cards -->
     <div class="treasury-grid">
         {% for item in treasury_data %}
-        <div class="treasury-card">
+        <div class="treasury-card" {% if item.treasury.name=="الخزينة الرئيسية"
+            %}style="border-color: #D4AF37; background: linear-gradient(135deg, #252525, #2d2d2d); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.1);"
+            {% endif %}>
             <div class="treasury-card-header">
-                <span class="treasury-name">{{ item.treasury.name }}</span>
+                <span class="treasury-name">
+                    {{ item.treasury.name }}
+                    {% if item.treasury.name == "الخزينة الرئيسية" %}
+                    <i class="fa-solid fa-star" style="color: #D4AF37; margin-right: 5px; font-size: 0.8em;"
+                        title="الخزينة الرئيسية للنقدية"></i>
+                    {% endif %}
+                </span>
                 <span class="treasury-type">{{ item.treasury.get_treasury_type_display }}</span>
             </div>
 

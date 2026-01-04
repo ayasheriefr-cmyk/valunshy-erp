@@ -223,9 +223,7 @@
                     <td class="debit-val">{{ total_period_debit|floatformat:2 }}</td>
                     <td class="credit-val">{{ total_period_credit|floatformat:2 }}</td>
                     <td class="debit-val">{{ total_debit_sum|floatformat:2 }}</td>
-                    <!-- Note: Need to pass total_debit_sum or calculate in template if possible, but I provided specific totals in context -->
                     <td class="credit-val">{{ total_credit_sum|floatformat:2 }}</td>
-                    <!-- Wait, I need to check context keys -->
                     <td class="debit-val">{{ total_closing_debit|floatformat:2 }}</td>
                     <td class="credit-val">{{ total_closing_credit|floatformat:2 }}</td>
                 </tr>

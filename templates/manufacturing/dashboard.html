@@ -186,13 +186,18 @@
             </div>
             <div>
                 <h2 style="margin: 0; color: #fff; font-size: 1.4rem;">
-                    {% if stone_alert_level == 'critical' %}تنبيه حرج جداً: رصيد الحجارة تجاوز الحد القانوني!{% else
-                    %}تنبيه: رصيد الحجارة يقترب من الحد الأقصى{% endif %}
+                    {% if stone_alert_level == 'critical' %}
+                    تنبيه حرج جداً: رصيد الحجارة تجاوز الحد القانوني!
+                    {% else %}
+                    تنبيه: رصيد الحجارة يقترب من الحد الأقصى
+                    {% endif %}
                 </h2>
                 <p style="margin: 5px 0 0; color: #ddd; font-size: 1rem;">
-                    إجمالي الرصيد الحالي: <b
-                        style="color: {% if stone_alert_level == 'critical' %}#ff5252{% else %}#ff9800{% endif %};">{{
-                        total_stone_carats|floatformat:2 }} قيراط</b>.
+                    إجمالي الرصيد الحالي:
+                    <b style="color: {% if stone_alert_level == 'critical' %}#ff5252{% else %}#ff9800{% endif %};">
+                        {{ total_stone_carats|floatformat:2 }}
+                        قيراط
+                    </b>.
                     الحد القانوني المسموح به في المصنع هو <b>150 قيراط</b>.
                 </p>
             </div>
@@ -244,13 +249,26 @@
         </div>
         <div class="glass-card" style="padding: 20px; border-right: 4px solid #4CAF50;">
             <div style="color: var(--text-muted); font-size: 0.9rem;">إجمالي الذهب بالورش</div>
-            <div style="font-size: 2rem; font-weight: 800;"><span dir="ltr">{{
-                    total_workshop_gold_combined|floatformat:2 }}</span> <small style="font-size: 0.9rem;">جم</small>
+            <div style="font-size: 2rem; font-weight: 800;">
+                <span dir="ltr">
+                    {{ total_workshop_gold_combined|floatformat:2 }}
+                </span>
+                <small style="font-size: 0.9rem;">جم</small>
             </div>
-            <div style="margin-top: 10px; font-size: 0.8rem; color: #ccc;">24k: <b dir="ltr">{{
-                    total_workshop_gold_24|floatformat:2 }}</b> | 21k: <b dir="ltr">{{
-                    total_workshop_gold_21|floatformat:2 }}</b> | 18k: <b dir="ltr">{{
-                    total_workshop_gold_18|floatformat:2 }}</b></div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #ccc;">
+                24k:
+                <b dir="ltr">
+                    {{ total_workshop_gold_24|floatformat:2 }}
+                </b>
+                | 21k:
+                <b dir="ltr">
+                    {{ total_workshop_gold_21|floatformat:2 }}
+                </b>
+                | 18k:
+                <b dir="ltr">
+                    {{ total_workshop_gold_18|floatformat:2 }}
+                </b>
+            </div>
         </div>
         <div class="glass-card"
             style="padding: 20px; border-right: 4px solid {% if stone_alert_level == 'critical' %}#ff5252{% elif stone_alert_level == 'warning' %}#ff9800{% else %}#2196F3{% endif %};">
@@ -314,13 +332,17 @@
                                 order.get_status_display }}</span></td>
                         <td style="text-align: center;">
                             <div class="progress-container">
-                                {% if order.status == 'draft' %}<div class="progress-bar" style="width: 15%;"></div>
-                                {% elif order.status == 'casting' %}<div class="progress-bar" style="width: 40%;"></div>
-                                {% elif order.status == 'crafting' %}<div class="progress-bar" style="width: 65%;">
-                                </div>
-                                {% elif order.status == 'polishing' %}<div class="progress-bar" style="width: 85%;">
-                                </div>
-                                {% else %}<div class="progress-bar" style="width: 100%;"></div>{% endif %}
+                                {% if order.status == 'draft' %}
+                                <div class="progress-bar" style="width: 15%;"></div>
+                                {% elif order.status == 'casting' %}
+                                <div class="progress-bar" style="width: 40%;"></div>
+                                {% elif order.status == 'crafting' %}
+                                <div class="progress-bar" style="width: 65%;"></div>
+                                {% elif order.status == 'polishing' %}
+                                <div class="progress-bar" style="width: 85%;"></div>
+                                {% else %}
+                                <div class="progress-bar" style="width: 100%;"></div>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
@@ -340,10 +362,15 @@
                     <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
                         {% for detail in stone_details %}
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                            <td style="padding: 8px 0; color: var(--text-light);">{{ detail.name }}</td>
+                            <td style="padding: 8px 0; color: var(--text-light);">
+                                {{ detail.name }}
+                            </td>
                             <td
                                 style="padding: 8px 0; text-align: left; font-weight: bold; color: var(--gold-primary);">
-                                <span dir="ltr">{{ detail.stock|floatformat:2 }}</span> {{ detail.unit }}
+                                <span dir="ltr">
+                                    {{ detail.stock|floatformat:2 }}
+                                </span>
+                                {{ detail.unit }}
                             </td>
                         </tr>
                         {% empty %}
@@ -357,8 +384,9 @@
                 <div
                     style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between;">
                     <span style="color: var(--text-muted);">إجمالي القيراط (ct):</span>
-                    <b style="color: {% if stone_alert_level != 'safe' %}#ff5252{% else %}#fff{% endif %};">{{
-                        total_stone_carats|floatformat:2 }}</b>
+                    <b style="color: {% if stone_alert_level != 'safe' %}#ff5252{% else %}#fff{% endif %};">
+                        {{ total_stone_carats|floatformat:2 }}
+                    </b>
                 </div>
             </div>
 
@@ -368,8 +396,20 @@
                 <div style="padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div style="font-weight: bold; color: var(--gold-primary);">{{ ws.name }}</div>
                     <div style="font-size: 0.85rem; display: flex; justify-content: space-between;">
-                        <span>21k: <b dir="ltr">{{ ws.gold_balance_21|floatformat:2 }}</b> جم</span>
-                        <span>18k: <b dir="ltr">{{ ws.gold_balance_18|floatformat:2 }}</b> جم</span>
+                        <span>
+                            21k:
+                            <b dir="ltr">
+                                {{ ws.gold_balance_21|floatformat:2 }}
+                            </b>
+                            جم
+                        </span>
+                        <span>
+                            18k:
+                            <b dir="ltr">
+                                {{ ws.gold_balance_18|floatformat:2 }}
+                            </b>
+                            جم
+                        </span>
                     </div>
                 </div>
                 {% endfor %}
@@ -382,7 +422,11 @@
                         {{ avg_scrap|floatformat:2 }}%
                     </div>
                     <div style="margin-top: 10px;">
-                        {% if avg_scrap > 1.5 %}فاقد مرتفع!{% else %}معدل طبيعي{% endif %}
+                        {% if avg_scrap > 1.5 %}
+                        فاقد مرتفع!
+                        {% else %}
+                        معدل طبيعي
+                        {% endif %}
                     </div>
                 </div>
             </div>

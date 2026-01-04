@@ -9,46 +9,102 @@ from .models import Partner
 
 @staff_member_required
 def trial_balance(request):
-    """ميزان المراجعة"""
+    """ميزان المراجعة بالمجاميع والأرصدة طبقا للمحاسبة المصرية"""
+    from django.utils import timezone
+    import datetime
+    
+    # Date filters
+    start_date_str = request.GET.get('start_date')
+    end_date_str = request.GET.get('end_date')
+    
+    if start_date_str:
+        start_date = datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date()
+    else:
+        # Default to start of current fiscal year or month
+        today = timezone.now().date()
+        start_date = today.replace(day=1)
+        
+    if end_date_str:
+        end_date = datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    else:
+        end_date = timezone.now().date()
+
     accounts = Account.objects.all().order_by('code')
     
+    active_year = FiscalYear.objects.filter(is_active=True).first()
+    
     data = []
-    total_debit = Decimal('0')
-    total_credit = Decimal('0')
+    total_opening_debit = Decimal('0')
+    total_opening_credit = Decimal('0')
+    total_period_debit = Decimal('0')
+    total_period_credit = Decimal('0')
+    total_closing_debit = Decimal('0')
+    total_closing_credit = Decimal('0')
     
     for account in accounts:
-        # Get all ledger entries for this account
-        entries = LedgerEntry.objects.filter(account=account)
-        debit_sum = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit_sum = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
+        # 1. Opening Balance (Entries BEFORE start_date)
+        opening_entries = LedgerEntry.objects.filter(account=account, journal_entry__date__lt=start_date)
+        op_debit = opening_entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
+        op_credit = opening_entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
         
-        # Get opening balance
-        active_year = FiscalYear.objects.filter(is_active=True).first()
+        # Add static opening balance from opening balances table if any
         if active_year:
             opening = OpeningBalance.objects.filter(fiscal_year=active_year, account=account).first()
             if opening:
-                debit_sum += opening.debit_balance
-                credit_sum += opening.credit_balance
+                op_debit += opening.debit_balance
+                op_credit += opening.credit_balance
         
-        balance = debit_sum - credit_sum
+        # 2. Period Transactions (Entries BETWEEN start_date AND end_date)
+        period_entries = LedgerEntry.objects.filter(
+            account=account, 
+            journal_entry__date__gte=start_date,
+            journal_entry__date__lte=end_date
+        )
+        p_debit = period_entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
+        p_credit = period_entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
         
-        if debit_sum > 0 or credit_sum > 0:
+        # 3. Totals (Opening + Period)
+        total_debit = op_debit + p_debit
+        total_credit = op_credit + p_credit
+        
+        # 4. Closing Balance
+        net_balance = total_debit - total_credit
+        cl_debit = net_balance if net_balance > 0 else Decimal('0')
+        cl_credit = abs(net_balance) if net_balance < 0 else Decimal('0')
+        
+        if total_debit > 0 or total_credit > 0:
             data.append({
                 'account': account,
-                'debit': debit_sum,
-                'credit': credit_sum,
-                'balance': abs(balance),
-                'balance_type': 'مدين' if balance > 0 else 'دائن' if balance < 0 else '-'
+                'op_debit': op_debit,
+                'op_credit': op_credit,
+                'p_debit': p_debit,
+                'p_credit': p_credit,
+                'total_debit': total_debit,
+                'total_credit': total_credit,
+                'cl_debit': cl_debit,
+                'cl_credit': cl_credit,
             })
-            total_debit += debit_sum
-            total_credit += credit_sum
+            total_opening_debit += op_debit
+            total_opening_credit += op_credit
+            total_period_debit += p_debit
+            total_period_credit += p_credit
+            total_closing_debit += cl_debit
+            total_closing_credit += cl_credit
     
     context = {
         'data': data,
-        'total_debit': total_debit,
-        'total_credit': total_credit,
-        'is_balanced': total_debit == total_credit,
-        'title': 'ميزان المراجعة'
+        'total_opening_debit': total_opening_debit,
+        'total_opening_credit': total_opening_credit,
+        'total_period_debit': total_period_debit,
+        'total_period_credit': total_period_credit,
+        'total_debit_sum': total_opening_debit + total_period_debit,
+        'total_credit_sum': total_opening_credit + total_period_credit,
+        'total_closing_debit': total_closing_debit,
+        'total_closing_credit': total_closing_credit,
+        'is_balanced': total_closing_debit == total_closing_credit,
+        'start_date': start_date,
+        'end_date': end_date,
+        'title': 'ميزان المراجعة (بالمجاميع والأرصدة)'
     }
     return render(request, 'finance/trial_balance.html', context)
 

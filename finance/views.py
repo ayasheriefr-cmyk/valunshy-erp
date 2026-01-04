@@ -1147,28 +1147,28 @@ def monthly_analytics_report(request):
         if len(processed_products) == 1 and growth_factor > 100:
              growth_factor = 10  # Cap extreme growth projection from single item
 
-            for name, stats in target_products:
-                if stats['total_profit'] <= 0: continue
-                
-                # Propose production based on growth factor needed
-                target_units_per_month = int(Decimal(stats['count']) * growth_factor)
-                total_units_needed = target_units_per_month * goal_months
-                
-                expected_profit = total_units_needed * stats['avg_profit']
-                
-                if total_units_needed > 0:
-                    goal_results['items_needed'].append({
-                        'product_name': name,
-                        'required_units': total_units_needed, # Total for all months
-                        'monthly_rate': target_units_per_month,
-                        'daily_rate': round(target_units_per_month / 26, 1), # Assume 26 work days
-                        'total_profit': expected_profit,
-                        'total_weight': total_units_needed * stats.get('avg_weight', Decimal('3.5')),
-                        'total_value': total_units_needed * stats.get('avg_revenue', Decimal('7500'))
-                    })
+        for name, stats in target_products:
+            if stats['total_profit'] <= 0: continue
+            
+            # Propose production based on growth factor needed
+            target_units_per_month = int(Decimal(stats['count']) * growth_factor)
+            total_units_needed = target_units_per_month * goal_months
+            
+            expected_profit = total_units_needed * stats['avg_profit']
+            
+            if total_units_needed > 0:
+                goal_results['items_needed'].append({
+                    'product_name': name,
+                    'required_units': total_units_needed, # Total for all months
+                    'monthly_rate': target_units_per_month,
+                    'daily_rate': round(target_units_per_month / 26, 1), # Assume 26 work days
+                    'total_profit': expected_profit,
+                    'total_weight': total_units_needed * stats.get('avg_weight', Decimal('3.5')),
+                    'total_value': total_units_needed * stats.get('avg_revenue', Decimal('7500'))
+                })
 
-            # Sort needed items by total profit contribution
-            goal_results['items_needed'].sort(key=lambda x: x['total_profit'], reverse=True)
+        # Sort needed items by total profit contribution
+        goal_results['items_needed'].sort(key=lambda x: x['total_profit'], reverse=True)
         
         # Estimate Labor Hours from efficiency_data
         # Sum up total operations needed across all items

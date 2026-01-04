@@ -130,7 +130,7 @@
                 <tbody>
                     {% for treasury in treasuries %}
                     <tr>
-                        <td {% if treasury.name == "الخزينة الرئيسية" %}style="background: rgba(212,175,55,0.05);" {%
+                        <td {% if treasury.name=="الخزينة الرئيسية" %}style="background: rgba(212,175,55,0.05);" {%
                             endif %}>
                             <a href="/admin/finance/treasury/{{ treasury.id }}/change/" class="link-gold">
                                 {{ treasury.name }}

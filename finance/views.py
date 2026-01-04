@@ -111,57 +111,113 @@ def trial_balance(request):
 
 @staff_member_required
 def balance_sheet(request):
-    """الميزانية العمومية"""
+    """الميزانية العمومية طبقاً للمعايير المصرية (EAS)"""
+    from decimal import Decimal
+    from django.db.models import Sum
     
-    # Assets
-    assets = Account.objects.filter(account_type='asset')
-    total_assets = Decimal('0')
-    assets_data = []
+    # 1. حساب صافي الربح للفترة (لإدراجه في حقوق الملكية)
+    revenue_accounts = Account.objects.filter(account_type='revenue')
+    total_revenue = Decimal('0')
+    for acc in revenue_accounts:
+        entries = LedgerEntry.objects.filter(account=acc)
+        total_revenue += (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')) - \
+                         (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0'))
+
+    cogs_accounts = Account.objects.filter(account_type='expense', code__startswith='51') | \
+                    Account.objects.filter(account_type='expense', code__startswith='52')
+    total_cogs = Decimal('0')
+    for acc in cogs_accounts:
+        entries = LedgerEntry.objects.filter(account=acc)
+        total_cogs += (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) - \
+                      (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0'))
+
+    other_expenses = Account.objects.filter(account_type='expense').exclude(id__in=cogs_accounts.values_list('id', flat=True))
+    total_other_expenses = Decimal('0')
+    for acc in other_expenses:
+        entries = LedgerEntry.objects.filter(account=acc)
+        total_other_expenses += (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) - \
+                                (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0'))
+
+    net_income = total_revenue - total_cogs - total_other_expenses
+
+    # 2. تصنيف الأصول (Assets)
+    # أصول غير متداولة (11) وأصول متداولة (12)
+    assets = Account.objects.filter(account_type='asset').order_by('code')
+    fixed_assets = []
+    current_assets = []
+    total_fixed_assets = Decimal('0')
+    total_current_assets = Decimal('0')
+
     for acc in assets:
         entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        balance = debit - credit + acc.balance
+        balance = (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) - \
+                  (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')) + acc.balance
+        
         if balance != 0:
-            assets_data.append({'account': acc, 'balance': balance})
-            total_assets += balance
-    
-    # Liabilities
-    liabilities = Account.objects.filter(account_type='liability')
-    total_liabilities = Decimal('0')
-    liabilities_data = []
+            item = {'account': acc, 'balance': balance}
+            if acc.code.startswith('11'): # فرضاً 11 للأصول الثابتة
+                fixed_assets.append(item)
+                total_fixed_assets += balance
+            else:
+                current_assets.append(item)
+                total_current_assets += balance
+
+    # 3. تصنيف الالتزامات وحقوق الملكية (Liabilities & Equity)
+    liabilities = Account.objects.filter(account_type='liability').order_by('code')
+    long_term_liabilities = []
+    current_liabilities = []
+    total_lt_liabilities = Decimal('0')
+    total_current_liabilities = Decimal('0')
+
     for acc in liabilities:
         entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        balance = credit - debit + acc.balance
+        balance = (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')) - \
+                  (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) + acc.balance
+        
         if balance != 0:
-            liabilities_data.append({'account': acc, 'balance': balance})
-            total_liabilities += balance
-    
-    # Equity
-    equity = Account.objects.filter(account_type='equity')
-    total_equity = Decimal('0')
+            item = {'account': acc, 'balance': balance}
+            if acc.code.startswith('22'): # فرضاً 22 للالتزامات طويلة الأجل
+                long_term_liabilities.append(item)
+                total_lt_liabilities += balance
+            else:
+                current_liabilities.append(item)
+                total_current_liabilities += balance
+
+    # حقوق الملكية (Equity)
+    equity_accounts = Account.objects.filter(account_type='equity').order_by('code')
     equity_data = []
-    for acc in equity:
+    total_base_equity = Decimal('0')
+    for acc in equity_accounts:
         entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        balance = credit - debit + acc.balance
+        balance = (entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')) - \
+                  (entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')) + acc.balance
         if balance != 0:
             equity_data.append({'account': acc, 'balance': balance})
-            total_equity += balance
-    
+            total_base_equity += balance
+
+    total_equity = total_base_equity + net_income
+    total_assets = total_fixed_assets + total_current_assets
+    total_liabilities = total_lt_liabilities + total_current_liabilities
+
     context = {
-        'assets_data': assets_data,
+        'fixed_assets': fixed_assets,
+        'current_assets': current_assets,
+        'total_fixed_assets': total_fixed_assets,
+        'total_current_assets': total_current_assets,
         'total_assets': total_assets,
-        'liabilities_data': liabilities_data,
-        'total_liabilities': total_liabilities,
+        
+        'long_term_liabilities': long_term_liabilities,
+        'current_liabilities': current_liabilities,
+        'total_lt_liabilities': total_lt_liabilities,
+        'total_current_liabilities': total_current_liabilities,
+        
         'equity_data': equity_data,
+        'net_income': net_income,
         'total_equity': total_equity,
+        
         'total_liabilities_equity': total_liabilities + total_equity,
-        'is_balanced': total_assets == (total_liabilities + total_equity),
-        'title': 'الميزانية العمومية'
+        'is_balanced': abs(total_assets - (total_liabilities + total_equity)) < Decimal('0.01'),
+        'title': 'الميزانية العمومية (EAS)'
     }
     return render(request, 'finance/balance_sheet.html', context)
 

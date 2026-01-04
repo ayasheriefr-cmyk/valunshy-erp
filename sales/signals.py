@@ -171,11 +171,42 @@ def calculate_sales_rep_commission(sender, instance, created, **kwargs):
             amount=commission_amount,
             notes=f"عمولة فاتورة رقم {instance.invoice_number} - قيمة الفاتورة: {instance.grand_total}"
         )
-        
+
         # 2. Update sales rep totals
         sales_rep.total_sales = (sales_rep.total_sales or Decimal('0')) + instance.grand_total
         sales_rep.total_commission = (sales_rep.total_commission or Decimal('0')) + commission_amount
         sales_rep.save(update_fields=['total_sales', 'total_commission'])
+
+        # 3. FINANCIAL IMPACT: Record Accrued Commission in General Ledger
+        # Debit: Commission Expense (5303)
+        # Credit: Accrued Liabilities / Commissions Payable (2102)
+        try:
+            expense_acc = Account.objects.get(code='5303')
+            payable_acc = Account.objects.get(code='2102')
+            
+            journal = JournalEntry.objects.create(
+                reference=f"COMM-{instance.invoice_number}",
+                description=f"استحقاق عمولة مندوب - {sales_rep.name} - فاتورة {instance.invoice_number}",
+                date=instance.created_at.date()
+            )
+            
+            # Debit: Expense
+            LedgerEntry.objects.create(
+                journal_entry=journal,
+                account=expense_acc,
+                debit=commission_amount,
+                credit=0
+            )
+            
+            # Credit: Payable
+            LedgerEntry.objects.create(
+                journal_entry=journal,
+                account=payable_acc,
+                debit=0,
+                credit=commission_amount
+            )
+        except Account.DoesNotExist:
+            pass # Should log this in production
 
 
 @receiver(post_save, sender=Invoice)

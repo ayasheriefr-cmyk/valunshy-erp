@@ -40,7 +40,20 @@ def create_journal_entry_for_transaction(sender, instance, created, **kwargs):
     if instance.transaction_type == 'cash_in' or instance.transaction_type == 'finished_goods_in':
         counter_account = settings.sales_revenue_account
     elif instance.transaction_type == 'cash_out':
-        counter_account = settings.cost_of_gold_account
+        # Default to COGS for generic cash out, but check if it's an Expense Voucher
+        if instance.reference_type == 'expense_voucher':
+            voucher = ExpenseVoucher.objects.filter(id=instance.reference_id).first()
+            if voucher:
+                if voucher.expense_category == 'salaries':
+                    counter_account = Account.objects.filter(code='5301').first()
+                elif voucher.expense_category in ['electricity', 'water', 'gas', 'rent']:
+                    counter_account = Account.objects.filter(code='5302').first()
+                else:
+                    counter_account = Account.objects.filter(code='53').first()
+        
+        # Fallback to COGS if still no account
+        if not counter_account:
+            counter_account = settings.cost_of_gold_account
     elif instance.transaction_type in ['transfer_in', 'transfer_out']:
         # For transfers, we need the OTHER treasury's account
         if instance.reference_type == 'treasury_transfer':

@@ -297,93 +297,96 @@
     <!-- Treasury Cards -->
     <div class="treasury-grid">
         {% for item in treasury_data %}
-        <div class="treasury-card" {% if item.treasury.name == "الخزينة الرئيسية"
-            %}style="border-color: #D4AF37; background: linear-gradient(135deg, #252525, #2d2d2d); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.1);"
-            {% endif %}>
-            <div class="treasury-card-header">
-                <span class="treasury-name">
-                    {{ item.treasury.name }}
-                    {% if item.treasury.name == "الخزينة الرئيسية" %}
-                    <i class="fa-solid fa-star" style="color: #D4AF37; margin-right: 5px; font-size: 0.8em;"
-                        title="الخزينة الرئيسية للنقدية"></i>
-                    {% endif %}
-                </span>
-                <span class="treasury-type">{{ item.treasury.get_treasury_type_display }}</span>
-            </div>
-
-            <div class="treasury-balances">
-                <div class="balance-item cash">
-                    <div class="amount">{{ item.cash_balance|floatformat:2 }}</div>
-                    <div class="type">💵 نقدية</div>
-                </div>
-                <div class="balance-item">
-                    <div class="amount">{{ item.total_gold|floatformat:3 }}</div>
-                    <div class="type">✨ إجمالي الذهب</div>
-                </div>
-                <div class="balance-item">
-                    <div class="amount" style="color:#2196F3;">{{ item.gold_21|floatformat:3 }}</div>
-                    <div class="type">ذهب 21</div>
-                </div>
-                <div class="balance-item">
-                    <div class="amount" style="color:#FF9800;">{{ item.gold_18|floatformat:3 }}</div>
-                    <div class="type">ذهب 18</div>
-                </div>
-            </div>
-
-            <div class="today-activity">
-                <div class="activity-item">
-                    <div class="in">+{{ item.cash_in_today|floatformat:2 }}</div>
-                    <div class="type">وارد اليوم</div>
-                </div>
-                <div class="activity-item">
-                    <div class="out">-{{ item.cash_out_today|floatformat:2 }}</div>
-                    <div class="type">صادر اليوم</div>
-                </div>
-                <div class="activity-item">
-                    <div class="net {% if item.net_today >= 0 %}positive{% else %}negative{% endif %}">
-                        {{ item.net_today|floatformat:2 }}
-                    </div>
-                    <div class="type">الصافي</div>
-                </div>
-            </div>
-        </div>
-        {% empty %}
-        <div class="treasury-card" style="text-align:center; color:#888;">
-            لا توجد خزائن مسجلة
-        </div>
-        {% endfor %}
-    </div>
-
-    <!-- Recent Transfers -->
-    <div class="transfers-section">
-        <h3>🔄 آخر التحويلات</h3>
-        {% for transfer in recent_transfers %}
-        <div class="transfer-item">
-            <div class="transfer-direction">
-                <span>{{ transfer.from_treasury.name }}</span>
-                <span class="transfer-arrow">➡️</span>
-                <span>{{ transfer.to_treasury.name }}</span>
-            </div>
-            <div>
-                <span style="color:#4CAF50; font-weight:bold;">{{ transfer.cash_amount|floatformat:2 }} ج.م</span>
-                {% if transfer.gold_weight > 0 %}
-                <span style="color:#D4AF37; margin-right:15px;">{{ transfer.gold_weight|floatformat:3 }} جم</span>
+        {% if item.treasury.name == "الخزينة الرئيسية" %}
+        <div class="treasury-card"
+            style="border-color: #D4AF37; background: linear-gradient(135deg, #252525, #2d2d2d); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.1);">
+            {% else %}
+            <div class="treasury-card">
                 {% endif %}
-            </div>
-        </div>
-        {% empty %}
-        <div style="text-align:center; color:#888; padding:20px;">
-            لا توجد تحويلات حديثة
-        </div>
-        {% endfor %}
-    </div>
+                <div class="treasury-card-header">
+                    <span class="treasury-name">
+                        {{ item.treasury.name }}
+                        {% if item.treasury.name == "الخزينة الرئيسية" %}
+                        <i class="fa-solid fa-star" style="color: #D4AF37; margin-right: 5px; font-size: 0.8em;"
+                            title="الخزينة الرئيسية للنقدية"></i>
+                        {% endif %}
+                    </span>
+                    <span class="treasury-type">{{ item.treasury.get_treasury_type_display }}</span>
+                </div>
 
-    <!-- Quick Actions -->
-    <div class="quick-actions">
-        <a href="/admin/finance/treasury/add/" class="action-btn primary">➕ إضافة خزينة</a>
-        <a href="/admin/finance/treasurytransfer/add/" class="action-btn secondary">🔄 تحويل جديد</a>
-        <a href="/admin/finance/treasurytransaction/add/" class="action-btn secondary">📝 حركة جديدة</a>
-        <a href="/finance/daily-close/" class="action-btn secondary">🔒 إغلاق اليومية</a>
+                <div class="treasury-balances">
+                    <div class="balance-item cash">
+                        <div class="amount">{{ item.cash_balance|floatformat:2 }}</div>
+                        <div class="type">💵 نقدية</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="amount">{{ item.total_gold|floatformat:3 }}</div>
+                        <div class="type">✨ إجمالي الذهب</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="amount" style="color:#2196F3;">{{ item.gold_21|floatformat:3 }}</div>
+                        <div class="type">ذهب 21</div>
+                    </div>
+                    <div class="balance-item">
+                        <div class="amount" style="color:#FF9800;">{{ item.gold_18|floatformat:3 }}</div>
+                        <div class="type">ذهب 18</div>
+                    </div>
+                </div>
+
+                <div class="today-activity">
+                    <div class="activity-item">
+                        <div class="in">+{{ item.cash_in_today|floatformat:2 }}</div>
+                        <div class="type">وارد اليوم</div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="out">-{{ item.cash_out_today|floatformat:2 }}</div>
+                        <div class="type">صادر اليوم</div>
+                    </div>
+                    <div class="activity-item">
+                        <div class="net {% if item.net_today >= 0 %}positive{% else %}negative{% endif %}">
+                            {{ item.net_today|floatformat:2 }}
+                        </div>
+                        <div class="type">الصافي</div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="treasury-card" style="text-align:center; color:#888;">
+                لا توجد خزائن مسجلة
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Recent Transfers -->
+        <div class="transfers-section">
+            <h3>🔄 آخر التحويلات</h3>
+            {% for transfer in recent_transfers %}
+            <div class="transfer-item">
+                <div class="transfer-direction">
+                    <span>{{ transfer.from_treasury.name }}</span>
+                    <span class="transfer-arrow">➡️</span>
+                    <span>{{ transfer.to_treasury.name }}</span>
+                </div>
+                <div>
+                    <span style="color:#4CAF50; font-weight:bold;">{{ transfer.cash_amount|floatformat:2 }} ج.م</span>
+                    {% if transfer.gold_weight > 0 %}
+                    <span style="color:#D4AF37; margin-right:15px;">{{ transfer.gold_weight|floatformat:3 }} جم</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <div style="text-align:center; color:#888; padding:20px;">
+                لا توجد تحويلات حديثة
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <a href="/admin/finance/treasury/add/" class="action-btn primary">➕ إضافة خزينة</a>
+            <a href="/admin/finance/treasurytransfer/add/" class="action-btn secondary">🔄 تحويل جديد</a>
+            <a href="/admin/finance/treasurytransaction/add/" class="action-btn secondary">📝 حركة جديدة</a>
+            <a href="/finance/daily-close/" class="action-btn secondary">🔒 إغلاق اليومية</a>
+        </div>
     </div>
-</div>
-{% endblock %}
+    {% endblock %}

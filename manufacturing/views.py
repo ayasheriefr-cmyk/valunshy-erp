@@ -157,6 +157,36 @@ def manufacturing_dashboard(request):
     carat_labels = list(carat_groups.keys())
     carat_values = list(carat_groups.values())
 
+    # D. Stone Inventory Alert & Status (Diamond Focus)
+    from django.db.models import DecimalField, ExpressionWrapper
+    stones = Stone.objects.all()
+    total_stone_carats = 0
+    stone_details = []
+    
+    for stone in stones:
+        stock = float(stone.current_stock or 0)
+        unit = str(stone.unit).lower()
+        
+        # Normalize to Carats (1 gram = 5 carats)
+        ct_weight = stock
+        if 'gram' in unit or 'جم' in unit:
+            ct_weight = stock * 5
+        
+        total_stone_carats += ct_weight
+        if stock > 0:
+            stone_details.append({
+                'name': stone.name,
+                'stock': stock,
+                'unit': stone.get_unit_display() if hasattr(stone, 'get_unit_display') else unit,
+                'carats': ct_weight
+            })
+    
+    # Alert Level Logic
+    stone_alert_level = 'safe'
+    if total_stone_carats >= 150:
+        stone_alert_level = 'critical'
+    elif total_stone_carats >= 140:
+        stone_alert_level = 'warning'
 
     context = {
         'title': 'لوحة تحكم الإنتاج والجرد',
@@ -175,6 +205,11 @@ def manufacturing_dashboard(request):
         
         'total_active_count': active_summary['total_count'] or 0,
         'total_active_weight': active_summary['total_weight'] or 0,
+
+        # Stone Inventory
+        'total_stone_carats': total_stone_carats,
+        'stone_details': stone_details,
+        'stone_alert_level': stone_alert_level,
 
         # Charts Data
         'chart_dates': dates,

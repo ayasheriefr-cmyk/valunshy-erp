@@ -176,6 +176,48 @@
 
 {% block content %}
 <div class="dashboard-container">
+    {% if stone_alert_level != 'safe' %}
+    <div class="stone-alert-banner"
+        style="margin-bottom: 25px; padding: 20px; border-radius: 12px; background: {% if stone_alert_level == 'critical' %}rgba(255, 82, 82, 0.2){% else %}rgba(255, 152, 0, 0.2){% endif %}; border: 1px solid {% if stone_alert_level == 'critical' %}#ff5252{% else %}#ff9800{% endif %}; position: relative; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div
+                style="font-size: 2.5rem; color: {% if stone_alert_level == 'critical' %}#ff5252{% else %}#ff9800{% endif %}; animation: pulse 1.5s infinite;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <h2 style="margin: 0; color: #fff; font-size: 1.4rem;">
+                    {% if stone_alert_level == 'critical' %}تنبيه حرج جداً: رصيد الحجارة تجاوز الحد القانوني!{% else
+                    %}تنبيه: رصيد الحجارة يقترب من الحد الأقصى{% endif %}
+                </h2>
+                <p style="margin: 5px 0 0; color: #ddd; font-size: 1rem;">
+                    إجمالي الرصيد الحالي: <b
+                        style="color: {% if stone_alert_level == 'critical' %}#ff5252{% else %}#ff9800{% endif %};">{{
+                        total_stone_carats|floatformat:2 }} قيراط</b>.
+                    الحد القانوني المسموح به في المصنع هو <b>150 قيراط</b>.
+                </p>
+            </div>
+        </div>
+        <style>
+            @keyframes pulse {
+                0% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+
+                50% {
+                    opacity: 0.7;
+                    transform: scale(1.1);
+                }
+
+                100% {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+            }
+        </style>
+    </div>
+    {% endif %}
+
     <div class="dashboard-header"
         style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
         <h1 class="dashboard-title">
@@ -202,13 +244,33 @@
         </div>
         <div class="glass-card" style="padding: 20px; border-right: 4px solid #4CAF50;">
             <div style="color: var(--text-muted); font-size: 0.9rem;">إجمالي الذهب بالورش</div>
-            <div style="font-size: 2rem; font-weight: 800;"><span dir="ltr">{{ total_workshop_gold_combined|floatformat:2 }}</span> <small style="font-size: 0.9rem;">جم</small>
+            <div style="font-size: 2rem; font-weight: 800;"><span dir="ltr">{{
+                    total_workshop_gold_combined|floatformat:2 }}</span> <small style="font-size: 0.9rem;">جم</small>
             </div>
-            <div style="margin-top: 10px; font-size: 0.8rem; color: #ccc;">24k: <b dir="ltr">{{ total_workshop_gold_24|floatformat:2 }}</b> | 21k: <b dir="ltr">{{ total_workshop_gold_21|floatformat:2 }}</b> | 18k: <b dir="ltr">{{ total_workshop_gold_18|floatformat:2 }}</b></div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #ccc;">24k: <b dir="ltr">{{
+                    total_workshop_gold_24|floatformat:2 }}</b> | 21k: <b dir="ltr">{{
+                    total_workshop_gold_21|floatformat:2 }}</b> | 18k: <b dir="ltr">{{
+                    total_workshop_gold_18|floatformat:2 }}</b></div>
         </div>
-        <div class="glass-card" style="padding: 20px; border-right: 4px solid #2196F3;">
-            <div style="color: var(--text-muted); font-size: 0.9rem;">رصيد المصنعيات المستحق</div>
-            <div style="font-size: 2rem; font-weight: 800;"><span dir="ltr">{{ total_workshop_labor|floatformat:0 }}</span> <small style="font-size: 0.9rem;">ج.م</small></div>
+        <div class="glass-card"
+            style="padding: 20px; border-right: 4px solid {% if stone_alert_level == 'critical' %}#ff5252{% elif stone_alert_level == 'warning' %}#ff9800{% else %}#2196F3{% endif %};">
+            <div style="color: var(--text-muted); font-size: 0.9rem;">إجمالي وزن الألماس (قيراط)</div>
+            <div
+                style="font-size: 2rem; font-weight: 800; color: {% if stone_alert_level != 'safe' %}#ff5252{% endif %};">
+                <span dir="ltr">{{ total_stone_carats|floatformat:2 }}</span>
+                <small style="font-size: 0.9rem;">ct</small>
+            </div>
+            <div
+                style="margin-top: 10px; width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                {% with percent=total_stone_carats|divide:1.5 %}
+                <div
+                    style="width: {% if percent > 100 %}100{% else %}{{ percent }}{% endif %}%; height: 100%; background: {% if stone_alert_level == 'critical' %}#ff5252{% elif stone_alert_level == 'warning' %}#ff9800{% else %}#2196F3{% endif %};">
+                </div>
+                {% endwith %}
+            </div>
+            <div style="margin-top: 5px; font-size: 0.75rem; color: var(--text-muted); text-align: left;">
+                Limit: 150 ct
+            </div>
         </div>
     </div>
 
@@ -250,7 +312,8 @@
                         <td style="text-align: center;"><span dir="ltr">{{ order.input_weight|floatformat:3 }}</span> جم
                         </td>
                         <td style="text-align: center;"><span
-                                style="background: rgba(212,175,55,0.1); border: 1px solid var(--gold-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">{{ order.get_status_display }}</span></td>
+                                style="background: rgba(212,175,55,0.1); border: 1px solid var(--gold-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">{{
+                                order.get_status_display }}</span></td>
                         <td style="text-align: center;">
                             <div class="progress-container">
                                 {% if order.status == 'draft' %}<div class="progress-bar" style="width: 15%;"></div>
@@ -273,6 +336,34 @@
         </div>
 
         <div>
+            <div class="glass-card" style="padding: 20px; margin-bottom: 20px;">
+                <h3 class="chart-header"><i class="fa-solid fa-gem"></i> مخزن الألماس (Diamond)</h3>
+                <div style="max-height: 250px; overflow-y: auto;">
+                    <table style="width: 100%; font-size: 0.9rem; border-collapse: collapse;">
+                        {% for detail in stone_details %}
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 8px 0; color: var(--text-light);">{{ detail.name }}</td>
+                            <td
+                                style="padding: 8px 0; text-align: left; font-weight: bold; color: var(--gold-primary);">
+                                <span dir="ltr">{{ detail.stock|floatformat:2 }}</span> {{ detail.unit }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" style="padding: 10px; color: var(--text-muted); text-align: center;">المخزن
+                                فارغ</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                <div
+                    style="margin-top: 15px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-muted);">إجمالي القيراط (ct):</span>
+                    <b style="color: {% if stone_alert_level != 'safe' %}#ff5252{% else %}#fff{% endif %};">{{
+                        total_stone_carats|floatformat:2 }}</b>
+                </div>
+            </div>
+
             <div class="glass-card" style="padding: 20px; margin-bottom: 20px;">
                 <h3 class="chart-header">أرصدة الورش</h3>
                 {% for ws in workshops %}

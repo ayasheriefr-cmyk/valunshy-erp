@@ -21,7 +21,7 @@ class Account(models.Model):
 
     class Meta:
         verbose_name = "حساب مالي"
-        verbose_name_plural = "الحسابات - شجرة الحسابات"
+        verbose_name_plural = "شجرة الحسابات"
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -35,7 +35,7 @@ class JournalEntry(models.Model):
     
     class Meta:
         verbose_name = "قيد يومية"
-        verbose_name_plural = "الحسابات - قيود اليومية"
+        verbose_name_plural = "قيود اليومية"
 
     def __str__(self):
         return f"{self.reference} بتاريخ {self.date}"
@@ -51,7 +51,7 @@ class CostCenter(models.Model):
 
     class Meta:
         verbose_name = "مركز تكلفة"
-        verbose_name_plural = "الحسابات - مراكز التكلفة"
+        verbose_name_plural = "مراكز التكلفة"
 
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -103,7 +103,7 @@ class FiscalYear(models.Model):
     
     class Meta:
         verbose_name = "سنة مالية"
-        verbose_name_plural = "الحسابات - السنوات المالية"
+        verbose_name_plural = "السنوات المالية"
     
     def __str__(self):
         return self.name
@@ -137,7 +137,7 @@ class OpeningBalance(models.Model):
     
     class Meta:
         verbose_name = "رصيد افتتاحي"
-        verbose_name_plural = "الحسابات - الأرصدة الافتتاحية"
+        verbose_name_plural = "الأرصدة الافتتاحية"
         unique_together = ('fiscal_year', 'account')
     
     def __str__(self):

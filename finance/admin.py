@@ -9,6 +9,12 @@ class LedgerEntryInline(admin.TabularInline):
     extra = 2
     fields = ('account', 'cost_center', 'debit', 'credit', 'gold_debit', 'gold_credit')
     classes = ('finance-inline',)
+    verbose_name = "بند القيد"
+    verbose_name_plural = "بنود القيد"
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('account', 'cost_center')
 
 @admin.register(Account)
 class AccountAdmin(ExportImportMixin, admin.ModelAdmin):
@@ -19,19 +25,61 @@ class AccountAdmin(ExportImportMixin, admin.ModelAdmin):
 
 @admin.register(JournalEntry)
 class JournalEntryAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('reference', 'date', 'description', 'total_debit', 'total_credit', 'is_balanced')
+    list_display = ('reference', 'date', 'description_short', 'total_debit', 'total_credit', 'is_balanced', 'entry_count')
     search_fields = ('reference', 'description')
     list_filter = ('date',)
     inlines = [LedgerEntryInline]
     date_hierarchy = 'date'
+    readonly_fields = ('created_at', 'total_debit_display', 'total_credit_display', 'balance_status')
+    
+    fieldsets = (
+        ('معلومات القيد', {
+            'fields': ('reference', 'date', 'description')
+        }),
+        ('ملخص القيد', {
+            'fields': ('total_debit_display', 'total_credit_display', 'balance_status'),
+            'classes': ('collapse',),
+            'description': 'ملخص تلقائي لإجماليات القيد'
+        }),
+    )
+    
+    def description_short(self, obj):
+        if obj.description:
+            return obj.description[:60] + '...' if len(obj.description) > 60 else obj.description
+        return '-'
+    description_short.short_description = "الوصف"
     
     def total_debit(self, obj):
-        return sum(entry.debit for entry in obj.ledger_entries.all())
+        total = sum(entry.debit for entry in obj.ledger_entries.all())
+        return f"{total:,.2f}"
     total_debit.short_description = "إجمالي المدين"
     
     def total_credit(self, obj):
-        return sum(entry.credit for entry in obj.ledger_entries.all())
+        total = sum(entry.credit for entry in obj.ledger_entries.all())
+        return f"{total:,.2f}"
     total_credit.short_description = "إجمالي الدائن"
+    
+    def total_debit_display(self, obj):
+        from django.utils.html import format_html
+        total = sum(entry.debit for entry in obj.ledger_entries.all())
+        return format_html('<b style="color:#e74c3c;">{:,.2f} جنيه</b>', total)
+    total_debit_display.short_description = "إجمالي المدين"
+    
+    def total_credit_display(self, obj):
+        from django.utils.html import format_html
+        total = sum(entry.credit for entry in obj.ledger_entries.all())
+        return format_html('<b style="color:#27ae60;">{:,.2f} جنيه</b>', total)
+    total_credit_display.short_description = "إجمالي الدائن"
+    
+    def balance_status(self, obj):
+        from django.utils.html import format_html
+        debit = sum(entry.debit for entry in obj.ledger_entries.all())
+        credit = sum(entry.credit for entry in obj.ledger_entries.all())
+        if debit == credit:
+            return format_html('<span style="color:#27ae60; font-weight:bold;">✅ متوازن</span>')
+        diff = abs(debit - credit)
+        return format_html('<span style="color:#e74c3c; font-weight:bold;">❌ غير متوازن (فرق: {:,.2f})</span>', diff)
+    balance_status.short_description = "حالة التوازن"
     
     def is_balanced(self, obj):
         debit = sum(entry.debit for entry in obj.ledger_entries.all())
@@ -40,6 +88,10 @@ class JournalEntryAdmin(ExportImportMixin, admin.ModelAdmin):
             return "✅ متوازن"
         return "❌ غير متوازن"
     is_balanced.short_description = "الحالة"
+    
+    def entry_count(self, obj):
+        return obj.ledger_entries.count()
+    entry_count.short_description = "عدد البنود"
 
 @admin.register(FinanceSettings)
 class FinanceSettingsAdmin(ExportImportMixin, admin.ModelAdmin):

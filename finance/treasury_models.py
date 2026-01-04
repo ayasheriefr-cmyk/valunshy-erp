@@ -67,7 +67,7 @@ class Treasury(models.Model):
     
     class Meta:
         verbose_name = "خزينة"
-        verbose_name_plural = "الخزينة - الخزائن"
+        verbose_name_plural = "الخزائن"
     
     def __str__(self):
         return f"{self.code} - {self.name}"
@@ -124,7 +124,7 @@ class TreasuryTransaction(models.Model):
     
     class Meta:
         verbose_name = "حركة خزينة"
-        verbose_name_plural = "الخزينة - الحركات"
+        verbose_name_plural = "حركات الخزينة"
         ordering = ['-date', '-created_at']
     
     def __str__(self):
@@ -161,7 +161,7 @@ class CustodyHolder(models.Model):
     
     class Meta:
         verbose_name = "مستلم عهدة"
-        verbose_name_plural = "الخزينة - مستلمي العهد"
+        verbose_name_plural = "مستلمي العهد"
     
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} ({self.get_holder_type_display()})"
@@ -221,7 +221,7 @@ class Custody(models.Model):
     
     class Meta:
         verbose_name = "سند عهدة"
-        verbose_name_plural = "الخزينة - سندات العهد"
+        verbose_name_plural = "سندات العهد"
         ordering = ['-issue_date', '-created_at']
         
     def __str__(self):
@@ -359,7 +359,7 @@ class ExpenseVoucher(models.Model):
     
     class Meta:
         verbose_name = "إذن صرف"
-        verbose_name_plural = "الخزينة - أذون الصرف"
+        verbose_name_plural = "أذون الصرف"
         ordering = ['-date', '-created_at']
     
     def __str__(self):
@@ -423,7 +423,7 @@ class ReceiptVoucher(models.Model):
     
     class Meta:
         verbose_name = "إذن قبض"
-        verbose_name_plural = "الخزينة - أذون القبض"
+        verbose_name_plural = "أذون القبض"
         ordering = ['-date', '-created_at']
     
     def __str__(self):
@@ -484,7 +484,7 @@ class TreasuryTransfer(models.Model):
     
     class Meta:
         verbose_name = "تحويل بين خزائن"
-        verbose_name_plural = "الخزينة - التحويلات"
+        verbose_name_plural = "التحويلات"
         ordering = ['-date', '-created_at']
     
     def __str__(self):
@@ -551,7 +551,7 @@ class DailyTreasuryReport(models.Model):
     
     class Meta:
         verbose_name = "تقرير خزينة يومي"
-        verbose_name_plural = "الخزينة - التقارير اليومية"
+        verbose_name_plural = "التقارير اليومية"
         unique_together = ('treasury', 'date')
         ordering = ['-date']
     

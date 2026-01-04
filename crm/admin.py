@@ -68,10 +68,24 @@ class SupplierTransactionInline(admin.TabularInline):
     can_delete = False
 
 @admin.register(SupplierTransaction)
-class SupplierTransactionAdmin(admin.ModelAdmin):
-    list_display = ('supplier', 'transaction_type', 'date', 'cash_debit', 'cash_credit', 'gold_movement')
-    list_filter = ('transaction_type', 'date', 'carat')
+class SupplierTransactionAdmin(ExportImportMixin, admin.ModelAdmin):
+    list_display = ('supplier', 'transaction_type', 'date', 'cash_debit', 'cash_credit', 'gold_movement', 'description_short')
+    list_filter = ('transaction_type', 'date', 'carat', 'supplier')
     search_fields = ('supplier__name', 'description')
+    date_hierarchy = 'date'
+    readonly_fields = ('created_at',)
+    
+    fieldsets = (
+        ('معلومات الحركة', {
+            'fields': ('supplier', 'transaction_type', 'date', 'description')
+        }),
+        ('الحركة النقدية', {
+            'fields': (('cash_debit', 'cash_credit'),)
+        }),
+        ('حركة الذهب', {
+            'fields': (('gold_debit', 'gold_credit', 'carat'),)
+        }),
+    )
     
     def gold_movement(self, obj):
         if obj.gold_debit > 0:
@@ -80,13 +94,20 @@ class SupplierTransactionAdmin(admin.ModelAdmin):
             return format_html('<span style="color:green;">+{} جم ({})</span>', obj.gold_credit, obj.carat)
         return "-"
     gold_movement.short_description = "حركة الذهب"
+    
+    def description_short(self, obj):
+        if obj.description:
+            return obj.description[:50] + '...' if len(obj.description) > 50 else obj.description
+        return '-'
+    description_short.short_description = "البيان"
 
 @admin.register(Supplier)
 class SupplierAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('supplier_code', 'name', 'primary_carat', 'phone', 'address', 'money_balance_display', 'gold_balance_list')
+    list_display = ('supplier_code', 'name', 'supplier_type', 'primary_carat', 'phone', 'money_balance_display', 'gold_balance_list')
     list_filter = ('supplier_type', 'primary_carat')
-    search_fields = ('name', 'phone', 'contact_person', 'address')
+    search_fields = ('name', 'phone', 'contact_person', 'address', 'email')
     inlines = [SupplierTransactionInline]
+    readonly_fields = ('created_at',)
     
     fieldsets = (
         ('بيانات المورد', {

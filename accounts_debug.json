@@ -1,0 +1,252 @@
+[
+    {
+        "code": "1101",
+        "name": "الخزينة الرئيسية (نقدية)",
+        "type": "asset"
+    },
+    {
+        "code": "1201",
+        "name": "Gold Inventory (مخزون الذهب)",
+        "type": "asset"
+    },
+    {
+        "code": "2101",
+        "name": "موردي الذهب (موازين)",
+        "type": "liability"
+    },
+    {
+        "code": "4101",
+        "name": "إيرادات المصنعيات (شغل)",
+        "type": "revenue"
+    },
+    {
+        "code": "5101",
+        "name": "Cost of Gold Sold (تكلفة الذهب)",
+        "type": "expense"
+    },
+    {
+        "code": "1000",
+        "name": "الأصول",
+        "type": "asset"
+    },
+    {
+        "code": "1100",
+        "name": "الأصول المتداولة",
+        "type": "asset"
+    },
+    {
+        "code": "1105",
+        "name": "مخزون الذهب الكسر / المستعمل",
+        "type": "asset"
+    },
+    {
+        "code": "2000",
+        "name": "الخصوم",
+        "type": "liability"
+    },
+    {
+        "code": "3000",
+        "name": "حقوق الملكية",
+        "type": "equity"
+    },
+    {
+        "code": "4000",
+        "name": "الإيرادات",
+        "type": "revenue"
+    },
+    {
+        "code": "4100",
+        "name": "إيرادات المبيعات",
+        "type": "revenue"
+    },
+    {
+        "code": "5000",
+        "name": "المصروفات",
+        "type": "expense"
+    },
+    {
+        "code": "5100",
+        "name": "تكلفة البضاعة المباعة",
+        "type": "expense"
+    },
+    {
+        "code": "1",
+        "name": "الأصول",
+        "type": "asset"
+    },
+    {
+        "code": "11",
+        "name": "الأصول المتداولة",
+        "type": "asset"
+    },
+    {
+        "code": "1102",
+        "name": "الحسابات البنكية / مدى",
+        "type": "asset"
+    },
+    {
+        "code": "1103",
+        "name": "مخزون الذهب بضاعة تامة",
+        "type": "asset"
+    },
+    {
+        "code": "110318",
+        "name": "مخزون ذهب عيار 18",
+        "type": "asset"
+    },
+    {
+        "code": "110321",
+        "name": "مخزون ذهب عيار 21",
+        "type": "asset"
+    },
+    {
+        "code": "110324",
+        "name": "مخزون ذهب عيار 24 (سبائك)",
+        "type": "asset"
+    },
+    {
+        "code": "1104",
+        "name": "ذهب قيد التصنيع (لدى الورش)",
+        "type": "asset"
+    },
+    {
+        "code": "1106",
+        "name": "عملاء ومبالغ مدينة",
+        "type": "asset"
+    },
+    {
+        "code": "2",
+        "name": "الخصوم والالتزامات",
+        "type": "liability"
+    },
+    {
+        "code": "21",
+        "name": "الخصوم المتداولة",
+        "type": "liability"
+    },
+    {
+        "code": "2102",
+        "name": "موردي المصنعيات والخدمات",
+        "type": "liability"
+    },
+    {
+        "code": "2103",
+        "name": "ضريبة القيمة المضافة",
+        "type": "liability"
+    },
+    {
+        "code": "3",
+        "name": "حقوق الملكية",
+        "type": "equity"
+    },
+    {
+        "code": "3101",
+        "name": "رأس المال",
+        "type": "equity"
+    },
+    {
+        "code": "3102",
+        "name": "الأرباح المرحلة",
+        "type": "equity"
+    },
+    {
+        "code": "4",
+        "name": "الإيرادات",
+        "type": "revenue"
+    },
+    {
+        "code": "41",
+        "name": "إيرادات المبيعات",
+        "type": "revenue"
+    },
+    {
+        "code": "4102",
+        "name": "إيرادات بيع الذهب",
+        "type": "revenue"
+    },
+    {
+        "code": "4103",
+        "name": "إيرادات فصوص وإكسسوارات",
+        "type": "revenue"
+    },
+    {
+        "code": "5",
+        "name": "المصروفات",
+        "type": "expense"
+    },
+    {
+        "code": "51",
+        "name": "تكلفة البضاعة المباعة",
+        "type": "expense"
+    },
+    {
+        "code": "52",
+        "name": "مصاريف التصنيع والهالك (الخسية)",
+        "type": "expense"
+    },
+    {
+        "code": "53",
+        "name": "مصاريف عمومية وإدارية",
+        "type": "expense"
+    },
+    {
+        "code": "5301",
+        "name": "رواتب وأجور",
+        "type": "expense"
+    },
+    {
+        "code": "5302",
+        "name": "إيجارات ومرافق",
+        "type": "expense"
+    },
+    {
+        "code": "5303",
+        "name": "عمولات مناديب المبيعات",
+        "type": "expense"
+    },
+    {
+        "code": "TEST-ACC-101",
+        "name": "Test Cash",
+        "type": "asset"
+    },
+    {
+        "code": "TEST-ACC-401",
+        "name": "Test Sales Revenue",
+        "type": "revenue"
+    },
+    {
+        "code": "TEST-ACC-201",
+        "name": "Test VAT Payable",
+        "type": "liability"
+    },
+    {
+        "code": "TEST-ACC-102",
+        "name": "Test Gold Inventory",
+        "type": "asset"
+    },
+    {
+        "code": "TEST-ACC-501",
+        "name": "Test Cost of Gold",
+        "type": "expense"
+    },
+    {
+        "code": "101001",
+        "name": "صندوق المركز الرئيسي",
+        "type": "asset"
+    },
+    {
+        "code": "401001",
+        "name": "إيرادات مبيعات",
+        "type": "revenue"
+    },
+    {
+        "code": "501001",
+        "name": "مصروفات عامة",
+        "type": "expense"
+    },
+    {
+        "code": "5200",
+        "name": "مصروفات المصنعية",
+        "type": "expense"
+    }
+]

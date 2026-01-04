@@ -112,44 +112,73 @@ def balance_sheet(request):
 
 @staff_member_required
 def income_statement(request):
-    """قائمة الدخل (الأرباح والخسائر)"""
+    """قائمة الدخل - بيان الأرباح والخسائر (EAS)"""
+    from decimal import Decimal
+    from django.db.models import Sum
     
-    # Revenue
+    # 1. الإيرادات التشغيلية (Revenues)
+    # تشمل المبيعات (ذهب، مصنعية، أحجار)
     revenue_accounts = Account.objects.filter(account_type='revenue')
     total_revenue = Decimal('0')
-    revenue_data = []
+    revenue_details = []
+    
     for acc in revenue_accounts:
         entries = LedgerEntry.objects.filter(account=acc)
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
         credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
+        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
         balance = credit - debit
         if balance != 0:
-            revenue_data.append({'account': acc, 'balance': balance})
+            revenue_details.append({'name': acc.name, 'balance': balance})
             total_revenue += balance
+
+    # 2. تكلفة المبيعات (COGS)
+    # تشمل تكلفة الخام + مصاريف تشغيل المصنع (أكواد 51 و 52)
+    cogs_accounts = Account.objects.filter(account_type='expense', code__startswith='51') | \
+                    Account.objects.filter(account_type='expense', code__startswith='52')
     
-    # Expenses
-    expense_accounts = Account.objects.filter(account_type='expense')
-    total_expenses = Decimal('0')
-    expense_data = []
-    for acc in expense_accounts:
+    total_cogs = Decimal('0')
+    cogs_details = []
+    for acc in cogs_accounts:
         entries = LedgerEntry.objects.filter(account=acc)
         debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
         credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
         balance = debit - credit
         if balance != 0:
-            expense_data.append({'account': acc, 'balance': balance})
-            total_expenses += balance
+            cogs_details.append({'name': acc.name, 'balance': balance})
+            total_cogs += balance
+
+    # 3. مجمل الربح (Gross Profit)
+    gross_profit = total_revenue - total_cogs
+
+    # 4. المصروفات الإدارية والعمومية (Operating Expenses)
+    # باقي المصروفات التي لا تندرج تحت التكلفة المباشرة (أكواد 53 وما بعدها)
+    operating_expense_accounts = Account.objects.filter(account_type='expense').exclude(id__in=cogs_accounts.values_list('id', flat=True))
     
-    net_income = total_revenue - total_expenses
+    total_operating_expenses = Decimal('0')
+    operating_expense_details = []
+    for acc in operating_expense_accounts:
+        entries = LedgerEntry.objects.filter(account=acc)
+        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
+        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
+        balance = debit - credit
+        if balance != 0:
+            operating_expense_details.append({'name': acc.name, 'balance': balance})
+            total_operating_expenses += balance
+
+    # 5. صافي الربح (Net Income)
+    net_income = gross_profit - total_operating_expenses
     
     context = {
-        'revenue_data': revenue_data,
+        'revenue_details': revenue_details,
         'total_revenue': total_revenue,
-        'expense_data': expense_data,
-        'total_expenses': total_expenses,
+        'cogs_details': cogs_details,
+        'total_cogs': total_cogs,
+        'gross_profit': gross_profit,
+        'operating_expense_details': operating_expense_details,
+        'total_operating_expenses': total_operating_expenses,
         'net_income': net_income,
         'is_profit': net_income > 0,
-        'title': 'قائمة الدخل'
+        'title': 'قائمة الدخل - بيان الأرباح والخسائر'
     }
     return render(request, 'finance/income_statement.html', context)
 

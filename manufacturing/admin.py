@@ -1,7 +1,13 @@
 from django.contrib import admin
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
-from .models import ManufacturingOrder, ProductionStage, Workshop, Stone, OrderStone, OrderTool, WorkshopSettlement, InstallationTool, StoneCut, StoneModel, StoneSize, StoneCategoryGroup, ManufacturingCylinder, WorkshopTransfer, CostAllocation
+from .models import (
+    Workshop, WorkshopSettlement, ManufacturingCylinder,
+    StoneCategoryGroup, StoneCut, StoneModel, StoneSize, Stone,
+    StoneInventoryAudit,
+    InstallationTool, ManufacturingOrder, OrderStone, OrderTool,
+    ProductionStage, WorkshopTransfer, CostAllocation
+)
 from core.admin_mixins import ExportImportMixin
 
 class ProductionStageInline(admin.TabularInline):
@@ -116,69 +122,42 @@ class StoneCategoryGroupAdmin(ExportImportMixin, admin.ModelAdmin):
 
 
 @admin.register(StoneCut)
-class StoneCutAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('code', 'name', 'category_group', 'description', 'models_count')
+class StoneCutAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name', 'category_group')
     list_filter = ('category_group',)
     search_fields = ('code', 'name')
     ordering = ('code',)
-    
-    def models_count(self, obj):
-        count = obj.models.count()
-        return format_html('<span style="color:#2196F3; font-weight:bold;">{}</span>', count)
-    models_count.short_description = 'عدد الموديلات'
 
 
 @admin.register(StoneModel)
-class StoneModelAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('code', 'name', 'stone_cut', 'sizes_count')
+class StoneModelAdmin(admin.ModelAdmin):
+    list_display = ('code', 'name', 'stone_cut')
     list_filter = ('stone_cut',)
     search_fields = ('code', 'name')
     ordering = ('stone_cut', 'code')
-    
-    def sizes_count(self, obj):
-        count = obj.sizes.count()
-        return format_html('<span style="color:#D4AF37; font-weight:bold;">{}</span>', count)
-    sizes_count.short_description = 'عدد المقاسات'
 
 
 @admin.register(StoneSize)
-class StoneSizeAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('code', 'stone_cut', 'stone_model', 'stone_type_display', 'short_code',
-                    'weight_range', 'size_mm', 'price_display', 'color', 'clarity')
-    list_filter = ('stone_cut', 'stone_model', 'color', 'clarity')
-    search_fields = ('code', 'stone_type', 'short_code')
+class StoneSizeAdmin(admin.ModelAdmin):
+    list_display = ('code', 'stone_cut', 'stone_model', 'size_mm', 'color', 'clarity', 'price_per_carat')
+    list_filter = ('stone_cut', 'color', 'clarity')
+    search_fields = ('code',)
     ordering = ('code',)
     list_per_page = 50
     
-    fieldsets = (
-        ('البيانات الأساسية', {
-            'fields': (('code', 'short_code'), ('stone_cut', 'stone_model'), 'stone_type')
-        }),
-        ('الوزن والمقاس', {
-            'fields': (('weight_from', 'weight_to'), 'size_mm')
-        }),
-        ('التسعير والجودة', {
-            'fields': ('price_per_carat', ('color', 'clarity'))
-        }),
-    )
-    
-    def stone_type_display(self, obj):
-        return format_html('<span style="color:#9C27B0;">{}</span>', obj.stone_type or '-')
-    stone_type_display.short_description = 'نوع الحجر'
-    
-    def weight_range(self, obj):
-        return format_html('{} - {}', obj.weight_from, obj.weight_to)
-    weight_range.short_description = 'نطاق الوزن'
-    
-    def price_display(self, obj):
-        return format_html('<span style="color:#4CAF50; font-weight:bold;">{}</span>', obj.price_per_carat)
-    price_display.short_description = 'سعر القراط'
 
+@admin.register(StoneInventoryAudit)
+class StoneInventoryAuditAdmin(admin.ModelAdmin):
+    list_display = ('audit_date', 'stone', 'system_stock', 'physical_stock', 'difference', 'audited_by')
+    list_filter = ('audit_date', 'stone__stone_cut__category_group')
+    search_fields = ('stone__name', 'notes')
+    readonly_fields = ('difference',)
+    date_hierarchy = 'audit_date'
 
 @admin.register(Stone)
-class StoneAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('name', 'stone_type', 'stone_cut', 'current_stock', 'unit')
-    list_filter = ('stone_type', 'stone_cut')
+class StoneAdmin(admin.ModelAdmin):
+    list_display = ('name', 'stone_type', 'stone_cut', 'stone_size', 'current_stock', 'unit')
+    list_filter = ('stone_type', 'unit', 'stone_cut__category_group')
     search_fields = ('name',)
 
 @admin.register(InstallationTool)

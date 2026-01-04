@@ -225,6 +225,8 @@ class Stone(models.Model):
     stone_type = models.CharField("النوع", max_length=50, blank=True)  # Diamond, Zircon, etc.
     stone_cut = models.ForeignKey(StoneCut, on_delete=models.SET_NULL, null=True, blank=True,
                                   verbose_name="شكل القطع", related_name='stones')
+    stone_size = models.ForeignKey(StoneSize, on_delete=models.SET_NULL, null=True, blank=True,
+                                   verbose_name="المقاس المحدد", related_name='stones_inventory')
     
     UNIT_CHOICES = [
         ('carat', 'قيراط (Carat)'),
@@ -239,7 +241,32 @@ class Stone(models.Model):
         verbose_name_plural = "التصنيع - مخزن الفصوص"
 
     def __str__(self):
-        return f"{self.name} ({self.current_stock} {self.unit})"
+        size_info = f" - {self.stone_size.size_mm}mm" if self.stone_size else ""
+        return f"{self.name}{size_info} ({self.current_stock} {self.unit})"
+
+class StoneInventoryAudit(models.Model):
+    """نظام جرد الأحجار"""
+    audit_date = models.DateField("تاريخ الجرد", default=timezone.now)
+    stone = models.ForeignKey(Stone, on_delete=models.CASCADE, verbose_name="الحجر", related_name='audits')
+    system_stock = models.DecimalField("الرصيد الدفتري", max_digits=10, decimal_places=3)
+    physical_stock = models.DecimalField("الرصيد الفعلي", max_digits=10, decimal_places=3)
+    difference = models.DecimalField("الفرق", max_digits=10, decimal_places=3, editable=False)
+    
+    notes = models.TextField("ملاحظات الجرد", blank=True)
+    audited_by = models.ForeignKey('auth.User', on_delete=models.PROTECT, verbose_name="بواسطة")
+
+    def save(self, *args, **kwargs):
+        self.difference = self.physical_stock - self.system_stock
+        super().save(*args, **kwargs)
+        
+        # Optionally update stone stock upon audit confirmation
+        # self.stone.current_stock = self.physical_stock
+        # self.stone.save()
+
+    class Meta:
+        verbose_name = "جرد أحجار"
+        verbose_name_plural = "التصنيع - جرد الأحجار"
+        ordering = ['-audit_date']
 
 class InstallationTool(models.Model):
     """أدوات ومستلزمات التركيب"""

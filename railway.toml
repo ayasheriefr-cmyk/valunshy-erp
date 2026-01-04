@@ -9,3 +9,5 @@ restartPolicyType = "on_failure"
 [build.nixpacks]
 packages = ["python311", "gcc", "postgresql"]
 setupKeys = ["PYTHON_VERSION=3.11.7"]
+
+# Force rebuild - Updated admin improvements 2026-01-04

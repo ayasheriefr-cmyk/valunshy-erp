@@ -243,8 +243,9 @@ class Stone(models.Model):
         verbose_name_plural = "التصنيع - مخزن الفصوص"
 
     def __str__(self):
+        cut_info = f"{self.stone_cut.name} " if self.stone_cut else ""
         size_info = f" - {self.stone_size.size_mm}mm" if self.stone_size else ""
-        return f"{self.name}{size_info} ({self.current_stock} {self.unit} / {self.current_quantity} قطعة)"
+        return f"{cut_info}{self.name}{size_info} ({self.current_stock} {self.unit} / {self.current_quantity} قطعة)"
 
 class StoneInventoryAudit(models.Model):
     """نظام جرد الأحجار"""

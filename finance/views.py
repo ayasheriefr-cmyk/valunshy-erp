@@ -898,24 +898,17 @@ def monthly_analytics_report(request):
             end_date = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
         title = f"التقرير التحليلي الشهري - {start_date.strftime('%B %Y')}"
     
-    # 1. Financial Analysis
-    # Revenue
-    revenue_accounts = Account.objects.filter(account_type='revenue')
-    total_revenue = Decimal('0')
-    for acc in revenue_accounts:
-        entries = LedgerEntry.objects.filter(account=acc, journal_entry__date__range=[start_date, end_date])
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        total_revenue += (credit - debit)
-        
-    # Expenses
-    expense_accounts = Account.objects.filter(account_type='expense')
-    total_expenses = Decimal('0')
-    for acc in expense_accounts:
-        entries = LedgerEntry.objects.filter(account=acc, journal_entry__date__range=[start_date, end_date])
-        debit = entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        credit = entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        total_expenses += (debit - credit)
+    # 1. Financial Analysis - Optimized to avoid N+1 per account
+    metrics = LedgerEntry.objects.filter(
+        journal_entry__date__range=[start_date, end_date]
+    ).aggregate(
+        rev_debit=Coalesce(Sum('debit', filter=Q(account__account_type='revenue')), Decimal('0')),
+        rev_credit=Coalesce(Sum('credit', filter=Q(account__account_type='revenue')), Decimal('0')),
+        exp_debit=Coalesce(Sum('debit', filter=Q(account__account_type='expense')), Decimal('0')),
+        exp_credit=Coalesce(Sum('credit', filter=Q(account__account_type='expense')), Decimal('0')),
+    )
+    total_revenue = metrics['rev_credit'] - metrics['rev_debit']
+    total_expenses = metrics['exp_debit'] - metrics['exp_credit']
         
     net_profit = total_revenue - total_expenses
     

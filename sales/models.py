@@ -48,7 +48,7 @@ class Invoice(models.Model):
     zatca_uuid = models.UUIDField("ZATCA UUID", null=True, blank=True)
     zatca_qr_code = models.TextField("ZATCA QR Code", blank=True)
     
-    created_at = models.DateTimeField("تاريخ الإنشاء", auto_now_add=True)
+    created_at = models.DateTimeField("تاريخ الإنشاء", auto_now_add=True, db_index=True)
     created_by = models.ForeignKey('auth.User', verbose_name="أنشئ بواسطة", on_delete=models.PROTECT)
     sales_rep = models.ForeignKey('SalesRepresentative', on_delete=models.SET_NULL, null=True, blank=True, 
                                    verbose_name="المندوب", related_name='invoices')

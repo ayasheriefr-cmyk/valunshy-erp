@@ -1,10 +1,14 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Count, Avg, Sum, F
 from django.db.models.functions import TruncDate
 from django.utils import timezone
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 import datetime
 import json
-from .models import ManufacturingOrder, Workshop
+from .models import ManufacturingOrder, Workshop, Stone, InstallationTool, OrderStone, OrderTool, ProductionStage, WorkshopTransfer, WorkshopSettlement
+from inventory.models import RawMaterial, Carat, Branch
+from finance.treasury_models import Treasury, TreasuryTransaction
 
 def manufacturing_analytics(request):
     """
@@ -92,8 +96,10 @@ def manufacturing_dashboard(request):
 
 
 
-    # 2. Active Orders Tracking
-    active_orders = ManufacturingOrder.objects.exclude(status__in=['completed', 'cancelled']).order_by('-start_date')
+    # 2. Active Orders Tracking (Optimized with prefetch)
+    active_orders = ManufacturingOrder.objects.exclude(
+        status__in=['completed', 'cancelled']
+    ).select_related('workshop', 'carat').prefetch_related('stages').order_by('-start_date')
     active_summary = active_orders.aggregate(
         total_count=Count('id'),
         total_weight=Sum('input_weight')
@@ -119,24 +125,46 @@ def manufacturing_dashboard(request):
     from sales.models import Invoice
     from inventory.models import Item
     
-    # A. Sales Trend (Last 7 Days)
+    # A. Sales Trend (Last 7 Days) - Optimized
+    today = timezone.now().date()
+    start_date = today - datetime.timedelta(days=6)
+    
+    sales_trend_data = Invoice.objects.filter(
+        created_at__date__gte=start_date
+    ).extra(select={'day': "date(created_at)"}).values('day').annotate(total=Sum('grand_total'))
+    
+    # Map result to date string
+    sales_map = {str(item['day']): float(item['total']) for item in sales_trend_data}
+    
     dates = []
     sales_values = []
-    today = timezone.now().date()
     for i in range(6, -1, -1):
         d = today - datetime.timedelta(days=i)
-        dates.append(d.strftime('%Y-%m-%d'))
-        val = Invoice.objects.filter(created_at__date=d).aggregate(Sum('grand_total'))['grand_total__sum'] or 0
-        sales_values.append(float(val))
+        d_str = d.strftime('%Y-%m-%d')
+        dates.append(d_str)
+        # Handle potential different date formats from extra select
+        val = sales_map.get(d_str, 0) or sales_map.get(str(d), 0)
+        sales_values.append(val)
 
-    # B. Workshop Gold Intake (Last 7 Days)
+    # B. Workshop Gold Intake (Last 7 Days) - Optimized
+    ws_intake_data = WorkshopSettlement.objects.filter(
+        settlement_type='gold_payment',
+        date__gte=start_date
+    ).values('workshop_id', 'date').annotate(total_w=Sum('weight'))
+    
+    # Map: (workshop_id, date_str) -> weight
+    intake_map = {}
+    for item in ws_intake_data:
+        key = (item['workshop_id'], str(item['date']))
+        intake_map[key] = float(item['total_w'])
+        
     workshop_gold_data = []
     for ws in workshops:
         ws_daily_weights = []
         for i in range(6, -1, -1):
             d = today - datetime.timedelta(days=i)
-            w = WorkshopSettlement.objects.filter(workshop=ws, settlement_type='gold_payment', date=d).aggregate(Sum('weight'))['weight__sum'] or 0
-            ws_daily_weights.append(float(w))
+            weight = intake_map.get((ws.id, str(d)), 0)
+            ws_daily_weights.append(weight)
         workshop_gold_data.append({
             'name': ws.name,
             'data': ws_daily_weights
@@ -254,3 +282,208 @@ def print_job_card(request, order_id):
     """طباعة بطاقة الشغل (Job Card) للصنايعي مع باركود"""
     order = ManufacturingOrder.objects.get(id=order_id)
     return render(request, 'manufacturing/job_card.html', {'order': order})
+
+@staff_member_required
+def fast_order_create(request):
+    """شاشة إنشاء أمر تصنيع سريع (Wizard)"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            # 1. Create Main Order
+            order = ManufacturingOrder.objects.create(
+                order_number=data.get('order_number'),
+                workshop_id=data.get('workshop'),
+                carat_id=data.get('carat'),
+                input_material_id=data.get('input_material'),
+                input_weight=data.get('input_weight'),
+                status='in_progress', # Start directly in progress
+                item_name_pattern=data.get('item_name'),
+                target_branch_id=data.get('target_branch'),
+                assigned_technician=data.get('technician', '')
+            )
+            
+            # 2. Add Stones
+            for stone_data in data.get('stones', []):
+                if stone_data.get('id'):
+                    OrderStone.objects.create(
+                        order=order,
+                        stone_id=stone_data['id'],
+                        quantity_issued=stone_data['qty'],
+                        quantity_required=stone_data['qty']
+                    )
+            
+            # 3. Add Tools/Materials (Solder/Laser wire)
+            for tool_data in data.get('tools', []):
+                if tool_data.get('id'):
+                    OrderTool.objects.create(
+                        order=order,
+                        tool_id=tool_data['id'],
+                        weight=tool_data.get('weight', 0),
+                        quantity=tool_data.get('qty', 0)
+                    )
+            
+            return JsonResponse({'status': 'success', 'order_id': order.id, 'redirect_url': f'/admin/manufacturing/manufacturingorder/{order.id}/change/'})
+            
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+    # Context for GET request
+    context = {
+        'workshops': Workshop.objects.all(),
+        'carats': Carat.objects.all(),
+        'raw_materials': RawMaterial.objects.filter(current_weight__gt=0),
+        'stones': Stone.objects.filter(current_stock__gt=0),
+        'tools': InstallationTool.objects.all(),
+        'branches': Branch.objects.all(),
+        'next_order_number': f"MFG-{timezone.now().strftime('%Y%m%d')}-{ManufacturingOrder.objects.count() + 1}"
+    }
+    return render(request, 'manufacturing/fast_order.html', context)
+
+@csrf_exempt
+def magic_workflow(request):
+    """
+    Magic Manufacturing Workflow: Drag-and-Drop Production Management
+    """
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        order_id = request.POST.get('order_id')
+        
+        try:
+            with transaction.atomic():
+                if action == 'assign_workshop':
+                    workshop_id = request.POST.get('workshop_id')
+                    input_weight = request.POST.get('input_weight', 0)
+                    treasury_id = request.POST.get('treasury_id')
+                    
+                    order = get_object_or_404(ManufacturingOrder, id=order_id)
+                    workshop = get_object_or_404(Workshop, id=workshop_id)
+                    
+                    # 1. Update Order
+                    order.workshop = workshop
+                    order.status = 'in_progress'
+                    if input_weight:
+                        order.input_weight = input_weight
+                    order.save()
+                    
+                    # 3. Material Issuance (Gold & Treasury Transaction)
+                    gold_weight = request.POST.get('gold_weight')
+                    if gold_weight and float(gold_weight) > 0:
+                        # Create Workshop Settlement (Increases Workshop Debt)
+                        WorkshopSettlement.objects.create(
+                            workshop=workshop,
+                            settlement_type='gold_payment',
+                            weight=gold_weight,
+                            carat=order.carat,
+                            notes=f"صرف ذهب سريع مع الطلب {order.order_number}"
+                        )
+                        
+                        # Create Treasury Transaction (Decreases Treasury Stock)
+                        if treasury_id:
+                            treasury = get_object_or_404(Treasury, id=treasury_id)
+                            TreasuryTransaction.objects.create(
+                                treasury=treasury,
+                                transaction_type='gold_out',
+                                gold_weight=gold_weight,
+                                gold_carat=order.carat,
+                                description=f"صرف ذهب لطلب تصنيع: {order.order_number} (للعامل: {workshop.name})",
+                                reference_type='manufacturing_order',
+                                reference_id=order.id,
+                                created_by=request.user if request.user.is_authenticated else None
+                            )
+                    
+                    # 4. Add Stones if provided
+                    stones_json = request.POST.get('stones_json')
+                    if stones_json:
+                        import json
+                        stones = json.loads(stones_json)
+                        for s in stones:
+                            OrderStone.objects.create(
+                                order=order, 
+                                stone_id=s['id'], 
+                                quantity_issued=s['qty'], 
+                                quantity_required=s['qty']
+                            )
+
+                    # 2. Create first stage
+                    ProductionStage.objects.create(
+                        order=order,
+                        workshop=workshop,
+                        stage_name='casting',
+                        input_weight=input_weight or 0,
+                        start_datetime=timezone.now()
+                    )
+                    
+                    return JsonResponse({'status': 'success'})
+
+                elif action == 'move_order':
+                    next_workshop_id = request.POST.get('next_workshop_id')
+                    output_weight = request.POST.get('output_weight', 0)
+                    powder_weight = request.POST.get('powder_weight', 0)
+                    
+                    order = get_object_or_404(ManufacturingOrder, id=order_id)
+                    next_workshop = get_object_or_404(Workshop, id=next_workshop_id)
+                    
+                    # Close current stage
+                    current_stage = order.stages.filter(end_datetime__isnull=True).last()
+                    if current_stage:
+                        current_stage.output_weight = output_weight
+                        current_stage.powder_weight = powder_weight
+                        current_stage.next_workshop = next_workshop
+                        current_stage.save() # Signal handles WorkshopTransfer
+                        
+                        # Create next stage
+                        ProductionStage.objects.create(
+                            order=order,
+                            workshop=next_workshop,
+                            stage_name='crafting',
+                            input_weight=output_weight,
+                            start_datetime=timezone.now()
+                        )
+                    
+                    return JsonResponse({'status': 'success'})
+
+                elif action == 'complete_order':
+                    output_weight = request.POST.get('output_weight', 0)
+                    powder_weight = request.POST.get('powder_weight', 0)
+                    
+                    order = get_object_or_404(ManufacturingOrder, id=order_id)
+                    
+                    # Close last stage
+                    current_stage = order.stages.filter(end_datetime__isnull=True).last()
+                    if current_stage:
+                        current_stage.output_weight = output_weight
+                        current_stage.powder_weight = powder_weight
+                        current_stage.save()
+                    
+                    # Mark Order Completed
+                    order.output_weight = output_weight
+                    order.powder_weight = powder_weight
+                    order.status = 'completed'
+                    order.save()
+                    
+                    return JsonResponse({'status': 'success'})
+
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+    # GET: Context for the board
+    workshops = Workshop.objects.all()
+    drafts = ManufacturingOrder.objects.filter(status='draft').order_by('-id')
+    
+    # Active orders grouped by current workshop
+    active_by_workshop = {}
+    for ws in workshops:
+        active_by_workshop[ws.id] = ManufacturingOrder.objects.filter(
+            workshop=ws, 
+            status__in=['in_progress', 'casting', 'crafting', 'polishing', 'qc_pending']
+        ).prefetch_related('stages')
+
+    context = {
+        'workshops': workshops,
+        'drafts': drafts,
+        'active_by_workshop': active_by_workshop,
+        'stones': Stone.objects.filter(current_stock__gt=0),
+        'treasuries': Treasury.objects.all(),
+    }
+    return render(request, 'manufacturing/magic_workflow.html', context)

@@ -1,0 +1,172 @@
+<div class="stage-tracker" dir="rtl">
+    <div class="stages-line">
+        {% with current_status=order.status %}
+
+        {# Stage 1: New/Draft #}
+        <div class="stage-item {% if current_status != 'cancelled' %}completed{% endif %}">
+            <div class="stage-dot" title="بدء الطلب">
+                <i class="fa-solid fa-file-invoice"></i>
+            </div>
+            <div class="stage-label">البداية</div>
+        </div>
+
+        {# Stage 2: Casting #}
+        <div
+            class="stage-item {% if current_status == 'casting' %}active{% elif current_status != 'draft' and current_status != 'cancelled' %}completed{% endif %}">
+            <div class="stage-dot" title="مرحلة السبك">
+                <i class="fa-solid fa-fire-burner"></i>
+            </div>
+            <div class="stage-label">السبك</div>
+        </div>
+
+        {# Stage 3: Crafting #}
+        <div
+            class="stage-item {% if current_status == 'crafting' %}active{% elif current_status in 'polishing,qc_pending,completed' %}completed{% endif %}">
+            <div class="stage-dot" title="مرحلة الصياغة">
+                <i class="fa-solid fa-hammer"></i>
+            </div>
+            <div class="stage-label">صياغة</div>
+        </div>
+
+        {# Stage 4: Polishing #}
+        <div
+            class="stage-item {% if current_status == 'polishing' %}active{% elif current_status in 'qc_pending,completed' %}completed{% endif %}">
+            <div class="stage-dot" title="التلميع والجلي">
+                <i class="fa-solid fa-sparkles"></i>
+            </div>
+            <div class="stage-label">تلميع</div>
+        </div>
+
+        {# Stage 5: QC #}
+        <div
+            class="stage-item {% if current_status == 'qc_pending' %}active{% elif current_status == 'completed' %}completed{% endif %}">
+            <div class="stage-dot" title="مراقبة الجودة">
+                <i class="fa-solid fa-clipboard-check"></i>
+            </div>
+            <div class="stage-label">جودة</div>
+        </div>
+
+        {# Stage 6: Completed #}
+        <div class="stage-item {% if current_status == 'completed' %}completed{% endif %}">
+            <div class="stage-dot" title="تم الانتهاء">
+                <i class="fa-solid fa-check-double"></i>
+            </div>
+            <div class="stage-label">جاهز</div>
+        </div>
+
+        {% endwith %}
+    </div>
+</div>
+
+<style>
+    .stage-tracker {
+        padding: 5px 0;
+        width: 100%;
+    }
+
+    .stages-line {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        position: relative;
+        padding-top: 10px;
+    }
+
+    .stages-line::before {
+        content: '';
+        position: absolute;
+        top: 25px;
+        left: 5%;
+        right: 5%;
+        height: 2px;
+        background: rgba(255, 255, 255, 0.1);
+        z-index: 1;
+    }
+
+    .stage-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+        z-index: 2;
+    }
+
+    .stage-dot {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #1a1a1a;
+        border: 2px solid #333;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        color: #666;
+        transition: all 0.3s ease;
+        margin-bottom: 8px;
+    }
+
+    .stage-label {
+        font-size: 0.65rem;
+        color: #888;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    /* Completed State */
+    .stage-item.completed .stage-dot {
+        background: var(--gold-primary);
+        border-color: var(--gold-primary);
+        color: #000;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.3);
+    }
+
+    .stage-item.completed .stage-label {
+        color: var(--gold-primary);
+    }
+
+    .stage-item.completed::after {
+        content: '';
+        position: absolute;
+        top: 25px;
+        right: -50%;
+        width: 100%;
+        height: 2px;
+        background: var(--gold-primary);
+        z-index: -1;
+    }
+
+    .stage-item:first-child::after {
+        display: none;
+    }
+
+    /* Active State */
+    .stage-item.active .stage-dot {
+        background: #fff;
+        border-color: var(--gold-primary);
+        color: var(--gold-primary);
+        transform: scale(1.2);
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        animation: pulse-gold 2s infinite;
+    }
+
+    .stage-item.active .stage-label {
+        color: #fff;
+        font-weight: bold;
+    }
+
+    @keyframes pulse-gold {
+        0% {
+            box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4);
+        }
+
+        70% {
+            box-shadow: 0 0 0 10px rgba(212, 175, 55, 0);
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 rgba(212, 175, 55, 0);
+        }
+    }
+</style>

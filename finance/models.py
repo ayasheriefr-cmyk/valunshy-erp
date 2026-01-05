@@ -29,7 +29,7 @@ class Account(models.Model):
 class JournalEntry(models.Model):
     reference = models.CharField("رقم المرجع", max_length=100) # e.g., Invoice #INV-1001
     description = models.TextField("الوصف / البيان")
-    date = models.DateField("تاريخ القيد", default=models.functions.Now)
+    date = models.DateField("تاريخ القيد", default=models.functions.Now, db_index=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     

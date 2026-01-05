@@ -45,7 +45,7 @@ class Workshop(models.Model):
 class WorkshopSettlement(models.Model):
     """تسويات حسابات الورش (نقدية أو وزن)"""
     workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='settlements', verbose_name="الورشة")
-    date = models.DateField("تاريخ التسوية", auto_now_add=True)
+    date = models.DateField("تاريخ التسوية", auto_now_add=True, db_index=True)
     
     SETTLEMENT_TYPE_CHOICES = [
         ('gold_payment', 'دفع ذهب للورشة'),
@@ -410,7 +410,7 @@ class ManufacturingOrder(models.Model):
     
     assigned_technician = models.CharField("الفني المسؤول", max_length=255, blank=True)
     
-    start_date = models.DateField("تاريخ البدء", auto_now_add=True)
+    start_date = models.DateField("تاريخ البدء", auto_now_add=True, db_index=True)
     end_date = models.DateField("تاريخ الانتهاء", null=True, blank=True)
 
     def get_total_tools_weight(self):

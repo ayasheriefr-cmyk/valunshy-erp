@@ -229,8 +229,12 @@
                     style="background: rgba(255,255,255,0.05); border: 1px solid var(--border-color); color: #fff; padding: 8px 12px; border-radius: 8px; width: 250px;"
                     placeholder="امسح باركود الطلب..." onkeypress="if(event.keyCode==13) handleScan(this.value)">
             </div>
-            <a href="/admin/manufacturing/manufacturingorder/add/" class="btn-new-order">
-                <i class="fa-solid fa-plus"></i> أمر تصنيع جديد
+            <a href="{% url 'manufacturing:magic_workflow' %}" class="btn-new-order"
+                style="background: var(--dark-bg); border: 1px solid var(--gold-primary); color: var(--gold-primary);">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> الوردية السحرية (D&D)
+            </a>
+            <a href="{% url 'manufacturing:fast_order_create' %}" class="btn-new-order">
+                <i class="fa-solid fa-magic"></i> إضافة أمر تصنيع ذكي
             </a>
         </div>
     </div>
@@ -343,20 +347,8 @@
                                 {{ order.get_status_display }}
                             </span>
                         </td>
-                        <td style="text-align: center;">
-                            <div class="progress-container">
-                                {% if order.status == 'draft' %}
-                                <div class="progress-bar" style="width: 15%;"></div>
-                                {% elif order.status == 'casting' %}
-                                <div class="progress-bar" style="width: 40%;"></div>
-                                {% elif order.status == 'crafting' %}
-                                <div class="progress-bar" style="width: 65%;"></div>
-                                {% elif order.status == 'polishing' %}
-                                <div class="progress-bar" style="width: 85%;"></div>
-                                {% else %}
-                                <div class="progress-bar" style="width: 100%;"></div>
-                                {% endif %}
-                            </div>
+                        <td style="text-align: center; min-width: 250px;">
+                            {% include 'manufacturing/components/stage_tracker.html' with order=order %}
                         </td>
                     </tr>
                     {% empty %}

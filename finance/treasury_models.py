@@ -111,7 +111,7 @@ class TreasuryTransaction(models.Model):
     reference_id = models.IntegerField("رقم المرجع", null=True, blank=True)
     
     description = models.TextField("البيان")
-    date = models.DateField("التاريخ", default=timezone.now)
+    date = models.DateField("التاريخ", default=timezone.now, db_index=True)
     
     # الأرصدة بعد الحركة
     balance_after_cash = models.DecimalField("الرصيد بعد الحركة", max_digits=15, decimal_places=2, default=0)

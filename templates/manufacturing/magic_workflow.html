@@ -1,0 +1,594 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load dashboard_tags %}
+
+{% block title %}Magic Manufacturing Workflow{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+<style>
+    :root {
+        --glass-bg: rgba(255, 255, 255, 0.03);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --gold-glow: rgba(212, 175, 55, 0.2);
+    }
+
+    body {
+        background: #0a0a0b;
+        color: #fff;
+        overflow-x: hidden;
+    }
+
+    .workflow-container {
+        display: flex;
+        height: calc(100vh - 80px);
+        gap: 20px;
+        padding: 20px;
+        font-family: 'Inter', 'Outfit', sans-serif;
+    }
+
+    /* Sidebar: Workers */
+    .workers-sidebar {
+        width: 280px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .sidebar-title {
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: var(--gold-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .worker-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        padding: 12px 15px;
+        border-radius: 12px;
+        cursor: grab;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        user-select: none;
+    }
+
+    .worker-card:hover {
+        background: rgba(212, 175, 55, 0.1);
+        border-color: var(--gold-primary);
+        transform: translateX(-5px);
+    }
+
+    .worker-card i {
+        font-size: 1.2rem;
+        color: var(--gold-primary);
+    }
+
+    .worker-card .worker-info {
+        flex: 1;
+    }
+
+    .worker-card .worker-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .worker-card .worker-type {
+        font-size: 0.75rem;
+        color: #888;
+    }
+
+    /* Main Area */
+    .main-workflow-area {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* Backlog (Horizontal Scroll) */
+    .backlog-section {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+    }
+
+    .backlog-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+
+    .backlog-cards {
+        display: flex;
+        gap: 15px;
+        overflow-x: auto;
+        padding-bottom: 10px;
+        min-height: 120px;
+    }
+
+    .order-card {
+        min-width: 220px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px dotted var(--gold-primary);
+        border-radius: 12px;
+        padding: 15px;
+        cursor: pointer;
+        transition: 0.3s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .order-card:hover {
+        background: rgba(255, 255, 255, 0.12);
+        box-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    .order-card .order-num {
+        font-weight: 800;
+        color: var(--gold-primary);
+        font-size: 0.85rem;
+    }
+
+    .order-card .order-item {
+        font-size: 1rem;
+        margin-top: 5px;
+        font-weight: 600;
+    }
+
+    .order-card .order-meta {
+        font-size: 0.75rem;
+        color: #aaa;
+        margin-top: 8px;
+    }
+
+    /* Workshop Columns */
+    .board-columns {
+        flex: 1;
+        display: flex;
+        gap: 20px;
+        overflow-x: auto;
+        padding-bottom: 15px;
+    }
+
+    .workshop-column {
+        min-width: 320px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--glass-border);
+        border-radius: 20px;
+        display: flex;
+        flex-direction: column;
+        max-height: 100%;
+    }
+
+    .column-header {
+        padding: 15px 20px;
+        background: rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid var(--glass-border);
+        border-top-left-radius: 20px;
+        border-top-right-radius: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .column-name {
+        font-weight: 700;
+        font-size: 1rem;
+    }
+
+    .orders-list {
+        flex: 1;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow-y: auto;
+        min-height: 150px;
+    }
+
+    .active-order-card {
+        background: #151517;
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 15px;
+        transition: 0.3s;
+        cursor: grab;
+    }
+
+    .active-order-card .progress-mini {
+        height: 4px;
+        background: #333;
+        border-radius: 2px;
+        margin: 10px 0;
+        overflow: hidden;
+    }
+
+    .active-order-card .progress-fill {
+        height: 100%;
+        background: var(--gold-primary);
+    }
+
+    /* Drop Zones */
+    .drop-placeholder {
+        background: rgba(212, 175, 55, 0.05);
+        border: 2px dashed var(--gold-primary);
+        border-radius: 12px;
+        height: 60px;
+    }
+
+    /* Modals */
+    .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .magic-modal {
+        background: #1a1a1c;
+        border: 1px solid var(--gold-primary);
+        border-radius: 24px;
+        width: 100%;
+        max-width: 450px;
+        padding: 30px;
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .magic-input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #333;
+        color: #fff;
+        padding: 12px 15px;
+        border-radius: 12px;
+        margin-top: 10px;
+        font-size: 1.1rem;
+    }
+
+    .magic-input:focus {
+        border-color: var(--gold-primary);
+        outline: none;
+    }
+
+    .btn-magic {
+        background: var(--gold-primary);
+        color: #000;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 20px;
+        transition: 0.3s;
+    }
+
+    .btn-magic:hover {
+        background: var(--gold-bright);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px var(--gold-glow);
+    }
+
+    /* Complete Zone */
+    .complete-zone {
+        height: 100px;
+        background: rgba(76, 175, 80, 0.05);
+        border: 2px dashed #4CAF50;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #4CAF50;
+        font-weight: 800;
+        font-size: 1.2rem;
+        gap: 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="workflow-container" dir="rtl">
+
+    <!-- Workers Sidebar -->
+    <div class="workers-sidebar">
+        <div class="sidebar-title">
+            <i class="fa-solid fa-users-gear"></i> العاملين / الورش
+        </div>
+        <div id="workersList" style="display: flex; flex-direction: column; gap: 10px;">
+            {% for ws in workshops %}
+            <div class="worker-card animate__animated animate__fadeInRight" data-id="{{ ws.id }}" draggable="true">
+                <i class="fa-solid fa-user-nut"></i>
+                <div class="worker-info">
+                    <div class="worker-name">{{ ws.name }}</div>
+                    <div class="worker-type">{{ ws.get_workshop_type_display }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Main Logic -->
+    <div class="main-workflow-area">
+
+        <!-- Backlog: Draft Orders -->
+        <div class="backlog-section">
+            <div class="backlog-header">
+                <div class="sidebar-title" style="margin-bottom: 0;">
+                    <i class="fa-solid fa-layer-group"></i> بانتظار التخصيص (Drafts)
+                </div>
+            </div>
+            <div id="backlogList" class="backlog-cards">
+                {% for order in drafts %}
+                <div class="order-card" data-order-id="{{ order.id }}">
+                    <div class="order-num">{{ order.order_number }}</div>
+                    <div class="order-item">{{ order.item_name_pattern|default:"قطعة جديدة" }}</div>
+                    <div class="order-meta">
+                        {{ order.carat.name }}
+                        {% if order.input_weight %} | {{ order.input_weight }}جم {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- The Board -->
+        <div id="workflowBoard" class="board-columns">
+            {% for ws in workshops %}
+            <div class="workshop-column" data-workshop-id="{{ ws.id }}">
+                <div class="column-header">
+                    <div class="column-name">{{ ws.name }}</div>
+                    <span class="badge" style="background: var(--gold-primary); color: #000;">{{
+                        active_by_workshop|get_item:ws.id|length }}</span>
+                </div>
+                <div class="orders-list" data-workshop-id="{{ ws.id }}">
+                    {% for order in active_by_workshop|get_item:ws.id %}
+                    <div class="active-order-card" data-order-id="{{ order.id }}">
+                        <div class="order-num">{{ order.order_number }}</div>
+                        <div class="order-item" style="font-size: 0.9rem;">{{ order.item_name_pattern }}</div>
+                        <div class="progress-mini">
+                            <div class="progress-fill" style="width: 60%;"></div>
+                        </div>
+                        <div class="order-meta" style="display: flex; justify-content: space-between;">
+                            <span>{{ order.input_weight }}جم</span>
+                            <span style="color: var(--gold-primary);">{{ order.get_status_display }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Completion Zone -->
+        <div id="completionZone" class="complete-zone">
+            <i class="fa-solid fa-flag-checkered fa-2x"></i>
+            جرّب سحب القطعة هنا لإنهاء الإنتاج (Complete)
+        </div>
+
+    </div>
+</div>
+
+<!-- Assign Modal -->
+<div id="assignModal" class="modal-overlay">
+    <div class="magic-modal">
+        <h2 style="color: var(--gold-primary); margin-top: 0;">تخصيص للعمل <span id="targetWorkerName"></span></h2>
+        <p id="targetOrderName"></p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+            <div>
+                <label>الوزن المستلم (جم)</label>
+                <input type="number" step="0.001" id="assignWeight" class="magic-input" placeholder="0.000">
+            </div>
+            <div>
+                <label>صرف ذهب إضافي؟</label>
+                <input type="number" step="0.001" id="assignGoldExtra" class="magic-input" placeholder="0.000">
+            </div>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>يصرف من خزينة:</label>
+            <select id="assignTreasury" class="magic-input">
+                <option value="">-- اختر الخزينة --</option>
+                {% for t in treasuries %}
+                <option value="{{ t.id }}">{{ t.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button class="btn-magic" onclick="submitAssign()">تأكيد البدء ✅</button>
+        <button class="btn-magic" style="background: transparent; color: #888; border: 1px solid #333;"
+            onclick="closeModals()">إلغاء</button>
+    </div>
+</div>
+
+<!-- Transition Modal -->
+<div id="moveModal" class="modal-overlay">
+    <div class="magic-modal">
+        <h2 style="color: var(--gold-primary); margin-top: 0;">تحويل إلى <span id="nextWorkerName"></span></h2>
+        <div style="margin-bottom: 15px;">
+            <label>الوزن المخرَج (الصافي)</label>
+            <input type="number" step="0.001" id="moveOutputWeight" class="magic-input">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label>الخسية (هالك)</label>
+                <input type="number" step="0.001" id="moveScrap" class="magic-input" value="0">
+            </div>
+            <div>
+                <label>بودر (جلي)</label>
+                <input type="number" step="0.001" id="movePowder" class="magic-input" value="0">
+            </div>
+        </div>
+        <button class="btn-magic" onclick="submitMove()">تحويل الآن ➡️</button>
+        <button class="btn-magic" style="background: transparent; color: #888; border: 1px solid #333;"
+            onclick="closeModals()">إلغاء</button>
+    </div>
+</div>
+
+<!-- Complete Modal -->
+<div id="completeModal" class="modal-overlay">
+    <div class="magic-modal">
+        <h2 style="color: #4CAF50; margin-top: 0;">إنهاء أمر التصنيع 🔥</h2>
+        <div style="margin-bottom: 15px;">
+            <label>وزن القطعة النهائية</label>
+            <input type="number" step="0.001" id="finalWeight" class="magic-input">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label>إجمالي البودر المجموع</label>
+            <input type="number" step="0.001" id="finalPowder" class="magic-input" value="0">
+        </div>
+        <button class="btn-magic" style="background: #4CAF50;" onclick="submitComplete()">إدخال للمخزن 🏁</button>
+        <button class="btn-magic" style="background: transparent; color: #888; border: 1px solid #333;"
+            onclick="closeModals()">إلغاء</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+    let currentOrderId = null;
+    let currentWorkshopId = null;
+
+    // 1. Setup Sortable for Backlog and Columns
+    const backlogEl = document.getElementById('backlogList');
+    const columnEls = document.querySelectorAll('.orders-list');
+    const completionEl = document.getElementById('completionZone');
+
+    // Handle Dragging Workers onto Orders (User's specific request)
+    // We can use native drag for this or Sortable. Since Workers are draggable names.
+    document.querySelectorAll('.worker-card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('workshop_id', card.dataset.id);
+            e.dataTransfer.setData('workshop_name', card.querySelector('.worker-name').innerText);
+        });
+    });
+
+    document.querySelectorAll('.order-card').forEach(card => {
+        card.addEventListener('dragover', (e) => e.preventDefault());
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const wsId = e.dataTransfer.getData('workshop_id');
+            const wsName = e.dataTransfer.getData('workshop_name');
+            if (wsId) {
+                currentOrderId = card.dataset.orderId;
+                currentWorkshopId = wsId;
+                document.getElementById('targetWorkerName').innerText = wsName;
+                document.getElementById('targetOrderName').innerText = "تفعيل الطلب: " + card.querySelector('.order-num').innerText;
+                document.getElementById('assignModal').style.display = 'flex';
+            }
+        });
+    });
+
+    // 2. Setup Kanban Dragging (Moving cards between columns)
+    [...columnEls].forEach(el => {
+        new Sortable(el, {
+            group: 'workflow',
+            animation: 150,
+            ghostClass: 'drop-placeholder',
+            onAdd: function (evt) {
+                const orderId = evt.item.dataset.orderId;
+                const nextWsId = evt.to.dataset.workshopId;
+                const nextWsName = evt.to.closest('.workshop-column').querySelector('.column-name').innerText;
+
+                currentOrderId = orderId;
+                currentWorkshopId = nextWsId;
+
+                // Open Transition Modal
+                document.getElementById('nextWorkerName').innerText = nextWsName;
+                document.getElementById('moveModal').style.display = 'flex';
+
+                // Optional: Store the original list to revert if modal cancelled
+                // (Complex to implement perfectly without a framework, but we can just reload on error)
+            }
+        });
+    });
+
+    // Handle Completion Drop
+    completionEl.addEventListener('dragover', (e) => e.preventDefault());
+    completionEl.addEventListener('drop', (e) => {
+        // Since we are using Sortable for cards, we might need a dummy column for completion or just catch the sortable event.
+        // For simplicity, let's just use the move logic if it fits.
+    });
+
+    // Dummy Sortable for Completion Zone to accept cards from 'workflow' group
+    new Sortable(completionEl, {
+        group: 'workflow',
+        onAdd: function (evt) {
+            currentOrderId = evt.item.dataset.orderId;
+            document.getElementById('completeModal').style.display = 'flex';
+            evt.item.remove(); // Visual removal
+        }
+    });
+
+    // Modal Submit Functions
+    function closeModals() {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    }
+
+    async function submitAssign() {
+        const weight = document.getElementById('assignWeight').value;
+        const extraGold = document.getElementById('assignGoldExtra').value;
+        const treasuryId = document.getElementById('assignTreasury').value;
+        const formData = new FormData();
+        formData.append('action', 'assign_workshop');
+        formData.append('order_id', currentOrderId);
+        formData.append('workshop_id', currentWorkshopId);
+        formData.append('input_weight', weight);
+        formData.append('gold_weight', extraGold);
+        formData.append('treasury_id', treasuryId);
+
+        const res = await fetch('', { method: 'POST', body: formData });
+        if (res.ok) location.reload();
+        else alert("Error assigning order");
+    }
+
+    async function submitMove() {
+        const outWeight = document.getElementById('moveOutputWeight').value;
+        const powder = document.getElementById('movePowder').value;
+
+        const formData = new FormData();
+        formData.append('action', 'move_order');
+        formData.append('order_id', currentOrderId);
+        formData.append('next_workshop_id', currentWorkshopId);
+        formData.append('output_weight', outWeight);
+        formData.append('powder_weight', powder);
+
+        const res = await fetch('', { method: 'POST', body: formData });
+        if (res.ok) location.reload();
+        else alert("Error moving order");
+    }
+
+    async function submitComplete() {
+        const weight = document.getElementById('finalWeight').value;
+        const powder = document.getElementById('finalPowder').value;
+
+        const formData = new FormData();
+        formData.append('action', 'complete_order');
+        formData.append('order_id', currentOrderId);
+        formData.append('output_weight', weight);
+        formData.append('powder_weight', powder);
+
+        const res = await fetch('', { method: 'POST', body: formData });
+        if (res.ok) location.reload();
+        else alert("Error completing order");
+    }
+
+</script>
+{% endblock %}

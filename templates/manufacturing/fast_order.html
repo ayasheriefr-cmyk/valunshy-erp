@@ -1,0 +1,452 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extra_head %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+<style>
+    :root {
+        --dark-bg: #0f0f12;
+        --card-bg: rgba(30, 30, 35, 0.7);
+        --gold-primary: #D4AF37;
+        --gold-bright: #FFD700;
+        --text-muted: #888;
+        --border-color: rgba(212, 175, 55, 0.1);
+    }
+
+    .wizard-container {
+        padding: 30px;
+        background: var(--dark-bg);
+        min-height: 100vh;
+        color: #fff;
+        font-family: 'Inter', system-ui, sans-serif;
+    }
+
+    .wizard-card {
+        max-width: 1000px;
+        margin: 0 auto;
+        background: var(--card-bg);
+        backdrop-filter: blur(15px);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 15px 45px rgba(0, 0, 0, 0.4);
+    }
+
+    .wizard-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .wizard-header h1 {
+        color: var(--gold-primary);
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+
+    .step-indicator {
+        display: flex;
+        justify-content: center;
+        gap: 40px;
+        margin-bottom: 40px;
+    }
+
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-muted);
+        position: relative;
+    }
+
+    .step.active {
+        color: var(--gold-bright);
+    }
+
+    .step.completed {
+        color: #4CAF50;
+    }
+
+    .step-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid currentColor;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    .form-section {
+        display: none;
+    }
+
+    .form-section.active {
+        display: block;
+        animation: fadeIn 0.5s ease;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .input-group {
+        margin-bottom: 25px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text-light);
+        font-weight: 500;
+    }
+
+    input,
+    select,
+    textarea {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 12px;
+        color: #fff;
+        outline: none;
+        transition: 0.3s;
+    }
+
+    input:focus {
+        border-color: var(--gold-primary);
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.1);
+    }
+
+    .btn-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 40px;
+    }
+
+    .btn {
+        padding: 12px 25px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+        border: none;
+    }
+
+    .btn-next {
+        background: var(--gold-primary);
+        color: #000;
+    }
+
+    .btn-next:hover {
+        background: var(--gold-bright);
+        transform: scale(1.05);
+    }
+
+    .btn-prev {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+
+    .dynamic-list {
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 12px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+
+    .dynamic-item {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 8px;
+    }
+
+    .remove-btn {
+        color: #ff5252;
+        cursor: pointer;
+        padding: 5px;
+    }
+
+    .select2-container--default .select2-selection--single {
+        background-color: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border-color);
+        height: 45px;
+        color: #fff;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #fff;
+        line-height: 45px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="wizard-container" dir="rtl">
+    <div class="wizard-card">
+        <div class="wizard-header">
+            <h1>إضافة أمر تصنيع ذكي</h1>
+            <p style="color: var(--text-muted);">أكمل البيانات لإنشاء أمر الشغل وبدء الإنتاج</p>
+        </div>
+
+        <div class="step-indicator">
+            <div class="step active" id="step1-indicator">
+                <div class="step-icon">1</div>
+                <span>بيانات الشغل</span>
+            </div>
+            <div class="step" id="step2-indicator">
+                <div class="step-icon">2</div>
+                <span>الفصوص</span>
+            </div>
+            <div class="step" id="step3-indicator">
+                <div class="step-icon">3</div>
+                <span>المستلزمات</span>
+            </div>
+            <div class="step" id="step4-indicator">
+                <div class="step-icon">4</div>
+                <span>تأكيد</span>
+            </div>
+        </div>
+
+        <form id="fastOrderForm">
+            <!-- Step 1: Basic Info -->
+            <div class="form-section active" id="step1">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <div class="input-group">
+                        <label>رقم الأمر</label>
+                        <input type="text" id="order_number" value="{{ next_order_number }}" readonly>
+                    </div>
+                    <div class="input-group">
+                        <label>الورشة / الفني</label>
+                        <select id="workshop" class="select2">
+                            {% for ws in workshops %}
+                            <option value="{{ ws.id }}">{{ ws.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>العيار</label>
+                        <select id="carat" class="select2">
+                            {% for c in carats %}
+                            <option value="{{ c.id }}">{{ c.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>المادة الخام المصروفة</label>
+                        <select id="input_material" class="select2">
+                            <option value="">بدون (صرف عهدة فقط)</option>
+                            {% for rm in raw_materials %}
+                            <option value="{{ rm.id }}">{{ rm.name }} ({{ rm.current_weight }} جم)</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>الوزن المصروف (جم)</label>
+                        <input type="number" step="0.001" id="input_weight" placeholder="0.000">
+                    </div>
+                    <div class="input-group">
+                        <label>اسم الصنف الناتج</label>
+                        <input type="text" id="item_name" placeholder="مثال: خاتم سوليتير 18">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Stones -->
+            <div class="form-section" id="step2">
+                <h3>إضافة فصوص/أحجار</h3>
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <select id="stone_select" style="flex: 2;">
+                        <option value="">اختر الحجر...</option>
+                        {% for s in stones %}
+                        <option value="{{ s.id }}" data-stock="{{ s.current_stock }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" id="stone_qty" style="flex: 1;" placeholder="الكمية">
+                    <button type="button" class="btn btn-next" onclick="addStone()">إضافة</button>
+                </div>
+                <div class="dynamic-list" id="stonesList">
+                    <!-- Items will appear here -->
+                </div>
+            </div>
+
+            <!-- Step 3: Tools -->
+            <div class="form-section" id="step3">
+                <h3>مستلزمات إضافية (لحام / سلك)</h3>
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <select id="tool_select" style="flex: 2;">
+                        <option value="">اختر المستلزم...</option>
+                        {% for t in tools %}
+                        <option value="{{ t.id }}" data-unit="{{ t.unit }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <input type="number" id="tool_weight" style="flex: 1;" placeholder="الوزن/العدد">
+                    <button type="button" class="btn btn-next" onclick="addTool()">إضافة</button>
+                </div>
+                <div class="dynamic-list" id="toolsList">
+                    <!-- Items will appear here -->
+                </div>
+            </div>
+
+            <!-- Step 4: Summary -->
+            <div class="form-section" id="step4">
+                <div class="glass-card" style="background: rgba(255,255,255,0.02);">
+                    <h2 style="color: var(--gold-bright);">مراجعة نهائية</h2>
+                    <div id="final_summary" style="line-height: 2;">
+                        <!-- JS fills this -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button type="button" class="btn btn-prev" id="prevBtn" onclick="changeStep(-1)"
+                    style="visibility: hidden;">السابق</button>
+                <button type="button" class="btn btn-next" id="nextBtn" onclick="changeStep(1)">التالي</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script>
+    let currentStep = 1;
+    const stones = [];
+    const tools = [];
+
+    $(document).ready(function () {
+        $('.select2').select2({ width: '100%', dir: 'rtl' });
+    });
+
+    function addStone() {
+        const sel = document.getElementById('stone_select');
+        const qty = document.getElementById('stone_qty').value;
+        if (!sel.value || !qty) return;
+
+        stones.push({ id: sel.value, name: sel.options[sel.selectedIndex].text, qty: qty });
+        renderLists();
+        document.getElementById('stone_qty').value = '';
+    }
+
+    function addTool() {
+        const sel = document.getElementById('tool_select');
+        const val = document.getElementById('tool_weight').value;
+        if (!sel.value || !val) return;
+
+        const opt = sel.options[sel.selectedIndex];
+        tools.push({ id: sel.value, name: opt.text, weight: val, qty: val });
+        renderLists();
+        document.getElementById('tool_weight').value = '';
+    }
+
+    function renderLists() {
+        const sList = document.getElementById('stonesList');
+        sList.innerHTML = stones.map((s, i) => `
+            <div class="dynamic-item">
+                <span style="flex: 1;">${s.name}</span>
+                <b style="color: var(--gold-primary)">${s.qty}</b>
+                <i class="fa fa-trash remove-btn" onclick="stones.splice(${i},1);renderLists()"></i>
+            </div>
+        `).join('');
+
+        const tList = document.getElementById('toolsList');
+        tList.innerHTML = tools.map((t, i) => `
+            <div class="dynamic-item">
+                <span style="flex: 1;">${t.name}</span>
+                <b style="color: var(--gold-primary)">${t.weight}</b>
+                <i class="fa fa-trash remove-btn" onclick="tools.splice(${i},1);renderLists()"></i>
+            </div>
+        `).join('');
+    }
+
+    function changeStep(n) {
+        if (n == 1 && !validateStep(currentStep)) return;
+
+        document.getElementById(`step${currentStep}`).classList.remove('active');
+        document.getElementById(`step${currentStep}-indicator`).classList.remove('active');
+        document.getElementById(`step${currentStep}-indicator`).classList.add('completed');
+
+        currentStep += n;
+
+        if (currentStep == 4) {
+            updateSummary();
+            document.getElementById('nextBtn').innerText = 'تأكيد وحفظ الأمر';
+        } else {
+            document.getElementById('nextBtn').innerText = 'التالي';
+        }
+
+        document.getElementById(`step${currentStep}`).classList.add('active');
+        document.getElementById(`step${currentStep}-indicator`).classList.add('active');
+
+        document.getElementById('prevBtn').style.visibility = currentStep == 1 ? 'hidden' : 'visible';
+
+        if (currentStep > 4) submitForm();
+    }
+
+    function validateStep(s) {
+        if (s == 1) {
+            if (!document.getElementById('input_weight').value) {
+                alert('يرجى إدخال الوزن المصروف');
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function updateSummary() {
+        const summary = document.getElementById('final_summary');
+        summary.innerHTML = `
+            <p><b>رقم الأمر:</b> ${document.getElementById('order_number').value}</p>
+            <p><b>الورشة:</b> ${$('#workshop option:selected').text()}</p>
+            <p><b>الوزن المدخل:</b> ${document.getElementById('input_weight').value} جم</p>
+            <p><b>عدد الفصوص:</b> ${stones.length}</p>
+            <p><b>عدد المستلزمات:</b> ${tools.length}</p>
+        `;
+    }
+
+    async function submitForm() {
+        const data = {
+            order_number: document.getElementById('order_number').value,
+            workshop: document.getElementById('workshop').value,
+            carat: document.getElementById('carat').value,
+            input_material: document.getElementById('input_material').value,
+            input_weight: document.getElementById('input_weight').value,
+            item_name: document.getElementById('item_name').value,
+            stones: stones,
+            tools: tools
+        };
+
+        const response = await fetch('', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            alert('تم إنشاء الأمر بنجاح!');
+            window.location.href = result.redirect_url;
+        } else {
+            alert('خطأ: ' + result.message);
+            currentStep = 4;
+        }
+    }
+</script>
+{% endblock %}

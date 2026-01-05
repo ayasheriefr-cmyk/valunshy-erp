@@ -16,3 +16,7 @@ def get_manufacturing_stats():
         'weight': qs.aggregate(t=Sum('input_weight'))['t'] or 0,
     }
     return stats
+
+@register.filter
+def get_item(dictionary, key):
+    return dictionary.get(key)

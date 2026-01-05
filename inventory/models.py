@@ -63,7 +63,7 @@ class Item(models.Model):
         ('reserved', _('Mahjouz (Reserved)')),
         ('lost', _('Lost')),
     ]
-    status = models.CharField("الحالة", max_length=20, choices=status_choices, default='available')
+    status = models.CharField("الحالة", max_length=20, choices=status_choices, default='available', db_index=True)
     current_branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, related_name='items', verbose_name="الفرع الحالي")
 
     created_at = models.DateTimeField(auto_now_add=True)

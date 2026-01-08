@@ -18,6 +18,7 @@ urlpatterns = [
     path('api/me/', api_views.MyProfileView.as_view(), name='api-profile'),
     path('api/prices/', api_views.GoldPriceView.as_view(), name='api-prices'),
     path('api/customers/', api_views.CustomerListView.as_view(), name='api-customers'),
+    path('api/item-stones/<int:item_id>/', api_views.ItemStonesDetailView.as_view(), name='api-item-stones'),
     
     # Client App
     path('api/order/create/', api_views.CustomerOrderView.as_view(), name='api-order-create'),

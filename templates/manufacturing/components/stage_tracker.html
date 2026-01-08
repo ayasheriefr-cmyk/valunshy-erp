@@ -1,60 +1,39 @@
 <div class="stage-tracker" dir="rtl">
     <div class="stages-line">
-        {% with current_status=order.status %}
-
-        {# Stage 1: New/Draft #}
-        <div class="stage-item {% if current_status != 'cancelled' %}completed{% endif %}">
+        {# 1. Start Stage (Always Completed if not cancelled) #}
+        <div class="stage-item completed">
             <div class="stage-dot" title="بدء الطلب">
                 <i class="fa-solid fa-file-invoice"></i>
             </div>
             <div class="stage-label">البداية</div>
         </div>
 
-        {# Stage 2: Casting #}
+        {# 2. Dynamic Stages from Production History #}
+        {% for stage in order.stages.all %}
         <div
-            class="stage-item {% if current_status == 'casting' %}active{% elif current_status != 'draft' and current_status != 'cancelled' %}completed{% endif %}">
-            <div class="stage-dot" title="مرحلة السبك">
-                <i class="fa-solid fa-fire-burner"></i>
+            class="stage-item 
+            {% if stage.end_datetime %}completed{% elif forloop.last and order.status != 'completed' %}active{% endif %}">
+            <div class="stage-dot" title="{{ stage.get_stage_name_display }}">
+                {% if stage.stage_name == 'casting' %}<i class="fa-solid fa-fire-burner"></i>
+                {% elif stage.stage_name == 'laser' %}<i class="fa-solid fa-bolt"></i>
+                {% elif 'mounting' in stage.stage_name %}<i class="fa-solid fa-gem"></i>
+                {% elif stage.stage_name == 'polishing' %}<i class="fa-solid fa-sparkles"></i>
+                {% elif stage.stage_name == 'qc' %}<i class="fa-solid fa-clipboard-check"></i>
+                {% else %}<i class="fa-solid fa-hammer"></i>{% endif %}
             </div>
-            <div class="stage-label">السبك</div>
+            <div class="stage-label">{{ stage.get_stage_name_display|truncatechars:12 }}</div>
         </div>
+        {% endfor %}
 
-        {# Stage 3: Crafting #}
-        <div
-            class="stage-item {% if current_status == 'crafting' %}active{% elif current_status in 'polishing,qc_pending,completed' %}completed{% endif %}">
-            <div class="stage-dot" title="مرحلة الصياغة">
-                <i class="fa-solid fa-hammer"></i>
-            </div>
-            <div class="stage-label">صياغة</div>
-        </div>
-
-        {# Stage 4: Polishing #}
-        <div
-            class="stage-item {% if current_status == 'polishing' %}active{% elif current_status in 'qc_pending,completed' %}completed{% endif %}">
-            <div class="stage-dot" title="التلميع والجلي">
-                <i class="fa-solid fa-sparkles"></i>
-            </div>
-            <div class="stage-label">تلميع</div>
-        </div>
-
-        {# Stage 5: QC #}
-        <div
-            class="stage-item {% if current_status == 'qc_pending' %}active{% elif current_status == 'completed' %}completed{% endif %}">
-            <div class="stage-dot" title="مراقبة الجودة">
-                <i class="fa-solid fa-clipboard-check"></i>
-            </div>
-            <div class="stage-label">جودة</div>
-        </div>
-
-        {# Stage 6: Completed #}
-        <div class="stage-item {% if current_status == 'completed' %}completed{% endif %}">
-            <div class="stage-dot" title="تم الانتهاء">
+        {# 3. Ready Stage (Only shows progress if completed) #}
+        {% if order.status == 'completed' or order.status == 'qc_pending' %}
+        <div class="stage-item {% if order.status == 'completed' %}completed{% else %}active{% endif %}">
+            <div class="stage-dot" title="جاهز">
                 <i class="fa-solid fa-check-double"></i>
             </div>
             <div class="stage-label">جاهز</div>
         </div>
-
-        {% endwith %}
+        {% endif %}
     </div>
 </div>
 

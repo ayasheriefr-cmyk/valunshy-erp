@@ -14,14 +14,15 @@ def calculate_workshop_loss(sender, instance, **kwargs):
     Automatically calculates scrap weight when output weight is provided.
     """
     if instance.input_weight and instance.output_weight:
-        # If output is set, calculate the loss automatically: Input - Output - Powder
+        # If output is set, calculate the loss automatically: Input - (Output - Stones - Tools + Powder)
         powder = instance.powder_weight or 0
         stones_g = instance.total_stone_weight or 0
-        # Scrap = Input - (Net Gold + Powder)
-        # Net Gold = Output Weight - Stones Weight
-        calculated_scrap = instance.input_weight - (instance.output_weight - stones_g + powder)
+        tools_g = instance.get_total_tools_weight()
         
-        # Only update if it makes sense (positive loss)
+        # Scrap = Input - (Net Gold Produced + Powder)
+        # Net Gold Produced = Output Weight - Stones Weight - Tools Weight (Extra material added)
+        calculated_scrap = instance.input_weight - (instance.output_weight - stones_g - tools_g + powder)
+        
         if calculated_scrap >= 0:
             instance.scrap_weight = calculated_scrap
             
@@ -101,8 +102,10 @@ def complete_manufacturing_order(sender, instance, created, **kwargs):
             # or it is written off via a specific settlement.
             # User Scenario: "I receive powder at end of day". So we leave the difference in their balance.
             
-            # Net Gold = output_weight - total_stone_weight
-            total_gold_consumed = (instance.output_weight - instance.total_stone_weight) + (instance.powder_weight or 0)
+            # Net Gold = output_weight - total_stone_weight - total_tools_weight
+            # We subtract tools weight because tools (like wire) are extra material that wasn't in the initial input_weight
+            total_tools_weight = instance.get_total_tools_weight()
+            total_gold_consumed = (instance.output_weight - instance.total_stone_weight - total_tools_weight) + (instance.powder_weight or 0)
 
             # Special Logic for Laser Workshop (Weight Gain from Welding)
             # If output > input, the extra weight is welding wire/solder consumed from treasury
@@ -184,14 +187,18 @@ def complete_manufacturing_order(sender, instance, created, **kwargs):
                 from finance.treasury_models import TreasuryTransaction
 
                 # Generate a unique barcode if not strictly defined
-                barcode = f"MFG-{instance.order_number}-{random.randint(1000, 9999)}"
+                barcode = ""
+                # If NO item category is selected, fallback to random MFG barcode
+                if not instance.item_category:
+                     barcode = f"MFG-{instance.order_number}-{random.randint(1000, 9999)}"
                 
                 # Calculate Total Labor Cost (Technician Pay + Factory Profit Margin)
                 total_labor_cost = (instance.manufacturing_pay or 0) + (instance.factory_margin or 0)
 
                 new_item = Item.objects.create(
                     name=instance.item_name_pattern or f"منتج مصنع - {instance.order_number}",
-                    barcode=barcode,
+                    barcode=barcode, # If empty and category has prefix, Item.save() will generate it
+                    category=instance.item_category, # Pass the category
                     carat=instance.carat,
                     gross_weight=instance.output_weight,
                     net_gold_weight=instance.output_weight - instance.total_stone_weight,
@@ -247,14 +254,16 @@ def complete_manufacturing_order(sender, instance, created, **kwargs):
 def process_workshop_transfer(sender, instance, created, **kwargs):
     """
     Automated balance adjustment when a workshop transfer is completed.
+    NOTE: Source workshop deduction is handled by ProductionStage.post_save signal.
+    This signal only ADDS gold to the destination workshop.
     """
     # Only process if status changed from something else to 'completed'
     is_completed = instance.status == 'completed'
     was_completed = getattr(instance, '_original_status', None) == 'completed'
     
-    if is_completed and not was_completed:
+    # If created, it wasn't completed before (it didn't exist), so we proceed if it is now completed.
+    if is_completed and (created or not was_completed):
         with transaction.atomic():
-            source = instance.from_workshop
             dest = instance.to_workshop
             weight = instance.weight
             carat_name = instance.carat.name
@@ -275,13 +284,8 @@ def process_workshop_transfer(sender, instance, created, **kwargs):
             if not field_to_update:
                 raise ValueError(f"العيار {carat_name} غير مدعوم في تحويلات الورش")
             
-            # Deduct from source
-            current_source_bal = getattr(source, field_to_update)
-            if current_source_bal < weight:
-                raise ValueError(f"الرصيد المتاح في {source.name} ({current_source_bal} جم) أقل من الوزن المطلوب تحويله")
-            
-            setattr(source, field_to_update, current_source_bal - weight)
-            source.save(update_fields=[field_to_update])
+            # NOTE: Source deduction is already done by ProductionStage.post_save
+            # Here we only ADD to destination workshop
             
             # Add to destination
             current_dest_bal = getattr(dest, field_to_update)
@@ -301,7 +305,9 @@ def update_order_stone_weight(sender, instance, **kwargs):
     total_weight = sum([os.weight_in_gold for os in order.orderstone_set.all()])
     order.total_stone_weight = total_weight
     # Save only the updated field
-    order.save(update_fields=['total_stone_weight'])
+    # Save the order to trigger pre_save (which updates scrap_weight)
+    # CRITICAL: Do NOT use update_fields here because pre_save might modify other fields (like scrap_weight)
+    order.save()
 
 
 from django.utils import timezone
@@ -337,15 +343,52 @@ def handle_production_stage_balances(sender, instance, created, **kwargs):
     """
     # 1. Calculate Loss (Khasia) if I/O/P are present
     if instance.input_weight and instance.output_weight:
-        # Standard: Loss = Input - Output - Powder
-        # This allows negative values (Gain) which is correct for Laser (Solder addition) or Errors.
-        calc_loss = instance.input_weight - instance.output_weight - (instance.powder_weight or 0)
+        # Subtract weight of stones added during THIS specific stage
+        stones_weight_in_stage = sum([os.weight_in_gold for os in instance.orderstone_set.all()])
+        
+        # calc_loss = Input - (Output - StonesAdded) - Powder
+        calc_loss = instance.input_weight - (instance.output_weight - stones_weight_in_stage) - (instance.powder_weight or 0)
         
         # Update loss field if changed (avoid recursion loop by checking)
         if instance.loss_weight != calc_loss:
             instance.loss_weight = calc_loss
             # Update without triggering signals to avoid infinite loop
             ProductionStage.objects.filter(pk=instance.pk).update(loss_weight=calc_loss)
+        
+        # --- NEW: Balance Tracking for Workshop ---
+        if instance.workshop and instance.end_datetime:
+            with transaction.atomic():
+                ws = instance.workshop
+                carat_name = instance.order.carat.name
+                weight_to_deduct = instance.input_weight # The amount they were responsible for in this stage
+                powder = instance.powder_weight or 0
+                loss = instance.loss_weight or 0 # Real Scrap
+                
+                # Logic: They received Input, and returned (Output + Powder + Loss)
+                # We remove the Input from their "Active Gold Debt" 
+                # and record Powder and Loss in their respective stock accounts.
+                
+                field_prefix = None
+                if '18' in carat_name: field_prefix = '18'
+                elif '21' in carat_name: field_prefix = '21'
+                elif '24' in carat_name: field_prefix = '24'
+                
+                if field_prefix:
+                    # 1. Deduct from Active Gold Balance
+                    current_gold = getattr(ws, f'gold_balance_{field_prefix}')
+                    setattr(ws, f'gold_balance_{field_prefix}', current_gold - weight_to_deduct)
+                    
+                    # 2. Add to Powder Stock
+                    if powder > 0:
+                        current_p = getattr(ws, f'filings_balance_{field_prefix}')
+                        setattr(ws, f'filings_balance_{field_prefix}', current_p + powder)
+                    
+                    # 3. Add to Scrap Stock
+                    if loss > 0:
+                        current_s = getattr(ws, f'scrap_balance_{field_prefix}')
+                        setattr(ws, f'scrap_balance_{field_prefix}', current_s + loss)
+                    
+                    ws.save()
 
     # 3. Auto-Transfer Logic
     if instance.next_workshop and not instance.is_transferred and instance.output_weight > 0:
@@ -370,6 +413,7 @@ def handle_production_stage_balances(sender, instance, created, **kwargs):
                 # Create the Transfer
                 transfer = WorkshopTransfer.objects.create(
                     transfer_number=f"TRF-{instance.order.order_number}-{instance.id}",
+                    order=instance.order, # Link to Order
                     from_workshop=from_ws,
                     to_workshop=instance.next_workshop,
                     carat=instance.order.carat,
@@ -439,20 +483,24 @@ def process_workshop_settlement(sender, instance, created, **kwargs):
                 current = getattr(ws, gold_field)
                 setattr(ws, gold_field, current - instance.weight)
 
-            # 4. We RECEIVED Powder (Clear Gold Debt)
-            # User wants to deduct powder weight from the workshop's gold liability
-            elif instance.settlement_type == 'powder_receive' and gold_field:
-                # Deduct from Gold Balance (Debt)
-                current_gold = getattr(ws, gold_field)
-                setattr(ws, gold_field, current_gold - instance.weight)
+            # 4. We RECEIVED Powder (Clear Gold Debt / Liability)
+            elif instance.settlement_type == 'powder_receive':
+                scrap_field = None
+                if '18' in instance.carat.name: scrap_field, filings_field = 'scrap_balance_18', 'filings_balance_18'
+                elif '21' in instance.carat.name: scrap_field, filings_field = 'scrap_balance_21', 'filings_balance_21'
+                elif '24' in instance.carat.name: scrap_field, filings_field = 'scrap_balance_24', 'filings_balance_24'
                 
-                # OPTIONAL: Add to Filings Balance if you want to track how much powder they generated?
-                # User scenario: "I receive powder... remove liability". 
-                # If we want to track stock of powder *at the workshop*, we'd add it. 
-                # But here we RECEIVED it, so it's gone from them.
-                # If 'filings_balance' represents "Powder held BY Workshop", we don't add.
-                # If 'filings_balance' represents "Total Powder Returned by Workshop", we add.
-                # Let's stick to the financial implication: Debt Reduced.
+                if scrap_field:
+                    # Deduct from Scrap Balance (accumulated loss)
+                    current_s = getattr(ws, scrap_field)
+                    setattr(ws, scrap_field, current_s - instance.weight)
+                    
+                    # Also deduct from Filings Balance if we were tracking it per order
+                    current_f = getattr(ws, filings_field)
+                    if current_f >= instance.weight:
+                        setattr(ws, filings_field, current_f - instance.weight)
+                    else:
+                        setattr(ws, filings_field, 0)
 
             ws.save()
 

@@ -127,11 +127,12 @@
         </div>
 
         {% if order.orderstone_set.exists %}
-        <div style="margin-top: 20px; border: 1px solid #000; padding: 10px;">
-            <div class="label" style="text-align: center; border-bottom: 1px solid #ddd; margin-bottom: 10px;">
+        <div style="margin-top: 15px; border: 1px solid #000; padding: 10px;">
+            <div class="label"
+                style="text-align: center; border-bottom: 1px solid #ddd; margin-bottom: 5px; font-size: 14px;">
                 💎 الفصوص والأحجار المطلوبة
             </div>
-            <table style="width: 100%; text-align: center; font-size: 14px; border-collapse: collapse;">
+            <table style="width: 100%; text-align: center; font-size: 13px; border-collapse: collapse;">
                 <thead>
                     <tr style="background: #eee;">
                         <th style="border: 1px solid #ccc;">الحجر</th>
@@ -141,14 +142,53 @@
                 <tbody>
                     {% for s in order.orderstone_set.all %}
                     <tr>
-                        <td style="border: 1px solid #ccc; padding: 5px;">{{ s.stone.name }}</td>
-                        <td style="border: 1px solid #ccc; padding: 5px;">{{ s.quantity }}</td>
+                        <td style="border: 1px solid #ccc; padding: 3px;">{{ s.stone.name }}</td>
+                        <td style="border: 1px solid #ccc; padding: 3px;">{{ s.quantity }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
         {% endif %}
+
+        <!-- Production History (NEW) -->
+        <div style="margin-top: 15px; border: 1px solid #000; padding: 10px;">
+            <div class="label"
+                style="text-align: center; border-bottom: 1px solid #ddd; margin-bottom: 5px; font-size: 14px;">
+                🔄 سجل مراحل التصنيع وتوقيتات الحركة
+            </div>
+            <table style="width: 100%; text-align: center; font-size: 12px; border-collapse: collapse;">
+                <thead>
+                    <tr style="background: #f5f5f5;">
+                        <th style="border: 1px solid #ccc; padding: 4px;">الورشة</th>
+                        <th style="border: 1px solid #ccc; padding: 4px;">دخول (جم)</th>
+                        <th style="border: 1px solid #ccc; padding: 4px;">خروج (جم)</th>
+                        <th style="border: 1px solid #ccc; padding: 4px;">وقت الدخول</th>
+                        <th style="border: 1px solid #ccc; padding: 4px;">وقت الخروج</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stage in order.stages.all %}
+                    <tr>
+                        <td style="border: 1px solid #ccc; padding: 4px; font-weight: bold;">{{ stage.workshop.name }}
+                        </td>
+                        <td style="border: 1px solid #ccc; padding: 4px;">{{ stage.input_weight|floatformat:2 }}</td>
+                        <td style="border: 1px solid #ccc; padding: 4px;">{{
+                            stage.output_weight|floatformat:2|default:"-" }}</td>
+                        <td style="border: 1px solid #ccc; padding: 4px;">{{ stage.start_datetime|date:"H:i" }} <br>
+                            <small>{{ stage.start_datetime|date:"d/m" }}</small></td>
+                        <td style="border: 1px solid #ccc; padding: 4px;">
+                            {% if stage.end_datetime %}
+                            {{ stage.end_datetime|date:"H:i" }} <br> <small>{{ stage.end_datetime|date:"d/m" }}</small>
+                            {% else %}
+                            <span style="color: #2196F3;">قيد التشغيل</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
         <div style="margin-top: 20px;">
             <div class="label" style="margin-bottom: 10px;">ملاحظات الإنتاج:</div>

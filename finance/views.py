@@ -855,12 +855,13 @@ def generate_advanced_ai_insights(
 
 
 @staff_member_required
+@staff_member_required
 def monthly_analytics_report(request):
-    """تقرير تحليلي شهري شامل (مالي - إنتاج - خطة عمل)"""
-    from django.db.models import Avg, Sum, Count, F, DurationField, ExpressionWrapper
+    """تقرير تحليلي شهري شامل (مالي - إنتاج - خطة عمل) - Optimized"""
+    from django.db.models import Avg, Sum, Count, F, DurationField, ExpressionWrapper, Q, Case, When, Value, DecimalField
     from django.utils import timezone
     import datetime
-
+    
     today = timezone.now().date()
     
     # Range Selection
@@ -898,7 +899,7 @@ def monthly_analytics_report(request):
             end_date = datetime.date(year, month + 1, 1) - datetime.timedelta(days=1)
         title = f"التقرير التحليلي الشهري - {start_date.strftime('%B %Y')}"
     
-    # 1. Financial Analysis - Optimized to avoid N+1 per account
+    # 1. Financial Analysis - Aggregated (Fast)
     metrics = LedgerEntry.objects.filter(
         journal_entry__date__range=[start_date, end_date]
     ).aggregate(
@@ -915,6 +916,7 @@ def monthly_analytics_report(request):
     # 2. Partner Shares
     partners = Partner.objects.filter(is_active=True)
     partner_shares = []
+    # Loop over partners is fine (usually < 10)
     for partner in partners:
         share_value = (net_profit * partner.percentage) / 100
         partner_shares.append({
@@ -922,22 +924,23 @@ def monthly_analytics_report(request):
             'share': share_value
         })
         
-    # 3. Production Efficiency (Tajza Time Analysis)
-    # Using the new start_datetime/end_datetime fields
-    stages = ProductionStage.objects.filter(start_datetime__date__range=[start_date, end_date])
-    
-    # Calculate duration in logic since it's a property, or annotate if DB supports (SQLite might be tricky with Diff)
-    # We will do python-side aggregation for safety with SQLite
+    # 3. Production Efficiency
+    # Optimized: Filter first, then aggregate in Python or annotation
+    stages = ProductionStage.objects.filter(
+        start_datetime__date__range=[start_date, end_date],
+        end_datetime__isnull=False
+    ).select_related('order') # Avoid N+1 if accessed
+
+    # Python-side aggregation for complex duration logic if needed, 
+    # but strictly we can do it faster if we only need per-stage Stats
     stage_stats = {}
-    
     for stage in stages:
-        if stage.start_datetime and stage.end_datetime:
-            duration = stage.end_datetime - stage.start_datetime
-            name = stage.get_stage_name_display()
-            if name not in stage_stats:
-                stage_stats[name] = {'count': 0, 'total_seconds': 0}
-            stage_stats[name]['count'] += 1
-            stage_stats[name]['total_seconds'] += duration.total_seconds()
+        duration = stage.end_datetime - stage.start_datetime
+        name = stage.get_stage_name_display()
+        if name not in stage_stats:
+            stage_stats[name] = {'count': 0, 'total_seconds': 0}
+        stage_stats[name]['count'] += 1
+        stage_stats[name]['total_seconds'] += duration.total_seconds()
             
     efficiency_data = []
     for name, stats in stage_stats.items():
@@ -948,33 +951,39 @@ def monthly_analytics_report(request):
             'count': stats['count']
         })
         
-    # 4. Target & Business Plan (Forecast)
+    # 4. Product Performance - OPTIMIZED Grouping
     from sales.models import InvoiceItem
-    invoices = InvoiceItem.objects.filter(invoice__created_at__date__range=[start_date, end_date])
     
-    # 5. Stone & Tahyif Analysis
-    from manufacturing.models import ManufacturingOrder, OrderStone
-    orders_in_period = ManufacturingOrder.objects.filter(start_date__range=[start_date, end_date])
-    total_stones_weight = orders_in_period.aggregate(Sum('total_stone_weight'))['total_stone_weight__sum'] or Decimal('0')
-    total_tahyif_gold = total_stones_weight * Decimal('0.2')
-
-    # Detailed Stone Analysis
-    stone_usage = OrderStone.objects.filter(order__in=orders_in_period).values('stone__name').annotate(
-        total_qty=Sum('quantity'),
-        usage_count=Count('id')
-    ).order_by('-total_qty')
-
+    # Use values() to group by item name/type at DB level
+    # We need to handle the dynamic item naming pattern logic. 
+    # Since specific naming logic exists (source_order.item_name_pattern), we might need an annotation or fallback.
+    # For speed, we will group by the string representation if possible, or fallback to python loop if logic is too complex for ORM.
+    # Given the previous code manually checked source_order, let's try to optimize:
+    
+    # Fetch all items with select_related to convert to python faster
+    invoice_items = InvoiceItem.objects.filter(
+        invoice__created_at__date__range=[start_date, end_date]
+    ).select_related('item', 'item__source_order').only(
+        'item__item_type', 'item__source_order__item_name_pattern', 
+        'subtotal', 'item__base_cost', 'item__extra_cost', 'item__weight'
+    )
+    
     product_performance = {}
-    for inv_item in invoices:
-        # Try to find the item classification
+    
+    # Improved Python Loop (still loops rows but avoids queries)
+    for inv_item in invoice_items:
+        # Resolve Name
         item_name = "قطعة عامة"
-        if hasattr(inv_item.item, 'source_order') and inv_item.item.source_order and inv_item.item.source_order.item_name_pattern:
-            item_name = inv_item.item.source_order.item_name_pattern
-        elif hasattr(inv_item.item, 'item_type') and inv_item.item.item_type:
-             item_name = str(inv_item.item)
-             
-        # Profit Calculation - Use the property from InvoiceItem
-        profit = inv_item.profit
+        if inv_item.item:
+            if inv_item.item.source_order and inv_item.item.source_order.item_name_pattern:
+                item_name = inv_item.item.source_order.item_name_pattern
+            elif inv_item.item.item_type:
+                 item_name = str(inv_item.item.item_type) # Assuming simple repr
+
+        # Calculate Profit (Replicating property logic to avoid DB hit if property does query)
+        # Property logic in model: self.subtotal - (self.item.base_cost + self.item.extra_cost)
+        cost = (inv_item.item.base_cost or 0) + (inv_item.item.extra_cost or 0)
+        profit = inv_item.subtotal - cost
         
         if item_name not in product_performance:
             product_performance[item_name] = {'count': 0, 'total_profit': Decimal('0'), 'total_revenue': Decimal('0'), 'total_weight': Decimal('0')}
@@ -982,26 +991,29 @@ def monthly_analytics_report(request):
         product_performance[item_name]['count'] += 1
         product_performance[item_name]['total_profit'] += profit
         product_performance[item_name]['total_revenue'] += inv_item.subtotal
-        product_performance[item_name]['total_weight'] += inv_item.sold_weight
-        
-    # Process products to include averages
+        product_performance[item_name]['total_weight'] += (inv_item.item.weight if inv_item.item else 0)
+
     processed_products = []
     for name, stats in product_performance.items():
         count = stats['count']
-        avg_profit = stats['total_profit'] / count if count > 0 else Decimal('0')
-        avg_weight = stats['total_weight'] / count if count > 0 else Decimal('0')
-        avg_revenue = stats['total_revenue'] / count if count > 0 else Decimal('0')
-        processed_products.append((name, {
-            'count': count,
-            'total_profit': stats['total_profit'],
-            'total_revenue': stats['total_revenue'],
-            'avg_profit': avg_profit,
-            'avg_weight': avg_weight,
-            'avg_revenue': avg_revenue
-        }))
+        if count > 0:
+            avg_profit = stats['total_profit'] / count
+            avg_weight = stats['total_weight'] / count
+            avg_revenue = stats['total_revenue'] / count
+            processed_products.append((name, {
+                'count': count,
+                'total_profit': stats['total_profit'],
+                'total_revenue': stats['total_revenue'],
+                'avg_profit': avg_profit,
+                'avg_weight': avg_weight,
+                'avg_revenue': avg_revenue
+            }))
 
-    # Sort by Profit
     sorted_products = sorted(processed_products, key=lambda x: x[1]['total_profit'], reverse=True)[:5]
+    
+    # 5.5 Fetch Accounts for Advanced Comparison
+    revenue_accounts = Account.objects.filter(account_type='revenue')
+    expense_accounts = Account.objects.filter(account_type='expense')
     
     # --- Advanced AI Analytics Engine Integration ---
     # Previous Period Calculation for Trends
@@ -1009,22 +1021,17 @@ def monthly_analytics_report(request):
     prev_start = start_date - delta
     prev_end = start_date - datetime.timedelta(days=1)
     
-    # Previous Revenue
-    prev_revenue = Decimal('0')
-    for acc in revenue_accounts:
-        prev_entries = LedgerEntry.objects.filter(account=acc, journal_entry__date__range=[prev_start, prev_end])
-        prev_credit = prev_entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        prev_debit = prev_entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        prev_revenue += (prev_credit - prev_debit)
-        
-    # Previous Expenses
-    prev_expenses = Decimal('0')
-    for acc in expense_accounts:
-        prev_entries = LedgerEntry.objects.filter(account=acc, journal_entry__date__range=[prev_start, prev_end])
-        prev_debit = prev_entries.aggregate(Sum('debit'))['debit__sum'] or Decimal('0')
-        prev_credit = prev_entries.aggregate(Sum('credit'))['credit__sum'] or Decimal('0')
-        prev_expenses += (prev_debit - prev_credit)
-        
+    # Bulk Aggregate Previous Period
+    prev_metrics = LedgerEntry.objects.filter(
+        journal_entry__date__range=[prev_start, prev_end]
+    ).aggregate(
+        rev_debit=Coalesce(Sum('debit', filter=Q(account__account_type='revenue')), Decimal('0')),
+        rev_credit=Coalesce(Sum('credit', filter=Q(account__account_type='revenue')), Decimal('0')),
+        exp_debit=Coalesce(Sum('debit', filter=Q(account__account_type='expense')), Decimal('0')),
+        exp_credit=Coalesce(Sum('credit', filter=Q(account__account_type='expense')), Decimal('0')),
+    )
+    prev_revenue = prev_metrics['rev_credit'] - prev_metrics['rev_debit']
+    prev_expenses = prev_metrics['exp_debit'] - prev_metrics['exp_credit']
     prev_profit = prev_revenue - prev_expenses
     
     # Generate Advanced Insights
@@ -1037,7 +1044,6 @@ def monthly_analytics_report(request):
         report_type=report_type
     )
     
-    # Base recommendations + Advanced ones
     recommendations = ai_insights['recommendations']
     alerts = ai_insights['alerts']
     
@@ -1071,8 +1077,6 @@ def monthly_analytics_report(request):
                 'expected_profit': stats['total_profit'] * Decimal(str(growth_base)),
                 'period': period_name
             })
-
-    # 6. Advanced Profit Goal Planner (Calculator)
 
     # 6. Advanced Profit Goal Planner (Calculator)
     goal_profit = Decimal(request.GET.get('goal_profit', '0'))

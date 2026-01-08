@@ -1,4 +1,4 @@
-import os
+اناimport os
 import django
 from decimal import Decimal
 

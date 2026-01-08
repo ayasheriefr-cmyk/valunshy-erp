@@ -6,7 +6,8 @@ from core.admin_mixins import ExportImportMixin
 
 @admin.register(Category)
 class CategoryAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ('name', 'barcode_prefix')
+    list_editable = ('barcode_prefix',)
 
 @admin.register(Item)
 class ItemAdmin(ExportImportMixin, admin.ModelAdmin):
@@ -58,9 +59,99 @@ class ItemAdmin(ExportImportMixin, admin.ModelAdmin):
         ('التتبع والموقع', {
             'fields': (('rfid_tag', 'current_branch'), 'image'),
         }),
+        ('تقرير دورة حياة المنتج (التصنيع)', {
+            'fields': ('production_lifecycle_report',),
+            'classes': ('collapse',),
+            'description': 'تقرير تفصيلي عن رحلة القطعة خلال مراحل التصنيع المختلفة بالأوزان والتواريخ.'
+        }),
     )
 
-    readonly_fields = ('barcode_img', 'weight_details', 'item_thumbnail', 'total_overhead_display', 'total_manufacturing_cost_display')
+    readonly_fields = ('barcode_img', 'weight_details', 'item_thumbnail', 'total_overhead_display', 'total_manufacturing_cost_display', 'production_lifecycle_report')
+    
+    class Media:
+        js = ('admin/js/auto_barcode.js',)
+
+    def production_lifecycle_report(self, obj):
+        if not obj or not obj.source_order:
+            return "هذه القطعة غير مرتبطة بأمر تصنيع مباشر، أو تم إدخالها كمخزون افتتاحي."
+            
+        order = obj.source_order
+        stages = order.stages.all().order_by('timestamp')
+        
+        if not stages.exists():
+            return "مربوطة بأمر تصنيع ولكن لا توجد مراحل مسجلة."
+            
+        html = """
+        <style>
+            .lifecycle-table {{ width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 10px; }}
+            .lifecycle-table th {{ background: rgba(255,255,255,0.05); padding: 8px; text-align: right; border: 1px solid rgba(255,255,255,0.1); color: var(--gold-primary); }}
+            .lifecycle-table td {{ padding: 8px; border: 1px solid rgba(255,255,255,0.1); color: #ddd; }}
+            .lifecycle-table tr:hover {{ background: rgba(255,255,255,0.02); }}
+            .loss-bad {{ color: #f44336; font-weight: bold; }}
+        </style>
+        <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="margin-bottom: 10px; font-size: 12px; color: #aaa;">
+                <strong>أمر التصنيع:</strong> <a href="/admin/manufacturing/manufacturingorder/{}/change/" target="_blank" style="color: var(--gold-primary);">{}</a> | 
+                <strong>تاريخ البدء:</strong> {}
+            </div>
+            <table class="lifecycle-table">
+                <thead>
+                    <tr>
+                        <th>المرحلة / الورشة</th>
+                        <th>الفني</th>
+                        <th>التاريخ (خروج)</th>
+                        <th>الوقت المستغرق</th>
+                        <th>وزن مستلم</th>
+                        <th>وزن خارج</th>
+                        <th>خسية (هالك)</th>
+                        <th>بودر (برادة)</th>
+                    </tr>
+                </thead>
+                <tbody>
+        """.format(order.id, order.order_number, order.start_date.strftime('%Y-%m-%d'))
+        
+        for stage in stages:
+            # Calculate duration
+            duration_str = "-"
+            if stage.start_datetime and stage.end_datetime:
+                diff = stage.end_datetime - stage.start_datetime
+                # Simple formatting
+                days = diff.days
+                hours = diff.seconds // 3600
+                minutes = (diff.seconds % 3600) // 60
+                duration_str = f"{hours}h {minutes}m"
+                if days > 0:
+                    duration_str = f"{days}d {duration_str}"
+            elif stage.timestamp:
+                 duration_str = stage.timestamp.strftime("%H:%M") # fallback
+
+            # Styling for loss
+            loss_class = "loss-bad" if stage.loss_weight > 0 else ""
+            
+            html += f"""
+                <tr>
+                    <td>
+                        <strong>{stage.get_stage_name_display()}</strong><br>
+                        <span style="color:#888;">{stage.workshop.name if stage.workshop else '-'}</span>
+                    </td>
+                    <td>{stage.technician or '-'}</td>
+                    <td>{stage.end_datetime.strftime('%Y-%m-%d %I:%M %p') if stage.end_datetime else '-'}</td>
+                    <td dir="ltr" style="text-align:right;">{duration_str}</td>
+                    <td>{stage.input_weight:,.3f} g</td>
+                    <td>{stage.output_weight:,.3f} g</td>
+                    <td class="{loss_class}">{stage.loss_weight:,.3f} g</td>
+                    <td>{stage.powder_weight:,.3f} g</td>
+                </tr>
+            """
+            
+        html += """
+                </tbody>
+            </table>
+        </div>
+        """
+        return mark_safe(html)
+    
+    production_lifecycle_report.short_description = "تقرير التصنيع التفصيلي"
 
     def total_overhead_display(self, obj):
         val = float(obj.total_overhead or 0)

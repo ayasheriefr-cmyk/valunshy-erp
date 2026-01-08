@@ -167,7 +167,24 @@ def update_treasury_balance(sender, instance, created, **kwargs):
 
         treasury.save()
 
-        # 3. Update the transaction record with the "Balance After"
+        # 3. Sync with Associated Workshop if gold is involved
+        # Exclude manufacturing_order to avoid double counting with manufacturing signals
+        if instance.gold_weight and treasury.workshop and instance.gold_carat and instance.reference_type != 'manufacturing_order':
+            ws = treasury.workshop
+            carat_name = instance.gold_carat.name
+            field = None
+            if '18' in carat_name: field = 'gold_balance_18'
+            elif '21' in carat_name: field = 'gold_balance_21'
+            elif '24' in carat_name: field = 'gold_balance_24'
+            
+            if field:
+                if instance.transaction_type in ['gold_in', 'transfer_in', 'adjustment', 'finished_goods_in']:
+                    setattr(ws, field, getattr(ws, field) + instance.gold_weight)
+                elif instance.transaction_type in ['gold_out', 'transfer_out']:
+                    setattr(ws, field, getattr(ws, field) - instance.gold_weight)
+                ws.save(update_fields=[field])
+
+        # 4. Update the transaction record with the "Balance After"
         # We use .update() to avoid triggering post_save again
         current_gold_balance = 0
         if instance.gold_carat:

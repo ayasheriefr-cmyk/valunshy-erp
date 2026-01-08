@@ -256,6 +256,66 @@ from rest_framework.response import Response
 from .models import Reservation
 from django.db import transaction
 
+
+class ItemStonesDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, item_id):
+        try:
+            item = Item.objects.get(pk=item_id)
+            if not hasattr(item, 'source_order') or not item.source_order:
+                return Response({"html": "لا يوجد مصدر تصنيع", "stones": []})
+            
+            stones = item.source_order.orderstone_set.all()
+            if not stones.exists():
+                return Response({"html": "لا يوجد أحجار", "stones": []})
+
+            html = """
+            <table style="width:100%; font-size:11px; color:#ccc; border-collapse:collapse;">
+                <thead style="text-align:right;">
+                    <tr style="border-bottom:1px solid #444;">
+                        <th style="padding:4px;">الحجر</th>
+                        <th style="padding:4px;">العدد</th>
+                        <th style="padding:4px;">الوزن</th>
+                        <th style="padding:4px;">السعر التقريبي</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """
+            data_stones = []
+            for s in stones:
+                stone_name = s.stone.name if s.stone else "-"
+                qty = f"{int(s.quantity)} ق" if s.quantity else "-"
+                wgt = f"{s.weight_in_gold:.2f} جم"
+                price = "-"
+                
+                # Check for stone size details if available
+                if s.stone and s.stone.stone_size:
+                    sz = s.stone.stone_size
+                    stone_name += f" ({sz.size_mm}mm)"
+                
+                html += f"""
+                    <tr style="border-bottom:1px solid #333;">
+                        <td style="padding:4px;">{stone_name}</td>
+                        <td style="padding:4px;">{qty}</td>
+                        <td style="padding:4px;">{wgt}</td>
+                        <td style="padding:4px;">{price}</td>
+                    </tr>
+                """
+                data_stones.append({
+                    "name": stone_name,
+                    "quantity": s.quantity,
+                    "weight": s.weight_in_gold
+                })
+            html += "</tbody></table>"
+            
+            return Response({"html": html, "stones": data_stones})
+            
+        except Item.DoesNotExist:
+            return Response({"error": "Item not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
 class ItemDetailByBarcodeView(APIView):
     """API to fetch item details by barcode (Scanner)"""
     permission_classes = [IsAuthenticated]

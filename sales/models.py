@@ -28,6 +28,7 @@ class Invoice(models.Model):
     total_gold_value = models.DecimalField("قيمة الذهب", max_digits=12, decimal_places=2, default=0)
     total_labor_value = models.DecimalField("قيمة المصنعية", max_digits=12, decimal_places=2, default=0)
     total_stones_value = models.DecimalField("قيمة الأحجار", max_digits=12, decimal_places=2, default=0)
+    total_gold_weight = models.DecimalField("إجمالي وزن الذهب", max_digits=12, decimal_places=3, default=0)
     total_tax = models.DecimalField("ضريبة القيمة المضافة", max_digits=12, decimal_places=2, default=0)
     grand_total = models.DecimalField("الإجمالي النهائي", max_digits=12, decimal_places=2, default=0)
     
@@ -76,6 +77,11 @@ class Invoice(models.Model):
         """إجمالي ربح الفاتورة"""
         return sum(item.profit for item in self.items.all())
     
+    @property
+    def total_combined_labor(self):
+        """إجمالي الأجور (مصنعية + أحجار)"""
+        return self.total_labor_value + self.total_stones_value
+    
     def calculate_totals(self, save=True):
         """
         إعادة حساب كافة المبالغ المالية للفاتورة
@@ -87,15 +93,18 @@ class Invoice(models.Model):
         total_gold = Decimal('0')
         total_labor = Decimal('0')
         total_stones = Decimal('0')
+        total_weight = Decimal('0')
         
         for item in items:
             total_gold += (item.sold_weight * item.sold_gold_price)
             total_labor += item.sold_labor_fee
             total_stones += item.sold_stone_fee
+            total_weight += item.sold_weight
             
         self.total_gold_value = total_gold
         self.total_labor_value = total_labor
         self.total_stones_value = total_stones
+        self.total_gold_weight = total_weight
         
         # Aggregate Exchange (Old Gold Return)
         if self.is_exchange:
@@ -118,7 +127,7 @@ class Invoice(models.Model):
         
         if save:
             self.save(update_fields=[
-                'total_gold_value', 'total_labor_value', 'total_stones_value', 
+                'total_gold_value', 'total_labor_value', 'total_stones_value', 'total_gold_weight',
                 'total_tax', 'grand_total', 'exchange_gold_weight', 'exchange_value_deducted'
             ])
         

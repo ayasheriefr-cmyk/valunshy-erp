@@ -19,6 +19,7 @@ from django.urls import path, include
 from core.views import home_dashboard, ai_assistant_query, get_notifications, mark_notification_read
 from django.views.generic import TemplateView
 from rest_framework.authtoken.views import obtain_auth_token
+from inventory.api_views import get_next_barcode
 
 from core.gm_views import gm_dashboard
 
@@ -39,6 +40,7 @@ urlpatterns = [
     path('ai-assistant/', ai_assistant_query, name='ai_assistant'),
     path('api/notifications/', get_notifications, name='get_notifications'),
     path('api/notifications/read/<int:notif_id>/', mark_notification_read, name='mark_notification_read'),
+    path('api/inventory/next-barcode/', get_next_barcode, name='api_next_barcode'),
     path('', home_dashboard, name='home'),
 ]
 

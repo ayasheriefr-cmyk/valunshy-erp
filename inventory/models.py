@@ -5,6 +5,7 @@ from core.models import Carat, Branch
 class Category(models.Model):
     name = models.CharField(_("Category Name"), max_length=100)
     description = models.TextField(blank=True)
+    barcode_prefix = models.CharField("بادئة الباركود", max_length=10, blank=True, help_text="مثال: VT للخاتم توينز, VW للدبلة")
 
     class Meta:
         verbose_name = "تصنيف"
@@ -12,9 +13,27 @@ class Category(models.Model):
 
     def __str__(self):
         return self.name
+    
+    def get_next_barcode(self):
+        """توليد الباركود التالي لهذا التصنيف"""
+        if not self.barcode_prefix:
+            return None
+        # Find the last item with this prefix
+        prefix = self.barcode_prefix.upper()
+        last_item = Item.objects.filter(barcode__istartswith=prefix).order_by('-barcode').first()
+        if last_item:
+            # Extract the number part
+            try:
+                num_part = last_item.barcode[len(prefix):]
+                next_num = int(num_part) + 1
+            except (ValueError, IndexError):
+                next_num = 1
+        else:
+            next_num = 1
+        return f"{prefix}{next_num:03d}"
 
 class Item(models.Model):
-    barcode = models.CharField("الباركود", max_length=100, unique=True, db_index=True)
+    barcode = models.CharField("الباركود", max_length=100, unique=True, db_index=True, blank=True)
     name = models.CharField("اسم الصنف", max_length=255)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='items', verbose_name="التصنيف")
     carat = models.ForeignKey(Carat, on_delete=models.PROTECT, related_name='items', verbose_name="العيار")
@@ -79,8 +98,13 @@ class Item(models.Model):
         return (self.stone_weight or Decimal('0')) * Decimal('0.2')
 
     def save(self, *args, **kwargs):
-        """تطبيق منطق التحييف تلقائياً (صافي الذهب = القائم - تحييف الأحجار)"""
+        """تطبيق منطق التحييف تلقائياً + توليد باركود تلقائي حسب التصنيف"""
         from decimal import Decimal
+        
+        # Auto-generate barcode if not provided and category has prefix
+        if not self.barcode and self.category and self.category.barcode_prefix:
+            self.barcode = self.category.get_next_barcode()
+        
         if self.gross_weight is not None:
              # Ensure we subtract decimal from decimal
              gross = Decimal(str(self.gross_weight))

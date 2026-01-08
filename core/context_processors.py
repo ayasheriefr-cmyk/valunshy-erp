@@ -5,14 +5,19 @@ from django.db.models.functions import Coalesce as DbCoalesce
 from decimal import Decimal
 
 def gold_prices(request):
-    # 1. Get latest price per carat in ONE query using Postgres distinct
-    # This replaces the loop of queries
-    prices = list(GoldPrice.objects.filter(carat__is_active=True)
-                 .select_related('carat')
-                 .order_by('carat', '-updated_at')
-                 .distinct('carat'))
+    # 1. Get latest price per carat (SQLite Compatible)
+    # Fetch all prices ordered by updated_at desc
+    all_prices = GoldPrice.objects.filter(carat__is_active=True).select_related('carat').order_by('-updated_at')
     
-    # Sort by name for consistency (Python side sorting is fine)
+    # Deduplicate in Python (keep first occurrence per carat)
+    seen_carats = set()
+    prices = []
+    for p in all_prices:
+        if p.carat_id not in seen_carats:
+            prices.append(p)
+            seen_carats.add(p.carat_id)
+    
+    # Sort by name for consistency
     prices.sort(key=lambda x: x.carat.name)
     
     # 2. Consolidated Manufacturing Stats in ONE aggregation

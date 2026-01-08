@@ -17,11 +17,28 @@ class ProductionStageInline(admin.TabularInline):
         'stage_name', 'workshop', 
         'input_weight', 'output_weight', 
         'powder_weight', 'loss_weight',
-        'start_datetime', 'end_datetime',
+        'time_tracking_display',
         'next_workshop', 'is_transferred', 'notes'
     )
     # Make timestamps and automation flags READ ONLY to show they are automatic
-    readonly_fields = ('timestamp', 'is_transferred', 'loss_weight', 'start_datetime', 'end_datetime')
+    readonly_fields = ('timestamp', 'is_transferred', 'loss_weight', 'time_tracking_display')
+    
+    def time_tracking_display(self, obj):
+        if not obj.pk: return "-"
+        import datetime
+        from django.utils import timezone
+        
+        start = obj.start_datetime.strftime('%H:%M (%d/%m)') if obj.start_datetime else "---"
+        end = obj.end_datetime.strftime('%H:%M (%d/%m)') if obj.end_datetime else "قيد التشغيل"
+        
+        return format_html(
+            '<div style="white-space:nowrap; font-size:12px;">'
+            '<span style="color:#4CAF50;">⬇ دخول:</span> <b>{}</b><br>'
+            '<span style="color:#2196F3;">⬆ خروج:</span> <b>{}</b>'
+            '</div>',
+            start, end
+        )
+    time_tracking_display.short_description = 'تتبع الوقت (دخول/خروج)'
     autocomplete_fields = ['cylinder']
     classes = ('tabular',) # Ensure standard Django class for popups
 
@@ -246,13 +263,16 @@ class WorkshopSettlementAdmin(ExportImportMixin, admin.ModelAdmin):
 
 @admin.register(Workshop)
 class WorkshopAdmin(ExportImportMixin, admin.ModelAdmin):
-    list_display = ('name', 'workshop_type_badge', 'contact_person', 'phone', 'gold_summary', 'filings_summary', 'labor_balance_display')
+    list_display = ('display_order', 'name', 'workshop_type_badge', 'contact_person', 'phone', 'gold_summary', 'filings_summary', 'labor_balance_display')
+    list_display_links = ('name',)
+    list_editable = ('display_order',)
     list_filter = ('workshop_type',)
     search_fields = ('name', 'contact_person')
+    ordering = ('display_order', 'name')
     
     fieldsets = (
         ('البيانات الأساسية', {
-            'fields': (('name', 'workshop_type'), ('contact_person', 'phone'), 'address')
+            'fields': (('name', 'workshop_type'), ('display_order',), ('contact_person', 'phone'), 'address', 'default_stage_name')
         }),
         ('الأرصدة الحالية (العهدة - ذهب)', {
             'fields': (('gold_balance_18', 'gold_balance_21', 'gold_balance_24'),),
@@ -300,13 +320,22 @@ class WorkshopAdmin(ExportImportMixin, admin.ModelAdmin):
         )
     workshop_type_badge.short_description = 'النوع'
 
+class WorkshopTransferInline(admin.TabularInline):
+    model = WorkshopTransfer
+    extra = 0
+    fields = ('transfer_number', 'from_workshop', 'to_workshop', 'carat', 'weight', 'status', 'date')
+    readonly_fields = ('transfer_number', 'from_workshop', 'to_workshop', 'carat', 'weight', 'status', 'date')
+    verbose_name = "تحويل ورش لهذا الأمر"
+    verbose_name_plural = "تحويلات الورش المرتبطة"
+    can_delete = False
+
 @admin.register(ManufacturingOrder)
 class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
     list_display = ('order_number_display', 'status_badge', 'carat', 'workshop', 'weight_summary', 'manufacturing_progress', 'total_overhead_display', 'total_making_cost_display', 'actions_column')
     list_display_links = ('order_number_display',)
     list_filter = ('status', 'carat', 'workshop')
     search_fields = ('order_number', 'assigned_technician', 'workshop__name')
-    inlines = [OrderStoneInline, OrderToolInline, ProductionStageInline]
+    inlines = [OrderStoneInline, OrderToolInline, ProductionStageInline, WorkshopTransferInline]
     list_per_page = 20
     date_hierarchy = 'start_date'
     
@@ -351,7 +380,7 @@ class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
         ('الأتمتة وتوليد الأصناف', {
             'classes': ('collapse',),
             'fields': (
-                'auto_create_item', 'item_name_pattern', 'target_branch'
+                'auto_create_item', 'item_name_pattern', 'item_category', 'target_branch'
             ),
             'description': 'سيتم إنشاء صنف في المخزن تلقائياً عند تحويل الحالة إلى "مكتمل".'
         }),
@@ -455,16 +484,17 @@ class ManufacturingOrderAdmin(ExportImportMixin, admin.ModelAdmin):
     final_product_image_display.short_description = 'صورة المنتج النهائي'
 
     def save_model(self, request, obj, form, change):
+        from decimal import Decimal
         # Calculate scrap automatically including tools weight
         if obj.input_weight and obj.output_weight:
-            tools_weight = obj.get_total_tools_weight()
-            powder = obj.powder_weight or 0
+            tools_weight = Decimal(str(obj.get_total_tools_weight() or 0))
+            powder = Decimal(str(obj.powder_weight or 0))
             # Formula: (Input + Tools) - (Output + Powder) = Scrap
             obj.scrap_weight = (obj.input_weight + tools_weight) - (obj.output_weight + powder)
         
         if obj.labor_rate and obj.output_weight:
             if not obj.manufacturing_pay or obj.manufacturing_pay == 0:
-                obj.manufacturing_pay = obj.labor_rate * obj.output_weight
+                obj.manufacturing_pay = Decimal(str(obj.labor_rate)) * obj.output_weight
 
         super().save_model(request, obj, form, change)
     

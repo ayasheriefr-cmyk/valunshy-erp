@@ -8,8 +8,8 @@ from import_export import resources
 class InvoiceItemInline(admin.TabularInline):
     model = InvoiceItem
     extra = 0
-    fields = ('item', 'sold_weight', 'sold_gold_price', 'sold_labor_fee', 'sold_factory_cost', 'subtotal', 'total_cost_display', 'profit_display')
-    readonly_fields = ('total_cost_display', 'profit_display')
+    fields = ('item', 'stones_breakdown', 'sold_weight', 'sold_gold_price', 'sold_labor_fee', 'sold_stone_fee', 'subtotal', 'total_cost_display', 'profit_display')
+    readonly_fields = ('stones_breakdown', 'total_cost_display', 'profit_display')
     
     def total_cost_display(self, obj):
         if obj.id:
@@ -25,6 +25,55 @@ class InvoiceItemInline(admin.TabularInline):
             return format_html('<b style="color:{};">{} ج.م</b>', color, f"{val:,.2f}")
         return "-"
     profit_display.short_description = "الربح"
+
+    def stones_breakdown(self, obj):
+        if not obj or not obj.item:
+            return "-"
+        
+        # Try to fetch source order via reverse relation
+        try:
+            if hasattr(obj.item, 'source_order'):
+                order = obj.item.source_order
+                stones = order.orderstone_set.all()
+                if not stones.exists():
+                    return "لا يوجد أحجار"
+                
+                html = """
+                <table style="width:100%; font-size:11px; color:#ccc; border-collapse:collapse;">
+                    <thead style="text-align:right;">
+                        <tr style="border-bottom:1px solid #444;">
+                            <th style="padding:4px;">الحجر</th>
+                            <th style="padding:4px;">العدد</th>
+                            <th style="padding:4px;">الوزن</th>
+                            <th style="padding:4px;">السعر التقريبي</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                """
+                for s in stones:
+                    stone_name = s.stone.name if s.stone else "-"
+                    qty = f"{int(s.quantity)} ق" if s.quantity else "-"
+                    wgt = f"{s.weight_in_gold:.2f} جم"
+                    # Simple heuristic/placeholder for price if not strictly defined per stone in order
+                    # In real scenario, we might want price per carat from stone_size or similar
+                    price = "-" 
+                    
+                    html += f"""
+                        <tr style="border-bottom:1px solid #333;">
+                            <td style="padding:4px;">{stone_name}</td>
+                            <td style="padding:4px;">{qty}</td>
+                            <td style="padding:4px;">{wgt}</td>
+                            <td style="padding:4px;">{price}</td>
+                        </tr>
+                    """
+                html += "</tbody></table>"
+                return format_html(html)
+            
+        except Exception as e:
+            return f"Error: {str(e)}"
+            
+        return "لا يوجد مصدر تصنيع"
+    stones_breakdown.short_description = "تفاصيل الأحجار"
     
 
 class OldGoldReturnInline(admin.TabularInline):
@@ -47,16 +96,16 @@ class InvoiceResource(resources.ModelResource):
 class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
     change_list_template = "admin/sales/invoice/change_list.html"
     resource_class = InvoiceResource
-    list_display = ('invoice_number', 'status_badge', 'customer', 'branch', 'grand_total', 'total_profit_display', 'sales_rep', 'payment_method', 'created_at')
+    list_display = ('invoice_number', 'status_badge', 'customer', 'branch', 'total_gold_weight', 'grand_total', 'total_profit_display', 'sales_rep', 'payment_method', 'created_at')
     list_filter = ('status', 'branch', 'payment_method', 'sales_rep', 'created_at')
     search_fields = ('invoice_number', 'customer__name', 'customer__phone', 'sales_rep__name')
     inlines = [InvoiceItemInline, OldGoldReturnInline]
-    readonly_fields = ('total_gold_value', 'total_labor_value', 'total_tax', 'grand_total', 'total_profit_display', 'created_by', 'created_at', 'zatca_qr_code', 'zatca_uuid', 'confirmed_by', 'confirmed_at')
+    readonly_fields = ('total_gold_value', 'total_labor_value', 'total_stones_value', 'total_combined_labor_display', 'total_gold_weight', 'total_tax', 'grand_total', 'total_profit_display', 'created_by', 'created_at', 'zatca_qr_code', 'zatca_uuid', 'confirmed_by', 'confirmed_at')
     autocomplete_fields = ['sales_rep', 'customer']
     
     fieldsets = (
         ('بيانات الفاتورة الأساسية', {
-            'fields': (('invoice_number', 'status'), ('branch', 'customer'), ('payment_method', 'sales_rep'))
+            'fields': ('invoice_number', 'status', 'branch', 'customer', 'payment_method', 'sales_rep')
         }),
         ('حالة التأكيد والمراجعة', {
             'fields': (('confirmed_by', 'confirmed_at'),),
@@ -68,7 +117,7 @@ class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
             'description': 'في حالة استبدال ذهب قديم بجديد، يرجى تفعيل الخيار وإدخال الوزن والقيمة المخصومة.'
         }),
         ('الملخص المالي والربحية (صافي)', {
-            'fields': (('total_gold_value', 'total_labor_value'), ('total_tax', 'grand_total'), 'total_profit_display'),
+            'fields': (('total_gold_weight', 'total_gold_value'), ('total_labor_value', 'total_stones_value'), ('total_combined_labor_display', 'total_tax'), ('grand_total', 'total_profit_display')),
             'classes': ('wide',)
         }),
         ('بيانات الفاتورة الإلكترونية (ZATCA)', {
@@ -88,6 +137,16 @@ class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
         color = "#2196F3" if val > 0 else "#f44336"
         return format_html('<span style="color:{}; font-weight:bold; font-size: 16px;">{} ج.م</span>', color, f"{val:,.2f}")
     total_profit_display.short_description = "صافي الربح"
+
+    def total_combined_labor_display(self, obj):
+        if obj.id:
+            val = float(obj.total_combined_labor or 0)
+            return format_html('<span style="color:#D4AF37; font-weight:bold; font-size: 16px;">{} ج.م</span>', f"{val:,.2f}")
+        return "-"
+    total_combined_labor_display.short_description = "إجمالي الأجور (ذهب + أحجار)"
+
+    class Media:
+        js = ('admin/js/invoice_stones.js',)
 
     def status_badge(self, obj):
         colors = {
@@ -134,6 +193,11 @@ class InvoiceAdmin(ExportImportMixin, admin.ModelAdmin):
         if not obj.pk:
             obj.created_by = request.user
         super().save_model(request, obj, form, change)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "sales_rep":
+            kwargs["queryset"] = SalesRepresentative.objects.filter(is_active=True).order_by('name')
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}

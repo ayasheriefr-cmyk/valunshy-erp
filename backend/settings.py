@@ -123,26 +123,20 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
-
-# Use DATABASE_URL from environment (Railway) or fallback to local PostgreSQL
-DATABASE_URL = os.environ.get('DATABASE_URL')
-
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
+# Use SQLite for Local Development (Default)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'gold_erp_db',
-            'USER': 'postgres',
-            'PASSWORD': 'radwa01000',
-            'HOST': '127.0.0.1',
-            'PORT': '5432',
-        }
-    }
+}
+
+# Production Logic (Commented out for Local Use)
+# DATABASE_URL = os.environ.get('DATABASE_URL')
+# if DATABASE_URL:
+#     DATABASES = {
+#         'default': dj_database_url.config(default=DATABASE_URL, conn_max_age=600)
+#     }
 
 
 # Password validation

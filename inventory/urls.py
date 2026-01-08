@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import inventory_dashboard
+from .api_views import get_next_barcode
 
 app_name = 'inventory'
 

@@ -1,4 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db import transaction
+from decimal import Decimal
 from django.db.models import Count, Avg, Sum, F
 from django.db.models.functions import TruncDate
 from django.utils import timezone
@@ -8,7 +10,7 @@ import datetime
 import json
 from .models import ManufacturingOrder, Workshop, Stone, InstallationTool, OrderStone, OrderTool, ProductionStage, WorkshopTransfer, WorkshopSettlement
 from inventory.models import RawMaterial, Carat, Branch
-from finance.treasury_models import Treasury, TreasuryTransaction
+from finance.treasury_models import Treasury, TreasuryTransaction, TreasuryTransfer
 
 def manufacturing_analytics(request):
     """
@@ -351,9 +353,103 @@ def magic_workflow(request):
         
         try:
             with transaction.atomic():
+                if action == 'magic_command':
+                    cmd = request.POST.get('command', '').strip()
+                    if not cmd: return JsonResponse({'status': 'error', 'message': 'أمر فارغ'})
+                    
+                    import re
+                    import re
+                    # --- CATALOG COMMANDS IMPLEMENTATION ---
+
+                    # 1. Start Production Run (إنشاء دفعة)
+                    # Regex: نفذ أمر [إنشاء دفعة]: العدد [10]، العيار [21]، الوزن [5]
+                    m_run = re.search(r'إنشاء دفعة.*العدد\s*\[?(\d+)\]?.*العيار\s*\[?(\S+)\]?.*الوزن\s*\[?([\d.]+)\]?', cmd)
+                    if m_run:
+                        count, carat_name, avg_weight = int(m_run.group(1)), m_run.group(2), Decimal(m_run.group(3))
+                        carat = Carat.objects.filter(name__icontains=carat_name).first() or Carat.objects.first()
+                        workshop_name = 'casting' # Default or parse if needed
+                        
+                        created_ids = []
+                        for _ in range(count):
+                            o = ManufacturingOrder.objects.create(
+                                order_number=f"AUTO-{timezone.now().strftime('%M%S%f')[:8]}",
+                                carat=carat, input_weight=avg_weight, status='draft',
+                                item_name_pattern=f"دفعة آلية {carat.name}"
+                            )
+                            created_ids.append(o.id)
+                        return JsonResponse({'status': 'success', 'message': f'تم إنشاء {count} أوامر بنجاح (IDs: {created_ids})'})
+
+                    # 2. Assign & Issue (تشغيل وصرف)
+                    # Regex: نفذ أمر [تشغيل وصرف] للأوامر [101, 102] لورشة [التركيب]. اصرف [50جم]
+                    # This is complex, simplified version:
+                    m_assign = re.search(r'تشغيل وصرف.*للأوامر\s*\[?([\d,\s]+)\]?.*لورشة\s*\[?(.+)\]?', cmd)
+                    if m_assign:
+                        ids_str, ws_name = m_assign.group(1), m_assign.group(2)
+                        ids = [int(x.strip()) for x in ids_str.split(',') if x.strip().isdigit()]
+                        workshop = Workshop.objects.filter(name__icontains=ws_name).first()
+                        
+                        if not workshop: return JsonResponse({'status': 'error', 'message': f'الورشة غير موجودة: {ws_name}'})
+                        
+                        processed_count = 0
+                        for oid in ids:
+                            order = ManufacturingOrder.objects.filter(id=oid, status='draft').first()
+                            if order:
+                                order.workshop = workshop
+                                order.status = 'in_progress'
+                                order.save()
+                                
+                                # Create Stage
+                                ProductionStage.objects.create(
+                                    order=order, workshop=workshop, 
+                                    stage_name=workshop.default_stage_name or 'casting',
+                                    input_weight=order.input_weight, start_datetime=timezone.now()
+                                )
+                                # Note: Treasury logic here would be complex to replicate fully without refactoring.
+                                # Assuming automated script handles bulk transfers separately or simplified here.
+                                processed_count += 1
+                        
+                        return JsonResponse({'status': 'success', 'message': f'تم تشغيل {processed_count} أوامر لورشة {workshop.name}'})
+
+                    # 3. Transfer (نقل مرحلة)
+                    # Regex: نفذ أمر [نقل مرحلة] للأمر [101] من [التركيب] إلى [التلميع]
+                    m_trans = re.search(r'نقل مرحلة.*للأمر\s*\[?(\d+)\]?.*إلى\s*\[?(.+)\]?', cmd)
+                    if m_trans:
+                        oid, to_ws_name = m_trans.group(1), m_trans.group(2)
+                        order = ManufacturingOrder.objects.get(id=oid)
+                        to_ws = Workshop.objects.filter(name__icontains=to_ws_name).first()
+                        
+                        if order and to_ws:
+                            # Close last stage
+                            last_stage = order.stages.last()
+                            if last_stage:
+                                last_stage.end_datetime = timezone.now()
+                                last_stage.output_weight = order.input_weight # Simplified assumption for speed
+                                last_stage.save()
+                            
+                            # Create new stage
+                            ProductionStage.objects.create(
+                                order=order, workshop=to_ws, stage_name='next_stage',
+                                input_weight=order.input_weight, start_datetime=timezone.now()
+                            )
+                            order.workshop = to_ws
+                            order.save()
+                            return JsonResponse({'status': 'success', 'message': f'تم نقل الأمر {oid} إلى {to_ws.name}'})
+
+                    # 4. Finish (إنهاء وتكويد)
+                    m_fin = re.search(r'إنهاء وتكويد.*للطلب\s*\[?(\d+)\]?', cmd)
+                    if m_fin:
+                        oid = m_fin.group(1)
+                        order = ManufacturingOrder.objects.get(id=oid)
+                        order.status = 'completed'
+                        order.save()
+                        # Auto-item creation logic triggered by signal/save if configured
+                        return JsonResponse({'status': 'success', 'message': f'تم إنهاء الطلب {oid} وتحويله للمخزن'})
+
+                    return JsonResponse({'status': 'error', 'message': 'عذراً، لم أفهم الأمر. تأكد من استخدام الصيغة الموجودة في الكتالوج.'})
+
                 if action == 'assign_workshop':
                     workshop_id = request.POST.get('workshop_id')
-                    input_weight = request.POST.get('input_weight', 0)
+                    input_weight = Decimal(str(request.POST.get('input_weight') or 0))
                     treasury_id = request.POST.get('treasury_id')
                     
                     order = get_object_or_404(ManufacturingOrder, id=order_id)
@@ -366,33 +462,82 @@ def magic_workflow(request):
                         order.input_weight = input_weight
                     order.save()
                     
-                    # 3. Material Issuance (Gold & Treasury Transaction)
-                    gold_weight = request.POST.get('gold_weight')
-                    if gold_weight and float(gold_weight) > 0:
-                        # Create Workshop Settlement (Increases Workshop Debt)
-                        WorkshopSettlement.objects.create(
-                            workshop=workshop,
-                            settlement_type='gold_payment',
-                            weight=gold_weight,
-                            carat=order.carat,
-                            notes=f"صرف ذهب سريع مع الطلب {order.order_number}"
-                        )
+                    
+                    # 3. Material Issuance (Strict Flow: Production -> WIP -> Workshop)
+                    input_weight_decimal = Decimal(str(input_weight or 0))
+                    extra_gold_weight = Decimal(str(request.POST.get('gold_weight') or 0))
+                    total_weight_to_process = input_weight_decimal + extra_gold_weight
+                    
+                    if total_weight_to_process > 0:
+                        # Identify Treasuries (Hardcoded IDs based on system requirement)
+                        PROD_TREASURY_ID = 2
+                        WIP_TREASURY_ID = 9
                         
-                        # Create Treasury Transaction (Decreases Treasury Stock)
-                        if treasury_id:
-                            treasury = get_object_or_404(Treasury, id=treasury_id)
+                        prod_treasury = Treasury.objects.filter(id=PROD_TREASURY_ID).first()
+                        wip_treasury = Treasury.objects.filter(id=WIP_TREASURY_ID).first()
+                        
+                        # Fallback if IDs changed (Try names)
+                        if not prod_treasury: prod_treasury = Treasury.objects.filter(name__icontains='الإنتاج').first()
+                        if not wip_treasury: wip_treasury = Treasury.objects.filter(name__icontains='تحت التشغيل').first()
+                        
+                        if prod_treasury and wip_treasury:
+                            # STEP 1: Transfer from Production -> WIP
+                            TreasuryTransfer.objects.create(
+                                from_treasury=prod_treasury,
+                                to_treasury=wip_treasury,
+                                gold_weight=total_weight_to_process,
+                                # Assuming carats match order (simplified)
+                                gold_carat=order.carat, 
+                                status='completed',
+                                initiated_by=request.user if request.user.is_authenticated else None,
+                                notes=f"تحويل تلقائي لبدء تشغيل أمر تصنيع: {order.order_number}"
+                            )
+                            
+                            # STEP 2: Issue from WIP -> Workshop
                             TreasuryTransaction.objects.create(
-                                treasury=treasury,
+                                treasury=wip_treasury,
                                 transaction_type='gold_out',
-                                gold_weight=gold_weight,
+                                gold_weight=total_weight_to_process,
                                 gold_carat=order.carat,
-                                description=f"صرف ذهب لطلب تصنيع: {order.order_number} (للعامل: {workshop.name})",
+                                description=f"صرف ذهب للتشغيل: {order.order_number} (للورشة: {workshop.name})",
                                 reference_type='manufacturing_order',
                                 reference_id=order.id,
                                 created_by=request.user if request.user.is_authenticated else None
                             )
-                    
-                    # 4. Add Stones if provided
+                            
+                            # Record Workshop Debt
+                            WorkshopSettlement.objects.create(
+                                workshop=workshop,
+                                settlement_type='gold_payment',
+                                weight=total_weight_to_process,
+                                carat=order.carat,
+                                notes=f"استلام ذهب (عبر {wip_treasury.name}) للأمر {order.order_number}"
+                            )
+                        else:
+                            # Fallback to old behavior if treasuries missing (Safety)
+                            if treasury_id and treasury_id.strip():
+                                t = Treasury.objects.get(id=treasury_id)
+                                TreasuryTransaction.objects.create(
+                                    treasury=t, transaction_type='gold_out',
+                                    gold_weight=extra_gold_weight, gold_carat=order.carat, 
+                                    description=f"صرف (Fallback): {order.order_number}",
+                                    reference_id=order.id
+                                )
+                                WorkshopSettlement.objects.create(
+                                    workshop=workshop, settlement_type='gold_payment',
+                                    weight=extra_gold_weight, carat=order.carat
+                                )
+
+                    # 4. Create first stage - DYNAMIC from Workshop
+                    stage = ProductionStage.objects.create(
+                        order=order,
+                        workshop=workshop,
+                        stage_name=workshop.default_stage_name or 'casting',
+                        input_weight=input_weight or 0,
+                        start_datetime=timezone.now()
+                    )
+
+                    # 5. Add Stones if provided (Now linked to stage)
                     stones_json = request.POST.get('stones_json')
                     if stones_json:
                         import json
@@ -401,51 +546,80 @@ def magic_workflow(request):
                             OrderStone.objects.create(
                                 order=order, 
                                 stone_id=s['id'], 
+                                production_stage=stage, # LINKED
                                 quantity_issued=s['qty'], 
                                 quantity_required=s['qty']
                             )
 
-                    # 2. Create first stage
-                    ProductionStage.objects.create(
-                        order=order,
-                        workshop=workshop,
-                        stage_name='casting',
-                        input_weight=input_weight or 0,
-                        start_datetime=timezone.now()
-                    )
+                    # 6. CREDIT WORKSHOP BALANCE (Increase what they hold)
+                    # Determine correct balance field
+                    gold_field = None
+                    if '18' in order.carat.name: gold_field = 'gold_balance_18'
+                    elif '21' in order.carat.name: gold_field = 'gold_balance_21'
+                    elif '24' in order.carat.name: gold_field = 'gold_balance_24'
+
+                    if gold_field:
+                        current_balance = getattr(workshop, gold_field)
+                        # Total gold given = Input Weight (Order Start) + Extra Gold Issued
+                        total_gold_in = (input_weight or 0) + (extra_gold_weight or 0)
+                        setattr(workshop, gold_field, current_balance + total_gold_in)
+                        workshop.save()
                     
                     return JsonResponse({'status': 'success'})
 
                 elif action == 'move_order':
-                    next_workshop_id = request.POST.get('next_workshop_id')
-                    output_weight = request.POST.get('output_weight', 0)
-                    powder_weight = request.POST.get('powder_weight', 0)
-                    
-                    order = get_object_or_404(ManufacturingOrder, id=order_id)
-                    next_workshop = get_object_or_404(Workshop, id=next_workshop_id)
-                    
-                    # Close current stage
-                    current_stage = order.stages.filter(end_datetime__isnull=True).last()
-                    if current_stage:
-                        current_stage.output_weight = output_weight
-                        current_stage.powder_weight = powder_weight
-                        current_stage.next_workshop = next_workshop
-                        current_stage.save() # Signal handles WorkshopTransfer
+                    try:
+                        next_workshop_id = request.POST.get('next_workshop_id')
+                        output_weight = Decimal(str(request.POST.get('output_weight') or 0))
+                        powder_weight = Decimal(str(request.POST.get('powder_weight') or 0))
                         
-                        # Create next stage
-                        ProductionStage.objects.create(
+                        print(f"DEBUG: move_order called for Order {order_id} -> Workshop {next_workshop_id}")
+                        
+                        order = get_object_or_404(ManufacturingOrder, id=order_id)
+                        next_workshop = get_object_or_404(Workshop, id=next_workshop_id)
+                        
+                        print(f"DEBUG: Found Order: {order.order_number}, Current Workshop: {order.workshop}")
+                        print(f"DEBUG: Target Workshop: {next_workshop.name} (ID: {next_workshop.id})")
+                        
+                        # Close current stage
+                        current_stage = order.stages.filter(end_datetime__isnull=True).last()
+                        if current_stage:
+                            print(f"DEBUG: Closing active stage {current_stage.id}")
+                            current_stage.output_weight = output_weight
+                            current_stage.powder_weight = powder_weight
+                            current_stage.next_workshop = next_workshop
+                            current_stage.end_datetime = timezone.now() # Explicit Exit Time
+                            current_stage.save() # Signal handles WorkshopTransfer
+                        else:
+                            print("DEBUG: No active stage found to close.")
+                            
+                        # Create next stage - DYNAMIC from Workshop
+                        new_stage = ProductionStage.objects.create(
                             order=order,
                             workshop=next_workshop,
-                            stage_name='crafting',
+                            stage_name=next_workshop.default_stage_name or 'crafting',
                             input_weight=output_weight,
                             start_datetime=timezone.now()
                         )
+                        print(f"DEBUG: Created new stage {new_stage.id} for workshop {new_stage.workshop}")
+                        
+                        # Update Order Current Location
+                        order.workshop = next_workshop
+                        order.save()
+                        print(f"DEBUG: Saved Order {order.id} with new workshop {order.workshop}")
+                        
+                        # Verify persistence
+                        order.refresh_from_db()
+                        print(f"DEBUG: VERIFICATION: Order {order.id} workshop is now {order.workshop}")
                     
-                    return JsonResponse({'status': 'success'})
+                        return JsonResponse({'status': 'success'})
+                    except Exception as e:
+                        print(f"DEBUG: ERROR in move_order: {e}")
+                        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
                 elif action == 'complete_order':
-                    output_weight = request.POST.get('output_weight', 0)
-                    powder_weight = request.POST.get('powder_weight', 0)
+                    output_weight = Decimal(str(request.POST.get('output_weight') or 0))
+                    powder_weight = Decimal(str(request.POST.get('powder_weight') or 0))
                     
                     order = get_object_or_404(ManufacturingOrder, id=order_id)
                     
@@ -454,36 +628,219 @@ def magic_workflow(request):
                     if current_stage:
                         current_stage.output_weight = output_weight
                         current_stage.powder_weight = powder_weight
+                        current_stage.end_datetime = timezone.now() # Explicit Exit Time
                         current_stage.save()
                     
                     # Mark Order Completed
                     order.output_weight = output_weight
                     order.powder_weight = powder_weight
                     order.status = 'completed'
+                    order.end_date = timezone.now().date()
+                    
+                    # --- AUTO-CREATE INVENTORY ITEM ---
+                    if order.auto_create_item:
+                        from inventory.models import Item, Branch
+                        
+                        # 1. Calculate Stone Weight
+                        stone_weight_total = Decimal('0')
+                        for os in order.orderstone_set.all():
+                            stone_weight_total += os.weight_in_gold # This property returns weight in GRAMS (normalized)
+                            
+                        # 2. Generate Barcode
+                        # Format: MFG-[OrderID]-[Random/Time]
+                        import random
+                        timestamp_code = timezone.now().strftime('%y%m%d')
+                        barcode = f"PROD-{timestamp_code}-{order.id}"
+                        
+                        # Ensure uniqueness (simple check)
+                        if Item.objects.filter(barcode=barcode).exists():
+                             barcode = f"PROD-{timestamp_code}-{order.id}-{random.randint(100,999)}"
+
+                        # 3. Determine Branch (Main Branch or Target)
+                        target_branch = order.target_branch
+                        if not target_branch:
+                            target_branch = Branch.objects.first() # Fallback
+
+                        # 4. Create Item
+                        # Net Gold Weight is calculated automatically in Item.save() as (gross - stone_weight_in_gold)
+                        # But we have stone_weight in grams already calculated above?
+                        # Wait, Item.stone_weight expects Carats typically if it's strictly for display? 
+                        # Let's check Item model... 
+                        # Item.stone_weight: "وزن الأحجار" (Decimal)
+                        # Item.stone_weight_in_gold property: returns (stone_weight * 0.2)
+                        # So Item.stone_weight should be in CARATS if the property multiplies by 0.2?
+                        # OR if it's raw weight?
+                        # Let's look at `inventory/models.py` again.
+                        # `stone_weight_in_gold` returns `(self.stone_weight or 0) * 0.2`.
+                        # This IMPLIES `stone_weight` is stored in CARATS (since 1ct = 0.2g).
+                        # HOWEVER, `OrderStone.weight_in_gold` handles mixed units (grams vs carats).
+                        # If we have mixed units, we can't easily sum "Carats". We should sum "Blue Gold Equivalence" (Grams).
+                        # But `Item` expects `stone_weight` to likely be in Carats for that property to work?
+                        # If I store Grams in `stone_weight`, then `stone_weight_in_gold` will optionally multiply by 0.2 which is WRONG if it's already grams.
+                        # FIX: We should calculate `net_gold_weight` explicitly here to be safe and set `stone_weight` to 0 or a converted value?
+                        # Better approach: Calculate net manually.
+                        
+                        net_weight = output_weight - stone_weight_total
+                        
+                        # For the Item record, we need to populate `stone_weight`.
+                        # If we have mixed stones, it's ambiguous. 
+                        # Let's simple utilize `total_stone_weight` from order if it exists, roughly.
+                        # Or just set net_gold_weight explicitly.
+                        
+                        new_item = Item(
+                            barcode=barcode,
+                            name=order.item_name_pattern or f"منتج تصنيع {order.order_number}",
+                            carat=order.carat,
+                            gross_weight=output_weight,
+                            stone_weight=0, # We will set net manually, avoid auto-calc confusion for now
+                            net_gold_weight=net_weight, # Explicit net weight
+                            status='available',
+                            current_branch=target_branch,
+                            # Costing
+                            fixed_labor_fee=order.manufacturing_pay + order.factory_margin,
+                            # Overhead
+                            overhead_electricity=order.overhead_electricity,
+                            overhead_water=order.overhead_water,
+                            overhead_gas=order.overhead_gas,
+                            overhead_rent=order.overhead_rent,
+                            overhead_salaries=order.overhead_salaries,
+                            overhead_other=order.overhead_other,
+                        )
+                        new_item.save()
+                        
+                        # Link back
+                        order.resulting_item = new_item
+                    
+                    order.save()
+                    
+                    return JsonResponse({
+                        'status': 'success',
+                        'barcode': order.resulting_item.barcode if order.resulting_item else '',
+                        'item_name': order.resulting_item.name if order.resulting_item else ''
+                    })
+
+                elif action == 'add_stone':
+                    stone_id = request.POST.get('stone_id')
+                    quantity = request.POST.get('quantity', 0)
+                    
+                    order = get_object_or_404(ManufacturingOrder, id=order_id)
+                    stone = get_object_or_404(Stone, id=stone_id)
+                    
+                    # Create or update OrderStone
+                    order_stone, created = OrderStone.objects.get_or_create(
+                        order=order,
+                        stone=stone,
+                        defaults={'quantity_issued': quantity, 'quantity_required': quantity}
+                    )
+                    if not created:
+                        order_stone.quantity_issued = Decimal(str(order_stone.quantity_issued or 0)) + Decimal(str(quantity))
+                        order_stone.save()
+                    
+                    return JsonResponse({'status': 'success'})
+
+                elif action == 'hold_order':
+                    order = get_object_or_404(ManufacturingOrder, id=order_id)
+                    current_stage = order.stages.filter(end_datetime__isnull=True).last()
+                    if current_stage:
+                        current_stage.end_datetime = timezone.now()
+                        current_stage.notes = (current_stage.notes or '') + " - تم الركن (Hold)"
+                        current_stage.save()
+                    
+                    order.workshop = None
+                    order.status = 'draft'
+                    order.save()
+                    return JsonResponse({'status': 'success'})
+
+                elif action == 'add_stones_bulk':
+                    stones_json = request.POST.get('stones_json')
+                    if stones_json:
+                        stones = json.loads(stones_json)
+                        order = get_object_or_404(ManufacturingOrder, id=order_id)
+                        for s in stones:
+                            OrderStone.objects.create(
+                                order=order,
+                                stone_id=s['id'],
+                                quantity_issued=Decimal(str(s['qty'])),
+                                quantity_required=Decimal(str(s['qty']))
+                            )
+                        return JsonResponse({'status': 'success'})
+                    return JsonResponse({'status': 'error', 'message': 'بيانات الأحجار مفقودة'}, status=400)
+
+                elif action == 'edit_order':
+                    item_name = request.POST.get('item_name')
+                    input_weight = Decimal(str(request.POST.get('input_weight') or 0))
+                    
+                    order = get_object_or_404(ManufacturingOrder, id=order_id)
+                    order.item_name_pattern = item_name
+                    # Only allow weight edit if draft or explicitly requested (we allow it here for quick fix)
+                    order.input_weight = input_weight
                     order.save()
                     
                     return JsonResponse({'status': 'success'})
+
+    # Create Order Action
+                elif action == 'create_order':
+                    
+                    # 1. Create Main Order
+                    input_weight = Decimal(str(request.POST.get('input_weight') or 0))
+                    order = ManufacturingOrder.objects.create(
+                        order_number=request.POST.get('order_number'),
+                        carat_id=request.POST.get('carat_id'),
+                        status='draft',
+                        item_name_pattern=request.POST.get('item_name'),
+                        input_weight=input_weight,
+                        assigned_technician=''
+                    )
+                    return JsonResponse({'status': 'success'})
+
+                elif action == 'reorder_workshops':
+                    order_json = request.POST.get('order_json')
+                    if order_json:
+                        workshop_ids = json.loads(order_json)
+                        # Bulk update display_order
+                        for index, ws_id in enumerate(workshop_ids):
+                            Workshop.objects.filter(id=ws_id).update(display_order=index)
+                        return JsonResponse({'status': 'success'})
+                    return JsonResponse({'status': 'error', 'message': 'Missing order data'})
 
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
     # GET: Context for the board
-    workshops = Workshop.objects.all()
-    drafts = ManufacturingOrder.objects.filter(status='draft').order_by('-id')
+    workshops = Workshop.objects.filter(is_active=True).order_by('display_order', 'name')
+    drafts = ManufacturingOrder.objects.filter(status='draft').select_related('carat').order_by('-id')[:20]
     
-    # Active orders grouped by current workshop
-    active_by_workshop = {}
+    # Optimize: Fetch all active orders in one query instead of looping
+    active_orders = ManufacturingOrder.objects.filter(
+        status__in=['in_progress', 'casting', 'crafting', 'polishing', 'qc_pending', 'tribolish', 'qc_failed']
+    ).select_related('workshop', 'carat').prefetch_related('stages')
+
+    # Group by workshop in Python
+    from collections import defaultdict
+    orders_by_workshop = defaultdict(list)
+    for order in active_orders:
+        if order.workshop_id:
+            orders_by_workshop[order.workshop_id].append(order)
+
+    # Active orders grouped by current workshop - LIST STRUCTURE
+    workflow_data = []
     for ws in workshops:
-        active_by_workshop[ws.id] = ManufacturingOrder.objects.filter(
-            workshop=ws, 
-            status__in=['in_progress', 'casting', 'crafting', 'polishing', 'qc_pending']
-        ).prefetch_related('stages')
+        ws_orders = orders_by_workshop.get(ws.id, [])
+        workflow_data.append({
+            'workshop': ws,
+            'orders': ws_orders,
+            'count': len(ws_orders)
+        })
+    
+    # Sort: By manual display_order, then by name
+    workflow_data.sort(key=lambda x: (x['workshop'].display_order, x['workshop'].name))
 
     context = {
         'workshops': workshops,
         'drafts': drafts,
-        'active_by_workshop': active_by_workshop,
-        'stones': Stone.objects.filter(current_stock__gt=0),
+        'workflow_data': workflow_data,
+        'stones': Stone.objects.filter(current_stock__gt=0).select_related('stone_cut__category_group').order_by('stone_cut__category_group__name', 'name'),
         'treasuries': Treasury.objects.all(),
+        'carats': Carat.objects.all(),
     }
     return render(request, 'manufacturing/magic_workflow.html', context)

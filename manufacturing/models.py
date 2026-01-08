@@ -17,6 +17,35 @@ class Workshop(models.Model):
     phone = models.CharField("رقم الهاتف", max_length=20, blank=True)
     address = models.TextField("العنوان", blank=True)
     
+    default_stage_name = models.CharField(
+        "المرحلة الافتراضية", 
+        max_length=20, 
+        choices=[
+            ('tazgah_qasem', 'تزجة قاسم (تجميع)'),
+            ('laser', 'ليزر (لحام/زيادة)'),
+            ('mounting_pablo', 'تركيب بابلو'),
+            ('polishing', 'الجلي والتلميع'),
+            ('mounting_manmouk', 'تركيب منموى (نهائي)'),
+            ('design', 'تصميم / 3D Design'),
+            ('printing', 'طباعة الشمع / 3D Printing'),
+            ('wax_injection', 'حقن الشمع / Wax Injection'),
+            ('wax_setting', 'تركيب الشمع / Wax Setting'),
+            ('casting', 'السبك / Casting'),
+            ('filing', 'البرد والتجهيز / Filing'),
+            ('mounting', 'التركيب / Mounting'),
+            ('setting', 'تركيب الأحجار / Stone Setting'),
+            ('plating', 'الطلاء / Plating'),
+            ('enamel', 'المينا / Enamel'),
+            ('chains', 'السلاسل / Chains'),
+            ('stamping', 'الدمغة / Stamping'),
+            ('repair', 'الصيانة / Repairs'),
+            ('qc', 'مراقبة الجودة / Quality Control'),
+            ('tribolish', 'الترابولش (Tribolish)'),
+        ],
+        default='tazgah_qasem',
+        help_text="المرحلة التي تظهر تلقائياً عند تحويل الشغل لهذه الورشة"
+    )
+    
     # Workshop Accounts (Weight-based)
     gold_balance_18 = models.DecimalField("رصيد ذهب 18 (جرام)", max_digits=12, decimal_places=3, default=0)
     gold_balance_21 = models.DecimalField("رصيد ذهب 21 (جرام)", max_digits=12, decimal_places=3, default=0)
@@ -32,6 +61,9 @@ class Workshop(models.Model):
     scrap_balance_24 = models.DecimalField("رصيد خسية 24 (جرام)", max_digits=12, decimal_places=3, default=0)
     
     labor_balance = models.DecimalField("رصيد النقدية (مصنعيات)", max_digits=15, decimal_places=2, default=0)
+    
+    display_order = models.IntegerField("ترتيب العرض", default=0, help_text="الرقم الأقل يظهر أولاً")
+    is_active = models.BooleanField("نشطة (تظهر في اللوحة)", default=True, help_text="إلغاء التفعيل يخفي الورشة من الوردية السحرية")
     
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -381,6 +413,7 @@ class ManufacturingOrder(models.Model):
     # Auto-Inventory Creation Fields
     auto_create_item = models.BooleanField("إنشاء قطعة في المخزن تلقائياً عند الاكتمال", default=True)
     item_name_pattern = models.CharField("اسم الصنف الناتج", max_length=255, blank=True, help_text="مثال: خاتم ذهب عيار 21")
+    item_category = models.ForeignKey('inventory.Category', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="تصنيف الصنف الناتج", help_text="سيتم توليد الباركود تلقائياً بناءً على هذا التصنيف")
     target_branch = models.ForeignKey(Branch, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="الفرع المستلم")
 
     def __init__(self, *args, **kwargs):
@@ -415,6 +448,8 @@ class ManufacturingOrder(models.Model):
 
     def get_total_tools_weight(self):
         """Calculates the total weight of gold-based tools/materials added to the order."""
+        if not self.pk:
+            return 0
         from django.db.models import Sum
         gold_types = ['gold_wire', 'gold_solder', 'cadmium', 'gold_sheet']
         return self.order_tools_list.filter(tool__tool_type__in=gold_types).aggregate(total=Sum('weight'))['total'] or 0
@@ -558,6 +593,9 @@ class ProductionStage(models.Model):
 
 class WorkshopTransfer(models.Model):
     transfer_number = models.CharField("رقم التحويل", max_length=50, unique=True)
+    # Link to Order (New Field)
+    order = models.ForeignKey('ManufacturingOrder', on_delete=models.SET_NULL, null=True, blank=True, related_name='transfers', verbose_name="أمر التصنيع")
+    
     from_workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='transfers_out', verbose_name="من ورشة")
     to_workshop = models.ForeignKey(Workshop, on_delete=models.CASCADE, related_name='transfers_in', verbose_name="إلى ورشة")
     

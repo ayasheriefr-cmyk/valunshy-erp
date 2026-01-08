@@ -1,255 +1,567 @@
-{% extends 'base.html' %}
+<!-- DIAGNOSTIC: ANTIGRAVITY SYSTEM FIX v2 -->
+{% extends 'admin/base_site.html' %}
 {% load static %}
-{% load dashboard_tags %}
 
-{% block title %}Magic Manufacturing Workflow{% endblock %}
+{% block title %}الوردية السحرية{% endblock %}
 
-{% block extra_css %}
+{% block extrastyle %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
 <style>
+    /* Toast Styles */
+    #magicToast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--gold-primary);
+        color: #000;
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-weight: 800;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        z-index: 2000;
+        display: none;
+        animation: slideInRight 0.3s;
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+        }
+
+        to {
+            transform: translateX(0);
+        }
+    }
+
     :root {
+        --gold-primary: #D4AF37;
+        --gold-bright: #FFD700;
+        --dark-bg: #0a0a0b;
+        --card-bg: #151517;
         --glass-bg: rgba(255, 255, 255, 0.03);
         --glass-border: rgba(255, 255, 255, 0.1);
-        --gold-glow: rgba(212, 175, 55, 0.2);
+    }
+
+    #content-main {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     body {
-        background: #0a0a0b;
+        background: var(--dark-bg) !important;
         color: #fff;
-        overflow-x: hidden;
     }
 
     .workflow-container {
         display: flex;
-        height: calc(100vh - 80px);
-        gap: 20px;
+        flex-direction: row;
+        overflow: hidden;
+        gap: 15px;
+        padding: 15px;
         padding: 20px;
         font-family: 'Inter', 'Outfit', sans-serif;
+        background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.05), transparent);
+        height: 85vh;
+        /* Force height to fit screen */
+        align-items: stretch;
     }
 
-    /* Sidebar: Workers */
     .workers-sidebar {
         width: 280px;
         background: var(--glass-bg);
         border: 1px solid var(--glass-border);
-        border-radius: 20px;
-        backdrop-filter: blur(10px);
-        padding: 20px;
+        border-radius: 16px;
+        padding: 15px;
+        flex-shrink: 0;
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        overflow-y: auto;
+        /* Enable internal scrolling */
+        max-height: 100%;
+    }
+
+    .selected-glow {
+        border-color: var(--gold-bright) !important;
+        box-shadow: 0 0 30px rgba(212, 175, 55, 0.4) !important;
+        transform: scale(1.05);
+        z-index: 50;
+    }
+
+    /* === SEARCHBOX === */
+    .search-wrapper {
+        margin-bottom: 20px;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        border-radius: 10px;
+        padding: 8px 12px 8px 35px;
+        color: #fff;
+        font-size: 0.9rem;
+    }
+
+    .search-wrapper i {
+        position: absolute;
+        left: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #888;
+    }
+
+    /* === SIDEBAR === */
+    .workers-sidebar {
+        width: 280px;
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 16px;
+        padding: 15px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
     }
 
     .sidebar-title {
-        font-size: 1.2rem;
-        font-weight: 800;
+        font-size: 1.1rem;
+        font-weight: 700;
         color: var(--gold-primary);
+        margin-bottom: 15px;
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 10px;
     }
 
     .worker-card {
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid var(--glass-border);
-        padding: 12px 15px;
-        border-radius: 12px;
+        padding: 10px 14px;
+        border-radius: 10px;
         cursor: grab;
-        transition: 0.3s;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        user-select: none;
+        margin-bottom: 10px;
+        transition: 0.2s;
     }
 
     .worker-card:hover {
-        background: rgba(212, 175, 55, 0.1);
+        background: rgba(212, 175, 55, 0.15);
         border-color: var(--gold-primary);
-        transform: translateX(-5px);
     }
 
-    .worker-card i {
-        font-size: 1.2rem;
-        color: var(--gold-primary);
-    }
-
-    .worker-card .worker-info {
-        flex: 1;
-    }
-
-    .worker-card .worker-name {
+    .worker-card .name {
         font-weight: 600;
-        font-size: 0.95rem;
     }
 
-    .worker-card .worker-type {
+    .worker-card .type {
         font-size: 0.75rem;
         color: #888;
     }
 
-    /* Main Area */
-    .main-workflow-area {
+    /* === ANIMATED GOLD BORDER (PULSE) - OPTIMIZED === */
+    @keyframes goldPulse {
+        0% {
+            border-color: var(--gold-primary);
+            opacity: 0.8;
+        }
+
+        50% {
+            border-color: var(--gold-bright);
+            opacity: 1;
+        }
+
+        100% {
+            border-color: var(--gold-primary);
+            opacity: 0.8;
+        }
+    }
+
+    .order-card.status-in_progress,
+    .order-card.status-casting,
+    .order-card.status-crafting,
+    .order-card.status-polishing {
+        border: 2px solid var(--gold-primary) !important;
+        /* Removed animation for performance */
+    }
+
+    .worker-stats {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+        font-size: 0.7rem;
+        background: rgba(0, 0, 0, 0.15);
+        padding: 4px 8px;
+        border-radius: 6px;
+    }
+
+    .stat-scrap {
+        color: #FFC107;
+        font-weight: 600;
+    }
+
+    .stat-powder {
+        color: #4CAF50;
+        font-weight: 600;
+    }
+
+    /* === STONES SECTION === */
+    .stones-section {
+        margin-top: 20px;
+        border-top: 1px solid var(--glass-border);
+        padding-top: 15px;
+    }
+
+    .stone-card {
+        background: linear-gradient(135deg, rgba(100, 100, 255, 0.1), rgba(200, 100, 200, 0.1));
+        border: 1px solid rgba(150, 100, 200, 0.3);
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: grab;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: 0.2s;
+    }
+
+    .stone-card:hover {
+        background: linear-gradient(135deg, rgba(100, 100, 255, 0.2), rgba(200, 100, 200, 0.2));
+        border-color: rgba(150, 100, 200, 0.5);
+        transform: scale(1.02);
+    }
+
+    .stone-card .stone-icon {
+        width: 24px;
+        height: 24px;
+        background: linear-gradient(135deg, #9b59b6, #3498db);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+    }
+
+    .stone-card .stone-info {
+        flex: 1;
+    }
+
+    .stone-card .stone-name {
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+
+    .stone-card .stone-stock {
+        font-size: 0.7rem;
+        color: #aaa;
+    }
+
+    /* === MAIN AREA === */
+    .main-area {
         flex: 1;
         display: flex;
         flex-direction: column;
         gap: 20px;
+        overflow: hidden;
     }
 
-    /* Backlog (Horizontal Scroll) */
-    .backlog-section {
+    /* === DRAFTS ROW === */
+    .drafts-section {
         background: var(--glass-bg);
         border: 1px solid var(--glass-border);
-        border-radius: 20px;
-        padding: 20px;
-        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 15px 20px;
     }
 
-    .backlog-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 15px;
+    .drafts-section h3 {
+        margin: 0 0 12px 0;
+        font-size: 1rem;
+        color: var(--gold-primary);
     }
 
-    .backlog-cards {
+    .drafts-row {
         display: flex;
         gap: 15px;
         overflow-x: auto;
         padding-bottom: 10px;
-        min-height: 120px;
+        min-height: 100px;
     }
 
-    .order-card {
-        min-width: 220px;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px dotted var(--gold-primary);
+    .draft-card {
+        min-width: 200px;
+        background: var(--card-bg);
+        border: 2px dashed var(--gold-primary);
         border-radius: 12px;
         padding: 15px;
         cursor: pointer;
-        transition: 0.3s;
-        position: relative;
-        overflow: hidden;
+        transition: 0.2s;
+        flex-shrink: 0;
     }
 
-    .order-card:hover {
-        background: rgba(255, 255, 255, 0.12);
-        box-shadow: 0 0 15px var(--gold-glow);
+    .draft-card:hover,
+    .draft-card.drag-over {
+        background: rgba(212, 175, 55, 0.1);
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);
     }
 
-    .order-card .order-num {
+    .draft-card .order-num {
         font-weight: 800;
         color: var(--gold-primary);
         font-size: 0.85rem;
     }
 
-    .order-card .order-item {
+    .draft-card .order-name {
         font-size: 1rem;
         margin-top: 5px;
         font-weight: 600;
     }
 
-    .order-card .order-meta {
+    .draft-card .order-meta {
         font-size: 0.75rem;
         color: #aaa;
         margin-top: 8px;
     }
 
-    /* Workshop Columns */
-    .board-columns {
+    /* === BOARD COLUMNS === */
+    .board-area {
         flex: 1;
         display: flex;
-        gap: 20px;
-        overflow-x: auto;
-        padding-bottom: 15px;
+        gap: 15px;
+        overflow-y: auto;
+        /* Allow vertical scroll for wrapped content */
+        overflow-x: hidden;
+        /* No horizontal scroll */
+        padding-bottom: 5px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        /* WRAP COLUMNS */
+        align-content: flex-start;
     }
 
     .workshop-column {
-        min-width: 320px;
+        flex: 1 1 300px;
+        /* Grow, shrink, basis 300px */
+        min-width: 280px;
+        /* Slightly smaller min width */
+        max-width: 400px;
+        /* Prevent too wide on large screens */
         background: rgba(255, 255, 255, 0.02);
         border: 1px solid var(--glass-border);
-        border-radius: 20px;
+        border-radius: 16px;
         display: flex;
         flex-direction: column;
-        max-height: 100%;
+        max-height: 80vh;
+        /* Limit height per column */
+        flex-shrink: 0;
     }
 
     .column-header {
-        padding: 15px 20px;
+        padding: 12px 16px;
         background: rgba(255, 255, 255, 0.05);
         border-bottom: 1px solid var(--glass-border);
-        border-top-left-radius: 20px;
-        border-top-right-radius: 20px;
+        border-radius: 16px 16px 0 0;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
-    .column-name {
+    .column-header .col-name {
         font-weight: 700;
-        font-size: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .column-header .badge {
+        background: var(--gold-primary);
+        color: #000;
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.8rem;
+        font-weight: 700;
     }
 
     .orders-list {
         flex: 1;
-        padding: 15px;
+        padding: 12px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
         overflow-y: auto;
-        min-height: 150px;
+        min-height: 300px;
+        /* Ensure drop target even when empty */
     }
 
-    .active-order-card {
-        background: #151517;
+    .order-card {
+        background: var(--card-bg);
         border: 1px solid #333;
-        border-radius: 12px;
-        padding: 15px;
-        transition: 0.3s;
+        border-radius: 10px;
+        padding: 12px;
         cursor: grab;
+        transition: 0.2s;
     }
 
-    .active-order-card .progress-mini {
-        height: 4px;
-        background: #333;
-        border-radius: 2px;
-        margin: 10px 0;
-        overflow: hidden;
+    .order-card:hover,
+    .order-card.drag-over {
+        border-color: var(--gold-primary);
+        /* Simplified hover effect */
+        transform: translateY(-2px);
     }
 
-    .active-order-card .progress-fill {
-        height: 100%;
+    .order-card .order-num {
+        font-weight: 800;
+        color: var(--gold-primary);
+        font-size: 0.8rem;
+    }
+
+    .order-card .order-name {
+        font-size: 0.9rem;
+        margin-top: 3px;
+    }
+
+    .order-card .order-weight {
+        font-size: 0.75rem;
+        color: #aaa;
+        margin-top: 5px;
+    }
+
+    .order-card .status-badge {
+        display: inline-block;
+        font-size: 0.65rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-top: 5px;
+        background: rgba(212, 175, 55, 0.1);
+        color: var(--gold-primary);
+    }
+
+    /* QUICK ACTIONS ON CARD */
+    .card-actions {
+        display: flex;
+        gap: 5px;
+        margin-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        padding-top: 8px;
+    }
+
+    .q-btn {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        color: #ddd;
+        font-size: 0.65rem;
+        padding: 4px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+    }
+
+    .q-btn:hover {
         background: var(--gold-primary);
+        color: #000;
+        border-color: var(--gold-primary);
     }
 
-    /* Drop Zones */
-    .drop-placeholder {
-        background: rgba(212, 175, 55, 0.05);
-        border: 2px dashed var(--gold-primary);
-        border-radius: 12px;
-        height: 60px;
+    .q-btn.btn-move {
+        border-color: rgba(212, 175, 55, 0.3);
     }
 
-    /* Modals */
+    .q-btn.btn-done {
+        border-color: rgba(76, 175, 80, 0.3);
+    }
+
+    .q-btn.btn-edit {
+        border-color: rgba(33, 150, 243, 0.3);
+        color: #fff;
+    }
+
+    /* === COMPLETION & HOLD ZONES === */
+    .zones-row {
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+        flex-shrink: 0;
+    }
+
+    .complete-zone,
+    .hold-zone {
+        flex: 1;
+        min-height: 80px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        gap: 8px;
+        transition: 0.2s;
+        cursor: pointer;
+    }
+
+    .complete-zone {
+        background: rgba(76, 175, 80, 0.05);
+        border: 2px dashed #4CAF50;
+        color: #4CAF50;
+    }
+
+    .hold-zone {
+        background: rgba(255, 193, 7, 0.05);
+        border: 2px dashed #FFC107;
+        color: #FFC107;
+    }
+
+    .complete-zone:hover,
+    .hold-zone:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    /* === MODALS === */
     .modal-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.8);
-        backdrop-filter: blur(10px);
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
         z-index: 1000;
         display: none;
-        align-items: center;
+        align-items: flex-start;
+        /* Raise to top */
         justify-content: center;
+        padding-top: 80px;
+        /* Space from top */
+        overflow-y: auto;
+    }
+
+    .modal-overlay.active {
+        display: flex;
     }
 
     .magic-modal {
         background: #1a1a1c;
         border: 1px solid var(--gold-primary);
-        border-radius: 24px;
+        border-radius: 20px;
         width: 100%;
-        max-width: 450px;
-        padding: 30px;
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        max-width: 420px;
+        padding: 25px;
+    }
+
+    .magic-modal h2 {
+        color: var(--gold-primary);
+        margin: 0 0 20px 0;
+        font-size: 1.3rem;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.9rem;
+        color: #aaa;
     }
 
     .magic-input {
@@ -257,10 +569,10 @@
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid #333;
         color: #fff;
-        padding: 12px 15px;
-        border-radius: 12px;
-        margin-top: 10px;
-        font-size: 1.1rem;
+        padding: 10px 12px;
+        border-radius: 10px;
+        font-size: 1rem;
+        box-sizing: border-box;
     }
 
     .magic-input:focus {
@@ -268,327 +580,1596 @@
         outline: none;
     }
 
+    .btn-row {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
     .btn-magic {
+        flex: 1;
         background: var(--gold-primary);
         color: #000;
         border: none;
-        padding: 12px 25px;
-        border-radius: 12px;
-        font-weight: 800;
+        padding: 12px;
+        border-radius: 10px;
+        font-weight: 700;
         cursor: pointer;
-        width: 100%;
-        margin-top: 20px;
-        transition: 0.3s;
+        transition: 0.2s;
     }
 
     .btn-magic:hover {
         background: var(--gold-bright);
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px var(--gold-glow);
     }
 
-    /* Complete Zone */
-    .complete-zone {
-        height: 100px;
-        background: rgba(76, 175, 80, 0.05);
-        border: 2px dashed #4CAF50;
-        border-radius: 20px;
+    .btn-cancel {
+        flex: 1;
+        background: transparent;
+        color: #888;
+        border: 1px solid #333;
+        padding: 12px;
+        border-radius: 10px;
+        cursor: pointer;
+    }
+
+    /* === FAB === */
+    .fab-new-order {
+        position: fixed;
+        bottom: 40px;
+        left: 40px;
+        width: 65px;
+        height: 65px;
+        background: linear-gradient(135deg, var(--gold-primary), var(--gold-bright));
+        color: #000;
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #4CAF50;
+        font-size: 1.8rem;
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.5);
+        cursor: pointer;
+        z-index: 999;
+        transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .fab-new-order:hover {
+        transform: scale(1.1) rotate(90deg);
+        box-shadow: 0 8px 30px rgba(212, 175, 55, 0.7);
+    }
+
+    .fab-new-order::after {
+        content: 'أمر جديد';
+        position: absolute;
+        right: 80px;
+        background: var(--gold-primary);
+        color: #000;
+        padding: 6px 15px;
+        border-radius: 8px;
+        font-size: 0.9rem;
         font-weight: 800;
-        font-size: 1.2rem;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.3s;
+    }
+
+    .fab-new-order:hover::after {
+        opacity: 1;
+        right: 75px;
+    }
+
+    /* === ACTION PAD === */
+    #actionPad {
+        position: fixed;
+        right: -300px;
+        top: 100px;
+        bottom: 100px;
+        width: 280px;
+        background: rgba(26, 26, 28, 0.95);
+        backdrop-filter: blur(20px);
+        border-right: 2px solid var(--gold-primary);
+        z-index: 900;
+        transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        display: flex;
+        flex-direction: column;
+        padding: 25px;
+        box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+    }
+
+    #actionPad.active {
+        right: 0;
+    }
+
+    .action-btn {
+        width: 100%;
+        padding: 15px;
+        margin-bottom: 15px;
+        border-radius: 12px;
+        border: 1px solid var(--glass-border);
+        background: rgba(255, 255, 255, 0.05);
+        color: #fff;
+        display: flex;
+        align-items: center;
         gap: 15px;
+        cursor: pointer;
+        transition: 0.2s;
+        text-align: right;
+    }
+
+    .action-btn i {
+        font-size: 1.2rem;
+    }
+
+    .action-btn:hover {
+        background: rgba(212, 175, 55, 0.1);
+        border-color: var(--gold-primary);
+        transform: translateX(-5px);
+    }
+
+    .action-btn.primary {
+        background: linear-gradient(135deg, var(--gold-primary), var(--gold-bright));
+        color: #000;
+        border: none;
+        font-weight: 800;
+    }
+
+    /* === MAGIC COMMANDER === */
+    .magic-commander-wrapper {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto 20px;
+        padding: 0 20px;
+        position: relative;
+    }
+
+    .magic-commander-bar {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 2px solid var(--gold-primary);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        padding: 5px 20px;
+        box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+    }
+
+    .magic-commander-input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: #fff;
+        font-size: 1.1rem;
+        padding: 12px;
+        outline: none;
+    }
+
+    .magic-commander-btn {
+        background: var(--gold-primary);
+        color: #000;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: 0.3s;
+    }
+
+    .magic-commander-btn:hover {
+        background: var(--gold-bright);
+        box-shadow: 0 0 15px var(--gold-primary);
+    }
+
+    .magic-commander-icon {
+        color: var(--gold-primary);
+        font-size: 1.4rem;
+        margin-right: 15px;
+        animation: pulse-gold 2s infinite;
+    }
+
+    @keyframes pulse-gold {
+        0% {
+            transform: scale(1);
+            opacity: 0.8;
+        }
+
+        50% {
+            transform: scale(1.15);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 0.8;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
+<div id="magicToast"></div>
+
+<div class="magic-commander-wrapper" dir="rtl">
+    <div class="magic-commander-bar">
+        <i class="fa-solid fa-wand-magic-sparkles magic-commander-icon"></i>
+        <input type="text" id="magicCommandInput" class="magic-commander-input"
+            placeholder="كيف يمكنني مساعدتك؟ (مثال: من الخزينة الرئيسية إلى التشغيل 50)..."
+            onkeypress="if(event.key === 'Enter') submitMagicCommand()">
+        <button class="magic-commander-btn" onclick="submitMagicCommand()">
+            إرسال الأمر <i class="fa-solid fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
+
+<!-- ACTION PAD (Zero-Drag UI) -->
+<div id="actionPad">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <h3 style="margin:0; color:var(--gold-primary);"><i class="fa-solid fa-wand-magic-sparkles"></i> المعالج السريع
+        </h3>
+        <i class="fa-solid fa-xmark" onclick="deselectOrder()" style="cursor:pointer; color:#888;"></i>
+    </div>
+
+    <div id="selectedOrderPreview"
+        style="background: rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--glass-border);">
+        <div id="previewNum" style="font-weight: 800; color: var(--gold-primary); font-size: 0.8rem;">---</div>
+        <div id="previewName" style="font-size: 1rem; margin-top: 5px; font-weight: 600;">يرجى اختيار أمر...</div>
+    </div>
+
+    <div class="action-buttons">
+        <button class="action-btn primary" id="btnActionAssign" onclick="handleAction('assign')">
+            <i class="fa-solid fa-user-plus"></i> تخصيص لعامل
+        </button>
+        <button class="action-btn" id="btnActionMove" onclick="handleAction('move')">
+            <i class="fa-solid fa-arrow-right-arrow-left"></i> تحويل لورشة أخرى
+        </button>
+        <button class="action-btn" id="btnActionStone" onclick="handleAction('stone')">
+            <i class="fa-solid fa-gem"></i> إضافة حجر واحد
+        </button>
+        <button class="action-btn" id="btnActionBulkStone" style="border-color: #e056fd; color: #e056fd; display:none;"
+            onclick="handleAction('bulk_stone')">
+            <i class="fa-solid fa-layer-group"></i> إضافة طقم الفصوص (الصينية)
+        </button>
+        <button class="action-btn" id="btnActionBulkStone" style="border-color: #e056fd; color: #e056fd; display:none;"
+            onclick="handleAction('bulk_stone')">
+            <i class="fa-solid fa-layer-group"></i> إضافة طقم فصوص
+        </button>
+        <button class="action-btn" id="btnActionComplete" style="border-color: #4CAF50; color: #4CAF50;"
+            onclick="handleAction('complete')">
+            <i class="fa-solid fa-check-double"></i> إتمام وإدخال مخزن
+        </button>
+        <button class="action-btn" id="btnActionHold" style="border-color: #FFC107; color: #FFC107;"
+            onclick="handleAction('hold')">
+            <i class="fa-solid fa-pause"></i> ركن الطلب (Hold)
+        </button>
+    </div>
+
+    <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--glass-border);">
+        <div style="font-size: 0.75rem; color: #666; margin-bottom: 10px;">أحجار جاهزة للإضافة (التراي):</div>
+        <div id="stoneTray"
+            style="display:flex; gap:5px; flex-wrap:wrap; min-height:40px; background: rgba(0,0,0,0.2); padding:5px; border-radius:8px;">
+            <div style="color: #444; font-size: 0.7rem; padding: 5px;">فارغ...</div>
+        </div>
+    </div>
+</div>
+
 <div class="workflow-container" dir="rtl">
 
-    <!-- Workers Sidebar -->
+    <!-- SIDEBAR: Workers -->
     <div class="workers-sidebar">
         <div class="sidebar-title">
             <i class="fa-solid fa-users-gear"></i> العاملين / الورش
         </div>
-        <div id="workersList" style="display: flex; flex-direction: column; gap: 10px;">
-            {% for ws in workshops %}
-            <div class="worker-card animate__animated animate__fadeInRight" data-id="{{ ws.id }}" draggable="true">
-                <i class="fa-solid fa-user-nut"></i>
-                <div class="worker-info">
-                    <div class="worker-name">{{ ws.name }}</div>
-                    <div class="worker-type">{{ ws.get_workshop_type_display }}</div>
+        <div class="search-wrapper">
+            <i class="fa-solid fa-search"></i>
+            <input type="text" class="search-input" placeholder="بحث عن عامل..."
+                onkeyup="filterSidebar(this, '.worker-card')">
+        </div>
+
+        <!-- NEW: SMART ASSISTANT BUTTON -->
+        <!-- VALUNSHY AI WIDGET BUTTON (Replaces old button) -->
+        <button onclick="toggleValunshyAI()" class="btn-magic"
+            style="width: 100%; margin-bottom: 15px; background: linear-gradient(45deg, #FFD700, #DAA520); color: #000; font-weight: bold; box-shadow: 0 4px 15px rgba(218, 165, 32, 0.3);">
+            <i class="fa-solid fa-robot"></i> المساعد الذكي
+        </button>
+
+        {% for ws in workshops %}
+        <div class="worker-card" draggable="true" data-id="{{ ws.id }}" data-name="{{ ws.name }}">
+            <div class="name" style="font-weight: 600; font-size: 0.95rem;">{{ ws.name }}</div>
+            <div class="type">{{ ws.get_workshop_type_display }}</div>
+            <div class="worker-stats">
+                <span class="stat-scrap" title="رصيد الخسية"><i class="fa-solid fa-scale-unbalanced text-warning"></i>
+                    {{ ws.scrap_balance_21|floatformat:2 }}ج</span>
+                <span class="stat-powder" title="رصيد البودرة"><i class="fa-solid fa-sparkles text-success"></i> {{ ws.filings_balance_21|floatformat:2 }}ج</span>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- STONES -->
+        <div class="stones-section">
+            <div class="sidebar-title" style="font-size: 1rem;">
+                <i class="fa-solid fa-gem"></i> الأحجار
+            </div>
+            <div class="search-wrapper">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" class="search-input" placeholder="بحث عن حجر..."
+                    onkeyup="filterSidebar(this, '.stone-card')">
+            </div>
+
+            {% for stone in stones %}
+            <div class="stone-card" draggable="true" data-id="{{ stone.id }}" data-name="{{ stone.name }}">
+                <div class="stone-icon">💎</div>
+                <div class="stone-info">
+                    <div class="stone-name">{{ stone.name }}</div>
+                    <div class="stone-stock">{{ stone.current_stock }} قيراط</div>
                 </div>
             </div>
+            {% empty %}
+            <div style="color: #666; font-size: 0.8rem;">لا توجد أحجار</div>
             {% endfor %}
         </div>
     </div>
 
-    <!-- Main Logic -->
-    <div class="main-workflow-area">
+    <!-- MAIN AREA -->
+    <div class="main-area">
 
-        <!-- Backlog: Draft Orders -->
-        <div class="backlog-section">
-            <div class="backlog-header">
-                <div class="sidebar-title" style="margin-bottom: 0;">
-                    <i class="fa-solid fa-layer-group"></i> بانتظار التخصيص (Drafts)
-                </div>
-            </div>
-            <div id="backlogList" class="backlog-cards">
+        <!-- DRAFTS: Orders waiting for assignment -->
+        <div class="drafts-section">
+            <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-layer-group"></i> أوامر بانتظار التخصيص</span>
+            </h3>
+            <div class="drafts-row" id="draftsRow">
                 {% for order in drafts %}
-                <div class="order-card" data-order-id="{{ order.id }}">
+                <div class="draft-card" data-order-id="{{ order.id }}">
                     <div class="order-num">{{ order.order_number }}</div>
-                    <div class="order-item">{{ order.item_name_pattern|default:"قطعة جديدة" }}</div>
+                    <div class="order-name">{{ order.item_name_pattern|default:"قطعة جديدة" }}</div>
                     <div class="order-meta">
                         {{ order.carat.name }}
                         {% if order.input_weight %} | {{ order.input_weight }}جم {% endif %}
                     </div>
                 </div>
+                {% empty %}
+                <div style="color: #666; padding: 20px;">لا توجد أوامر في الانتظار</div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- The Board -->
-        <div id="workflowBoard" class="board-columns">
-            {% for ws in workshops %}
-            <div class="workshop-column" data-workshop-id="{{ ws.id }}">
+        <!-- BOARD: Workshop columns -->
+        <div class="board-area" id="boardArea">
+            {% for item in workflow_data %}
+            <div class="workshop-column" data-workshop-id="{{ item.workshop.id }}">
                 <div class="column-header">
-                    <div class="column-name">{{ ws.name }}</div>
-                    <span class="badge" style="background: var(--gold-primary); color: #000;">{{
-                        active_by_workshop|get_item:ws.id|length }}</span>
+                    <span class="col-name">{{ item.workshop.name }}</span>
+                    <span class="badge">{{ item.count }}</span>
                 </div>
-                <div class="orders-list" data-workshop-id="{{ ws.id }}">
-                    {% for order in active_by_workshop|get_item:ws.id %}
-                    <div class="active-order-card" data-order-id="{{ order.id }}">
+                <!-- Workshop Balances -->
+                <div class="workshop-balances"
+                    style="display:flex;gap:8px;padding:5px 10px;background:rgba(0,0,0,0.3);font-size:0.7rem;flex-wrap:wrap;border-bottom:1px solid #333;">
+                    <span style="color:#FFD700;" title="رصيد الذهب 21">💰 {{ item.workshop.gold_balance_21|floatformat:2 }}جم</span>
+                    <span style="color:#9b59b6;" title="رصيد البودر 21">🧹 {{ item.workshop.filings_balance_21|floatformat:2 }}جم</span>
+                    <span style="color:#e74c3c;" title="رصيد الخسية 21">⚠️ {{ item.workshop.scrap_balance_21|floatformat:2 }}جم</span>
+                </div>
+                <div class="orders-list" data-workshop-id="{{ item.workshop.id }}">
+                    {% for order in item.orders %}
+                    <div class="order-card status-{{ order.status }}" data-order-id="{{ order.id }}">
                         <div class="order-num">{{ order.order_number }}</div>
-                        <div class="order-item" style="font-size: 0.9rem;">{{ order.item_name_pattern }}</div>
-                        <div class="progress-mini">
-                            <div class="progress-fill" style="width: 60%;"></div>
+                        <div class="order-name">{{ order.item_name_pattern }}</div>
+                        <div class="order-weight" style="display:flex; justify-content:space-between;">
+                            <span>📦 {{ order.input_weight }}جم</span>
+                            {% if order.scrap_weight > 0 %}
+                            <span class="stat-scrap">⚖️ {{ order.scrap_weight }}</span>
+                            {% endif %}
                         </div>
-                        <div class="order-meta" style="display: flex; justify-content: space-between;">
-                            <span>{{ order.input_weight }}جم</span>
-                            <span style="color: var(--gold-primary);">{{ order.get_status_display }}</span>
+                        <span class="status-badge">{{ order.get_status_display }}</span>
+
+                        <div class="card-actions">
+                            <button class="q-btn btn-move" onclick="event.stopPropagation(); quickMove({{ order.id }})">
+                                <i class="fa-solid fa-share"></i> نقل
+                            </button>
+                            <button class="q-btn btn-done" onclick="event.stopPropagation(); quickComplete({{ order.id }})">
+                                <i class="fa-solid fa-check-double"></i> إنهاء
+                            </button>
+                            <button class="q-btn btn-edit" onclick="event.stopPropagation(); quickEdit('{{ order.id }}', '{{ order.item_name_pattern|escapejs }}', '{{ order.input_weight }}')">
+                                <i class="fa-solid fa-pen"></i> تعديل
+                            </button>
                         </div>
                     </div>
+                    {% empty %}
+                    <div style="color: #555; font-size: 0.85rem; padding: 10px;">لا توجد أوامر</div>
                     {% endfor %}
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- Completion Zone -->
-        <div id="completionZone" class="complete-zone">
-            <i class="fa-solid fa-flag-checkered fa-2x"></i>
-            جرّب سحب القطعة هنا لإنهاء الإنتاج (Complete)
+        <!-- COMPLETION & HOLD ZONES -->
+        <div class="zones-row">
+            <div class="hold-zone" id="holdZone">
+                <i class="fa-solid fa-pause"></i> سحب للركن (Hold)
+            </div>
+            <div class="complete-zone" id="completeZone">
+                <i class="fa-solid fa-flag-checkered"></i> سحب للإنهاء
+            </div>
         </div>
 
     </div>
 </div>
 
-<!-- Assign Modal -->
-<div id="assignModal" class="modal-overlay">
+<!-- FAB -->
+<div class="fab-new-order" id="fabNewOrder">
+    <i class="fa-solid fa-plus"></i>
+</div>
+
+<!-- ASSIGN MODAL -->
+<div class="modal-overlay" id="assignModal">
     <div class="magic-modal">
-        <h2 style="color: var(--gold-primary); margin-top: 0;">تخصيص للعمل <span id="targetWorkerName"></span></h2>
-        <p id="targetOrderName"></p>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-            <div>
-                <label>الوزن المستلم (جم)</label>
-                <input type="number" step="0.001" id="assignWeight" class="magic-input" placeholder="0.000">
+        <h2>تخصيص لـ <span id="assignWorkerName"></span></h2>
+        <p id="assignOrderInfo" style="color: #aaa; margin-bottom: 20px;"></p>
+        <div class="form-group">
+            <label>الوزن المستلم (جم)</label>
+            <input type="number" step="0.001" id="assignWeight" class="magic-input" placeholder="0.000">
+        </div>
+        <div class="form-group">
+            <label>صرف ذهب إضافي (جم)</label>
+            <input type="number" step="0.001" id="assignExtraGold" class="magic-input" value="0">
+        </div>
+        <div class="form-group" style="opacity: 0.7;">
+            <label>المسار المالي (تلقائي)</label>
+            <div class="magic-input"
+                style="background: rgba(255,255,255,0.1); padding: 8px; font-size: 0.9rem; color: #aaa;">
+                <i class="fa-solid fa-coins"></i> خزينة الإنتاج ➡️ تحت التشغيل ➡️ الورشة
             </div>
-            <div>
-                <label>صرف ذهب إضافي؟</label>
-                <input type="number" step="0.001" id="assignGoldExtra" class="magic-input" placeholder="0.000">
+            <input type="hidden" id="assignTreasury" value="">
+        </div>
+
+        <!-- NEW: Stone Selection in Assign Modal -->
+        <div class="form-group" style="background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px;">
+            <label><i class="fa-regular fa-gem"></i> إضافة أحجار (اختياري)</label>
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                <select id="assignStoneSelect" class="magic-input" style="flex: 2;">
+                    <option value="">-- اختر حجر --</option>
+                    {% regroup stones by stone_cut.category_group.name as stone_list %}
+                    {% for group in stone_list %}
+                    <optgroup label="{{ group.grouper|default:'أخرى' }}">
+                        {% for s in group.list %}
+                        <option value="{{ s.id }}">{{ s.name }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    {% endfor %}
+                </select>
+                <input type="number" id="assignStoneQty" class="magic-input" style="flex: 1;" placeholder="العدد"
+                    value="1">
+                <button class="btn-magic" style="background: #9b59b6; padding: 0 10px;"
+                    onclick="addStoneToAssignList()">+</button>
+            </div>
+            <div id="assignStonesContainer" style="display: flex; flex-wrap: wrap; gap: 5px;">
+                <!-- Chips will appear here -->
             </div>
         </div>
-        <div style="margin-bottom: 15px;">
-            <label>يصرف من خزينة:</label>
-            <select id="assignTreasury" class="magic-input">
-                <option value="">-- اختر الخزينة --</option>
-                {% for t in treasuries %}
-                <option value="{{ t.id }}">{{ t.name }}</option>
+
+        <div class="btn-row">
+            <button class="btn-magic" onclick="submitAssign()">تأكيد البدء ✅</button>
+            <button class="btn-cancel" onclick="closeModals()">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- MOVE MODAL -->
+<div class="modal-overlay" id="moveModal">
+    <div class="magic-modal">
+        <h2>تحويل إلى <span id="moveWorkerName"></span></h2>
+        <div class="form-group">
+            <label>الوزن الخارج (الصافي)</label>
+            <input type="number" step="0.001" id="moveOutputWeight" class="magic-input">
+        </div>
+        <div class="form-group">
+            <label>وزن البودرة (المستلمة)</label>
+            <input type="number" step="0.001" id="movePowder" class="magic-input" value="0">
+        </div>
+        <div class="form-group">
+            <label>تحويل إلى ورشة</label>
+            <select id="moveWorkshopList" class="magic-input">
+                <option value="">-- اختر الورشة التالية --</option>
+                {% for w in workshops %}
+                <option value="{{ w.id }}">{{ w.name }}</option>
                 {% endfor %}
             </select>
         </div>
-        <button class="btn-magic" onclick="submitAssign()">تأكيد البدء ✅</button>
-        <button class="btn-magic" style="background: transparent; color: #888; border: 1px solid #333;"
-            onclick="closeModals()">إلغاء</button>
+        <div class="btn-row">
+            <button class="btn-magic" onclick="submitMove()">تحويل ➡️</button>
+            <button class="btn-cancel" onclick="closeModals()">إلغاء</button>
+        </div>
     </div>
 </div>
 
-<!-- Transition Modal -->
-<div id="moveModal" class="modal-overlay">
-    <div class="magic-modal">
-        <h2 style="color: var(--gold-primary); margin-top: 0;">تحويل إلى <span id="nextWorkerName"></span></h2>
-        <div style="margin-bottom: 15px;">
-            <label>الوزن المخرَج (الصافي)</label>
-            <input type="number" step="0.001" id="moveOutputWeight" class="magic-input">
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div>
-                <label>الخسية (هالك)</label>
-                <input type="number" step="0.001" id="moveScrap" class="magic-input" value="0">
-            </div>
-            <div>
-                <label>بودر (جلي)</label>
-                <input type="number" step="0.001" id="movePowder" class="magic-input" value="0">
-            </div>
-        </div>
-        <button class="btn-magic" onclick="submitMove()">تحويل الآن ➡️</button>
-        <button class="btn-magic" style="background: transparent; color: #888; border: 1px solid #333;"
-            onclick="closeModals()">إلغاء</button>
-    </div>
-</div>
-
-<!-- Complete Modal -->
-<div id="completeModal" class="modal-overlay">
-    <div class="magic-modal">
-        <h2 style="color: #4CAF50; margin-top: 0;">إنهاء أمر التصنيع 🔥</h2>
-        <div style="margin-bottom: 15px;">
-            <label>وزن القطعة النهائية</label>
+<!-- COMPLETE MODAL -->
+<div class="modal-overlay" id="completeModal">
+    <div class="magic-modal" style="border-color: #4CAF50;">
+        <h2 style="color: #4CAF50;">إنهاء أمر التصنيع 🏁</h2>
+        <div class="form-group">
+            <label>الوزن النهائي للقطعة (جم)</label>
             <input type="number" step="0.001" id="finalWeight" class="magic-input">
         </div>
-        <div style="margin-bottom: 15px;">
-            <label>إجمالي البودر المجموع</label>
-            <input type="number" step="0.001" id="finalPowder" class="magic-input" value="0">
+        <div class="btn-row">
+            <button class="btn-magic" style="background: #4CAF50;" onclick="submitComplete()">إدخال للمخزن</button>
+            <button class="btn-cancel" onclick="closeModals()">إلغاء</button>
         </div>
-        <button class="btn-magic" style="background: #4CAF50;" onclick="submitComplete()">إدخال للمخزن 🏁</button>
-        <button class="btn-magic" style="background: transparent; color: #888; border: 1px solid #333;"
-            onclick="closeModals()">إلغاء</button>
     </div>
 </div>
 
-{% endblock %}
+<!-- STONE MODAL -->
+<div class="modal-overlay" id="stoneModal">
+    <div class="magic-modal" style="border-color: #9b59b6;">
+        <h2 style="color: #9b59b6;">💎 إضافة حجر: <span id="stoneNameDisplay"></span></h2>
+        <input type="hidden" id="stoneIdInput">
+        <div class="form-group">
+            <label>الكمية (قيراط)</label>
+            <input type="number" step="0.01" id="stoneQty" class="magic-input" placeholder="0.00">
+        </div>
+        <div class="btn-row">
+            <button class="btn-magic" style="background: #9b59b6;" onclick="submitStone()">إضافة الحجر</button>
+            <button class="btn-cancel" onclick="closeModals()">إلغاء</button>
+        </div>
+    </div>
+</div>
 
-{% block extra_js %}
+<!-- NEW ORDER MODAL -->
+<div class="modal-overlay" id="newOrderModal">
+    <div class="magic-modal" style="border-color: #00bcd4;">
+        <h2 style="color: #00bcd4;">✨ أمر تصنيع جديد</h2>
+        <div class="form-group">
+            <label>رقم الأمر</label>
+            <input type="text" id="newOrderNumber" class="magic-input" placeholder="AUTO (سيتم توليده)" disabled>
+        </div>
+        <div class="form-group">
+            <label>اسم الصنف / البيان</label>
+            <input type="text" id="newItemName" class="magic-input" placeholder="مثال: خاتم لازوردي">
+        </div>
+        <div class="form-group">
+            <label>الوزن (جم)</label>
+            <input type="number" step="0.001" id="newOrderWeight" class="magic-input" placeholder="0.000">
+        </div>
+        <div class="form-group">
+            <label>العيار</label>
+            <select id="newOrderCarat" class="magic-input">
+                <option value="">-- اختر العيار --</option>
+                {% for c in carats %}
+                <option value="{{ c.id }}">{{ c.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="btn-row">
+            <button class="btn-magic" style="background: #00bcd4;" onclick="submitNewOrder()">إنشاء</button>
+            <button class="btn-cancel" onclick="closeModals()">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- BULK STONE MODAL -->
+<div class="modal-overlay" id="bulkStoneModal">
+    <div class="magic-modal" style="border-color: #e056fd; width: 450px;">
+        <h2 style="color: #e056fd;"><i class="fa-solid fa-layer-group"></i> إضافة طقم فصوص الصينية</h2>
+        <div id="bulkStoneList"
+            style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 10px;">
+            <!-- Rendered by JS -->
+        </div>
+        <div class="btn-row">
+            <button class="btn-magic" style="background: #e056fd;" onclick="submitBulkStones()">إضافة الطقم بالكامل
+                للطلب</button>
+            <button class="btn-cancel" onclick="closeModals()">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- VALUNSHY AI CHAT WIDGET -->
+<div id="valunshyWidget" class="valunshy-widget">
+    <!-- Header -->
+    <div class="valunshy-header">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <div class="status-dot"></div>
+            <span style="font-weight: 700;">VALUNSHY AI</span>
+        </div>
+        <i class="fa-solid fa-xmark" onclick="toggleValunshyAI()" style="cursor: pointer; opacity: 0.7;"></i>
+    </div>
+
+    <!-- Body -->
+    <div class="valunshy-body" id="valunshyChatBody">
+        <!-- Welcome Message -->
+        <div class="ai-msg">
+            مرحباً بك في نظام فالينشي الذكي 👋
+            <br>كيف يمكنني مساعدتك اليوم؟
+        </div>
+
+        <!-- Quick Chips -->
+        <div class="quick-chips">
+            <div class="chip" onclick="sendQuickCommand('تحليل المصروفات (اليوم)')">💰 تحليل المصروفات</div>
+            <div class="chip" onclick="sendQuickCommand('رصيد الذهب')">💎 رصيد الذهب</div>
+            <div class="chip" onclick="sendQuickCommand('ملخص عام')">📊 ملخص عام</div>
+        </div>
+
+        <!-- Catalog Suggestions (Horizontal Scroll) -->
+        <div class="catalog-suggestions">
+            <div class="catalog-card"
+                onclick="pasteCommand('نفذ أمر [تشغيل وصرف] للأوامر [101, 102] لورشة [اسم الورشة]. اصرف [50جم]')">
+                <div class="icon">⚙️</div>
+                <div class="title">تشغيل وصرف</div>
+                <div class="desc">تخصيص للورشة + صرف ذهب</div>
+            </div>
+            <div class="catalog-card"
+                onclick="pasteCommand('نفذ أمر [إنشاء دفعة]: العدد [10]، العيار [21]، الوزن [5]')">
+                <div class="icon">🏭</div>
+                <div class="title">إنشاء دفعة</div>
+                <div class="desc">إنشاء أوامر تلقائية</div>
+            </div>
+            <div class="catalog-card" onclick="pasteCommand('نفذ أمر [نقل مرحلة] للأمر [101] إلى [الورشة التالية]')">
+                <div class="icon">➡️</div>
+                <div class="title">نقل مرحلة</div>
+                <div class="desc">إغلاق مرحلة وفتح مرحلة</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="valunshy-input-area">
+        <input type="text" id="valunshyInput" placeholder="اكتب الأمر أو السؤال هنا..."
+            onkeypress="if(event.key === 'Enter') sendValunshyMessage()">
+        <button onclick="sendValunshyMessage()" class="send-btn">
+            <i class="fa-solid fa-paper-plane"></i>
+        </button>
+    </div>
+</div>
+
+<style>
+    /* WIDGET STYLES */
+    .valunshy-widget {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        /* Arabic RTL */
+        left: auto;
+        width: 380px;
+        height: 500px;
+        background: #1a1a1d;
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        display: none;
+        /* Hidden by default */
+        flex-direction: column;
+        z-index: 20000;
+        font-family: 'Outfit', sans-serif;
+        overflow: hidden;
+        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .valunshy-widget.active {
+        display: flex;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .valunshy-header {
+        background: rgba(255, 215, 0, 0.1);
+        padding: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        background: #4CAF50;
+        border-radius: 50%;
+        box-shadow: 0 0 5px #4CAF50;
+    }
+
+    .valunshy-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .ai-msg {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 10px 15px;
+        border-radius: 12px;
+        border-top-right-radius: 2px;
+        /* Chat bubble effect */
+        color: #eee;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        align-self: flex-start;
+        max-width: 90%;
+    }
+
+    .user-msg {
+        background: var(--gold-primary);
+        color: #000;
+        padding: 10px 15px;
+        border-radius: 12px;
+        border-top-left-radius: 2px;
+        font-size: 0.9rem;
+        align-self: flex-end;
+        /* RTL: left side */
+        align-self: flex-end;
+        max-width: 90%;
+        font-weight: 600;
+    }
+
+    .quick-chips {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 5px;
+    }
+
+    .chip {
+        background: rgba(255, 215, 0, 0.1);
+        border: 1px solid rgba(255, 215, 0, 0.2);
+        color: var(--gold-primary);
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .chip:hover {
+        background: var(--gold-primary);
+        color: #000;
+    }
+
+    .catalog-suggestions {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding: 5px 0;
+    }
+
+    .catalog-card {
+        background: #000;
+        border: 1px solid #333;
+        padding: 10px;
+        border-radius: 10px;
+        min-width: 140px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .catalog-card:hover {
+        border-color: var(--gold-primary);
+        transform: translateY(-2px);
+    }
+
+    .catalog-card .icon {
+        font-size: 1.2rem;
+        margin-bottom: 5px;
+    }
+
+    .catalog-card .title {
+        font-weight: 700;
+        color: #fff;
+        font-size: 0.8rem;
+        margin-bottom: 3px;
+    }
+
+    .catalog-card .desc {
+        color: #888;
+        font-size: 0.7rem;
+    }
+
+    .valunshy-input-area {
+        padding: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        display: flex;
+        gap: 10px;
+        background: #151517;
+    }
+
+    .valunshy-input-area input {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.05);
+        border: none;
+        color: #fff;
+        padding: 10px;
+        border-radius: 8px;
+        font-family: inherit;
+    }
+
+    .valunshy-input-area input:focus {
+        outline: 1px solid var(--gold-primary);
+    }
+
+    .send-btn {
+        background: var(--gold-primary);
+        color: #000;
+        border: none;
+        width: 40px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: 0.2s;
+    }
+
+    .send-btn:hover {
+        background: var(--gold-bright);
+    }
+</style>
+
+<script>
+    function toggleValunshyAI() {
+        const el = document.getElementById('valunshyWidget');
+        if (el.style.display === 'flex') {
+            el.style.display = 'none';
+            el.classList.remove('active');
+        } else {
+            el.style.display = 'flex';
+            el.classList.add('active');
+            document.getElementById('valunshyInput').focus();
+        }
+    }
+
+    function pasteCommand(cmd) {
+        document.getElementById('valunshyInput').value = cmd;
+        document.getElementById('valunshyInput').focus();
+    }
+
+    function sendQuickCommand(cmd) {
+        appendUserMessage(cmd);
+        processAICommand(cmd);
+    }
+
+    function sendValunshyMessage() {
+        const input = document.getElementById('valunshyInput');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        appendUserMessage(msg);
+        input.value = '';
+        processAICommand(msg);
+    }
+
+    function appendUserMessage(msg) {
+        const body = document.getElementById('valunshyChatBody');
+        const div = document.createElement('div');
+        div.className = 'user-msg';
+        div.innerText = msg;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function appendAIMessage(htmlContent) {
+        const body = document.getElementById('valunshyChatBody');
+        const div = document.createElement('div');
+        div.className = 'ai-msg';
+        div.innerHTML = htmlContent;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    async function processAICommand(cmd) {
+        // Show typing...
+        const body = document.getElementById('valunshyChatBody');
+        const typingDiv = document.createElement('div');
+        typingDiv.className = 'ai-msg';
+        typingDiv.innerText = 'جاري التفكير...';
+        typingDiv.id = 'aiTyping';
+        body.appendChild(typingDiv);
+        body.scrollTop = body.scrollHeight;
+
+        try {
+            const fd = new FormData();
+            fd.append('action', 'magic_command');
+            fd.append('command', cmd);
+
+            const res = await fetch(window.location.href, {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-CSRFToken': window.getCookie('csrftoken') }
+            });
+            const data = await res.json();
+
+            document.getElementById('aiTyping').remove();
+
+            if (res.ok) {
+                appendAIMessage('✅ ' + data.message);
+                // Reload if success implies update (optional)
+                if (data.status === 'success') {
+                    setTimeout(() => location.reload(), 2000);
+                }
+            } else {
+                appendAIMessage('❌ ' + data.message);
+            }
+        } catch (e) {
+            document.getElementById('aiTyping').remove();
+            appendAIMessage('Error: ' + e);
+        }
+    }
+</script>
+
+<div class="modal-overlay" id="editOrderModal">
+    <div class="magic-modal" style="border-color: #2196F3;">
+        <h2 style="color: #2196F3;">✏️ تعديل سريع</h2>
+        <div class="form-group">
+            <label>اسم الصنف / البيان</label>
+            <input type="text" id="editItemName" class="magic-input">
+        </div>
+        <div class="form-group">
+            <label>الوزن (جم)</label>
+            <input type="number" step="0.001" id="editInputWeight" class="magic-input">
+        </div>
+        <div class="btn-row">
+            <button class="btn-magic" style="background: #2196F3;" onclick="submitEditOrder()">حفظ التعديلات</button>
+            <button class="btn-cancel" onclick="closeModals()">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+</div>
+
+
+
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
+    // 1. GLOBAL STATE & ERROR HANDLING
+    window.onerror = function (msg, url, line, col, error) {
+        alert('JS ERROR: ' + msg + '\nLine: ' + line + '\nURL: ' + url);
+        return false;
+    };
+
+    window.showToast = function (msg) {
+        const toast = document.getElementById('magicToast');
+        if (toast) {
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2500);
+        }
+    };
+
     let currentOrderId = null;
     let currentWorkshopId = null;
+    let draggedWorker = null;
+    let draggedStone = null;
+    let stoneTray = [];
 
-    // 1. Setup Sortable for Backlog and Columns
-    const backlogEl = document.getElementById('backlogList');
-    const columnEls = document.querySelectorAll('.orders-list');
-    const completionEl = document.getElementById('completionZone');
+    console.log('Magic Workflow JS Cleaned v14.0 - EASY MODE');
 
-    // Handle Dragging Workers onto Orders (User's specific request)
-    // We can use native drag for this or Sortable. Since Workers are draggable names.
-    document.querySelectorAll('.worker-card').forEach(card => {
-        card.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('workshop_id', card.dataset.id);
-            e.dataTransfer.setData('workshop_name', card.querySelector('.worker-name').innerText);
-        });
-    });
-
-    document.querySelectorAll('.order-card').forEach(card => {
-        card.addEventListener('dragover', (e) => e.preventDefault());
-        card.addEventListener('drop', (e) => {
-            e.preventDefault();
-            const wsId = e.dataTransfer.getData('workshop_id');
-            const wsName = e.dataTransfer.getData('workshop_name');
-            if (wsId) {
-                currentOrderId = card.dataset.orderId;
-                currentWorkshopId = wsId;
-                document.getElementById('targetWorkerName').innerText = wsName;
-                document.getElementById('targetOrderName').innerText = "تفعيل الطلب: " + card.querySelector('.order-num').innerText;
-                document.getElementById('assignModal').style.display = 'flex';
+    // 2. HELPER FUNCTIONS
+    window.getCookie = function (name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let c of cookies) {
+                c = c.trim();
+                if (c.startsWith(name + '=')) {
+                    cookieValue = decodeURIComponent(c.substring(name.length + 1));
+                    break;
+                }
             }
-        });
-    });
-
-    // 2. Setup Kanban Dragging (Moving cards between columns)
-    [...columnEls].forEach(el => {
-        new Sortable(el, {
-            group: 'workflow',
-            animation: 150,
-            ghostClass: 'drop-placeholder',
-            onAdd: function (evt) {
-                const orderId = evt.item.dataset.orderId;
-                const nextWsId = evt.to.dataset.workshopId;
-                const nextWsName = evt.to.closest('.workshop-column').querySelector('.column-name').innerText;
-
-                currentOrderId = orderId;
-                currentWorkshopId = nextWsId;
-
-                // Open Transition Modal
-                document.getElementById('nextWorkerName').innerText = nextWsName;
-                document.getElementById('moveModal').style.display = 'flex';
-
-                // Optional: Store the original list to revert if modal cancelled
-                // (Complex to implement perfectly without a framework, but we can just reload on error)
-            }
-        });
-    });
-
-    // Handle Completion Drop
-    completionEl.addEventListener('dragover', (e) => e.preventDefault());
-    completionEl.addEventListener('drop', (e) => {
-        // Since we are using Sortable for cards, we might need a dummy column for completion or just catch the sortable event.
-        // For simplicity, let's just use the move logic if it fits.
-    });
-
-    // Dummy Sortable for Completion Zone to accept cards from 'workflow' group
-    new Sortable(completionEl, {
-        group: 'workflow',
-        onAdd: function (evt) {
-            currentOrderId = evt.item.dataset.orderId;
-            document.getElementById('completeModal').style.display = 'flex';
-            evt.item.remove(); // Visual removal
         }
-    });
+        return cookieValue;
+    };
 
-    // Modal Submit Functions
-    function closeModals() {
-        document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    window.closeModals = function () {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+    };
+
+    window.showToast = function (msg) {
+        const toast = document.getElementById('magicToast');
+        if (toast) {
+            toast.textContent = msg;
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 2500);
+        }
+    };
+
+    // EASY MODE: SELECTION LOGIC
+    window.selectOrder = function (card) {
+        document.querySelectorAll('.order-card.selected-glow, .draft-card.selected-glow').forEach(el => el.classList.remove('selected-glow'));
+        card.classList.add('selected-glow');
+        currentOrderId = card.dataset.orderId;
+
+        document.getElementById('previewNum').textContent = card.querySelector('.order-num')?.textContent || '---';
+        document.getElementById('previewName').textContent = card.querySelector('.order-name')?.textContent || '---';
+        document.getElementById('actionPad').classList.add('active');
+        window.showToast('تم اختيار الطلب: ' + currentOrderId);
+    };
+
+    window.quickMove = function (orderId) {
+        currentOrderId = orderId;
+        window.handleAction('move');
+    };
+
+    window.quickComplete = function (orderId) {
+        currentOrderId = orderId;
+        window.handleAction('complete');
+    };
+
+    window.deselectOrder = function () {
+        document.querySelectorAll('.order-card.selected-glow, .draft-card.selected-glow').forEach(el => el.classList.remove('selected-glow'));
+        document.getElementById('actionPad').classList.remove('active');
+        currentOrderId = null;
+    };
+
+    window.filterSidebar = function (input, selector) {
+        const q = input.value.toLowerCase();
+        document.querySelectorAll(selector).forEach(el => {
+            const txt = el.textContent.toLowerCase();
+            el.style.display = txt.includes(q) ? '' : 'none';
+        });
+    };
+
+    window.addStoneToTray = function (id, name) {
+        if (stoneTray.find(s => s.id === id)) { window.showToast('الحجر مضاف بالفعل'); return; }
+        stoneTray.push({ id, name });
+        renderTray();
+        window.showToast('تمت إضافة ' + name + ' للتراي');
+    };
+
+    function renderTray() {
+        const container = document.getElementById('stoneTray');
+        container.innerHTML = '';
+        const bulkBtn = document.getElementById('btnActionBulkStone');
+
+        if (stoneTray.length === 0) {
+            container.innerHTML = '<div style="color: #444; font-size: 0.7rem; padding: 5px;">فارغ...</div>';
+            if (bulkBtn) bulkBtn.style.display = 'none';
+            return;
+        }
+
+        if (bulkBtn) bulkBtn.style.display = 'block';
+
+        stoneTray.forEach((s, idx) => {
+            const chip = document.createElement('div');
+            chip.style.cssText = 'background: #9b59b6; color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; display: flex; align-items: center; gap: 5px;';
+            chip.innerHTML = `<span>${s.name}</span><i class="fa-solid fa-times" style="cursor:pointer;" onclick="removeFromTray(${idx})"></i>`;
+            container.appendChild(chip);
+        });
     }
 
-    async function submitAssign() {
-        const weight = document.getElementById('assignWeight').value;
-        const extraGold = document.getElementById('assignGoldExtra').value;
-        const treasuryId = document.getElementById('assignTreasury').value;
-        const formData = new FormData();
-        formData.append('action', 'assign_workshop');
-        formData.append('order_id', currentOrderId);
-        formData.append('workshop_id', currentWorkshopId);
-        formData.append('input_weight', weight);
-        formData.append('gold_weight', extraGold);
-        formData.append('treasury_id', treasuryId);
+    window.openBulkStoneModal = function () {
+        const list = document.getElementById('bulkStoneList');
+        list.innerHTML = '';
+        stoneTray.forEach(s => {
+            const div = document.createElement('div');
+            div.className = 'form-group';
+            div.style.marginBottom = '10px';
+            div.innerHTML = `
+                <label style="color:#eee; font-size:0.8rem;">${s.name}</label>
+                <input type="number" step="0.01" class="magic-input bulk-stone-qty" data-id="${s.id}" placeholder="الكمية بالقيراط">
+            `;
+            list.appendChild(div);
+        });
+        document.getElementById('bulkStoneModal').classList.add('active');
+    };
 
-        const res = await fetch('', { method: 'POST', body: formData });
-        if (res.ok) location.reload();
-        else alert("Error assigning order");
+    window.submitBulkStones = async function () {
+        const items = document.querySelectorAll('.bulk-stone-qty');
+        const stones = Array.from(items).map(i => ({ id: i.dataset.id, qty: i.value || 0 }));
+
+        const fd = new FormData();
+        fd.append('action', 'add_stones_bulk');
+        fd.append('order_id', currentOrderId);
+        fd.append('stones_json', JSON.stringify(stones));
+
+        const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+        handleResponse(res);
+    };
+
+    window.removeFromTray = function (idx) {
+        stoneTray.splice(idx, 1);
+        renderTray();
+    };
+
+    window.handleAction = function (type) {
+        if (!currentOrderId) { alert('يرجى اختيار أمر أولاً'); return; }
+        if (type === 'assign') {
+            window.showToast('اختر عاملاً من القائمة الجانبية للتخصيص');
+        } else if (type === 'stone') {
+            if (stoneTray.length === 0) { alert('التراي فارغ! اختر أحجاراً أولاً'); return; }
+            const stone = stoneTray[0];
+            document.getElementById('stoneNameDisplay').textContent = stone.name;
+            document.getElementById('stoneIdInput').value = stone.id;
+            document.getElementById('stoneModal').classList.add('active');
+        } else if (type === 'bulk_stone') {
+            openBulkStoneModal();
+        } else if (type === 'move') {
+            document.getElementById('moveModal').classList.add('active');
+            if (currentWorkshopId) document.getElementById('moveWorkshopList').value = currentWorkshopId;
+        } else if (type === 'complete') {
+            document.getElementById('completeModal').classList.add('active');
+        } else if (type === 'hold') {
+            if (confirm('هل تريد ركن هذا الطلب وإعادته للانتظار؟')) window.submitHold();
+        }
+    };
+
+    window.openNewOrderModal = function () {
+        const date = new Date();
+        const num = 'MFG-' + date.getFullYear().toString().substr(-2) + (date.getMonth() + 1).toString().padStart(2, '0') + date.getDate().toString().padStart(2, '0') + '-' + Math.floor(Math.random() * 1000);
+        const numInput = document.getElementById('newOrderNumber');
+        const modal = document.getElementById('newOrderModal');
+        if (numInput && modal) { numInput.value = num; modal.classList.add('active'); }
+    };
+
+    // 3. AJAX SUBMISSION
+    const handleResponse = async (res) => { if (res.ok) location.reload(); else { const data = await res.json(); alert('خطأ: ' + (data.message || res.statusText)); } };
+
+    // ASSIGN MODAL STONES LOGIC
+    let assignStones = [];
+
+    window.addStoneToAssignList = function () {
+        const sel = document.getElementById('assignStoneSelect');
+        const qtyInp = document.getElementById('assignStoneQty');
+        const id = sel.value;
+        const name = sel.options[sel.selectedIndex].text;
+        const qty = qtyInp.value || 1;
+
+        if (!id) return;
+
+        assignStones.push({ id, name, qty });
+        renderAssignStones();
+        sel.value = '';
+        qtyInp.value = 1;
+    };
+
+    window.removeStoneFromAssign = function (idx) {
+        assignStones.splice(idx, 1);
+        renderAssignStones();
+    };
+
+    function renderAssignStones() {
+        const div = document.getElementById('assignStonesContainer');
+        div.innerHTML = '';
+        assignStones.forEach((s, i) => {
+            const chip = document.createElement('div');
+            chip.style.cssText = 'background: #9b59b6; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;';
+            chip.innerHTML = `<span>${s.name} (${s.qty})</span> <i class="fa-solid fa-times" style="cursor:pointer;" onclick="removeStoneFromAssign(${i})"></i>`;
+            div.appendChild(chip);
+        });
     }
 
-    async function submitMove() {
-        const outWeight = document.getElementById('moveOutputWeight').value;
-        const powder = document.getElementById('movePowder').value;
+    // Reset stones when opening modal (Optional, add to open logic if needed)
+    // For now, we assume closeModals or reload cleans updates.
 
-        const formData = new FormData();
-        formData.append('action', 'move_order');
-        formData.append('order_id', currentOrderId);
-        formData.append('next_workshop_id', currentWorkshopId);
-        formData.append('output_weight', outWeight);
-        formData.append('powder_weight', powder);
+    window.submitAssign = async function () {
+        if (!currentOrderId || !currentWorkshopId) { alert('بيانات مفقودة'); return; }
+        const fd = new FormData();
+        fd.append('action', 'assign_workshop'); fd.append('order_id', currentOrderId); fd.append('workshop_id', currentWorkshopId);
+        fd.append('input_weight', document.getElementById('assignWeight').value || 0);
+        fd.append('gold_weight', document.getElementById('assignExtraGold').value || 0);
+        fd.append('treasury_id', document.getElementById('assignTreasury').value || '');
 
-        const res = await fetch('', { method: 'POST', body: formData });
-        if (res.ok) location.reload();
-        else alert("Error moving order");
-    }
+        // Append Stones JSON
+        if (assignStones.length > 0) {
+            fd.append('stones_json', JSON.stringify(assignStones));
+        }
 
-    async function submitComplete() {
-        const weight = document.getElementById('finalWeight').value;
-        const powder = document.getElementById('finalPowder').value;
+        const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+        handleResponse(res);
+    };
 
-        const formData = new FormData();
-        formData.append('action', 'complete_order');
-        formData.append('order_id', currentOrderId);
-        formData.append('output_weight', weight);
-        formData.append('powder_weight', powder);
+    window.submitMove = async function () {
+        if (!currentOrderId) return;
+        const destId = document.getElementById('moveWorkshopList').value || currentWorkshopId;
+        const output = document.getElementById('moveOutputWeight').value || 0;
+        const powder = document.getElementById('movePowder').value || 0;
 
-        const res = await fetch('', { method: 'POST', body: formData });
-        if (res.ok) location.reload();
-        else alert("Error completing order");
-    }
+        if (!destId) { alert('يرجى اختيار الورشة المستلمة'); return; }
 
+        const fd = new FormData();
+        fd.append('action', 'move_order');
+        fd.append('order_id', currentOrderId);
+        fd.append('next_workshop_id', destId);
+        fd.append('output_weight', output);
+        fd.append('powder_weight', powder);
+
+        const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+        handleResponse(res);
+    };
+
+    window.submitComplete = async function () {
+        if (!currentOrderId) return;
+        const fd = new FormData();
+        fd.append('action', 'complete_order'); fd.append('order_id', currentOrderId);
+        fd.append('output_weight', document.getElementById('finalWeight').value || 0);
+        const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+        handleResponse(res);
+    };
+
+    window.submitHold = async function (orderId) {
+        const fd = new FormData();
+        fd.append('action', 'hold_order'); fd.append('order_id', orderId || currentOrderId);
+        const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+        handleResponse(res);
+    };
+
+    window.submitStone = async function () {
+        if (!currentOrderId || stoneTray.length === 0) return;
+
+        window.showToast('جاري إضافة مجموعة الأحجار...');
+        const fd = new FormData();
+        fd.append('action', 'assign_workshop'); // Reuse logic or add stones?
+        // Actually, the view 'assign_workshop' handles 'stones_json'
+        // Let's use a simpler way: just iterate or add a new action.
+        // Wait, 'magic_workflow' view has 'add_stone' which handles ONE.
+        // I'll update the view to handle 'add_stones_bulk'.
+
+        const stonesData = stoneTray.map(s => ({ id: s.id, qty: document.getElementById('stoneQty').value || 1 }));
+
+        fd.append('action', 'add_stones_bulk');
+        fd.append('order_id', currentOrderId);
+        fd.append('stones_json', JSON.stringify(stonesData));
+
+        const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+        if (res.ok) {
+            window.showToast('✅ تمت إضافة الأحجار');
+            stoneTray = [];
+            renderTray();
+            closeModals();
+            setTimeout(() => location.reload(), 800);
+        } else {
+            const data = await res.json();
+            alert('خطأ: ' + data.message);
+        }
+    };
+
+    window.quickEdit = function (id, name, weight) {
+        currentOrderId = id;
+        document.getElementById('editItemName').value = name;
+        document.getElementById('editInputWeight').value = weight || 0;
+        document.getElementById('editOrderModal').classList.add('active');
+    };
+
+    window.submitEditOrder = async function () {
+        if (!currentOrderId) return;
+        const fd = new FormData();
+        fd.append('action', 'edit_order');
+        fd.append('order_id', currentOrderId);
+        fd.append('item_name', document.getElementById('editItemName').value);
+        fd.append('input_weight', document.getElementById('editInputWeight').value);
+
+        const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+        handleResponse(res);
+    };
+
+    window.submitMagicCommand = async function () {
+        const input = document.getElementById('magicCommandInput');
+        const cmd = input.value.trim();
+        if (!cmd) return;
+
+        window.showToast('جاري معالجة الأمر الذكي...');
+        const fd = new FormData();
+        fd.append('action', 'magic_command');
+        fd.append('command', cmd);
+
+        try {
+            const res = await fetch(window.location.href, {
+                method: 'POST',
+                body: fd,
+                headers: { 'X-CSRFToken': window.getCookie('csrftoken') }
+            });
+            const data = await res.json();
+            if (res.ok) {
+                window.showToast('✅ ' + data.message);
+                input.value = '';
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                alert('❌ ' + data.message);
+            }
+        } catch (e) {
+            alert('Error: ' + e);
+        }
+    };
+
+    window.submitNewOrder = function () {
+        const name = document.getElementById('newItemName').value;
+        const carat = document.getElementById('newOrderCarat').value;
+        const weight = document.getElementById('newOrderWeight').value || 0;
+
+        if (!name || !carat) { alert('يرجى ملء الحقول'); return; }
+
+        // Use async/await inside or just standard promise. Converting to async for consistency
+        (async () => {
+            const fd = new FormData();
+            fd.append('action', 'create_order');
+            fd.append('order_number', document.getElementById('newOrderNumber').value);
+            fd.append('item_name', name);
+            fd.append('carat_id', carat);
+            fd.append('input_weight', weight);
+
+            const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+            handleResponse(res);
+        })();
+    };
+
+    // 4. INTERACTION
+    let pendingDrag = null;
+
+    window.closeModals = function () {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+
+        // REVERT DRAG IF CANCELLED
+        if (pendingDrag) {
+            console.log('Reverting drag...');
+            pendingDrag.from.appendChild(pendingDrag.item);
+            // Optionally resort if needed, but append is usually safe enough to return it to the list
+            pendingDrag = null;
+            window.showToast("↩️ تم إلغاء النقل");
+        }
+    };
+
+    // Modified Submit Functions with VALIDATION
+    // Override the previous submit functions to include validation and clear pendingDrag on success
+
+    const originalSubmitAssign = window.submitAssign;
+    window.submitAssign = async function () {
+        const weight = parseFloat(document.getElementById('assignWeight').value || 0);
+        if (weight <= 0) {
+            alert('⚠️ عذراً، لا يمكن قبول وزن صفر! يرجى إدخال الوزن المستلم.');
+            return;
+        }
+        // If valid, we proceed. current logic reloads page on success, so pendingDrag is cleared naturally.
+        await originalSubmitAssign();
+    };
+
+    const originalSubmitMove = window.submitMove;
+    window.submitMove = async function () {
+        const output = parseFloat(document.getElementById('moveOutputWeight').value || 0);
+        if (output <= 0) {
+            alert('⚠️ عذراً، يجب إدخال الوزن الخارج (الصافي).');
+            return;
+        }
+        await originalSubmitMove();
+    };
+
+    const originalSubmitComplete = window.submitComplete;
+    window.submitComplete = async function () {
+        const output = parseFloat(document.getElementById('finalWeight').value || 0);
+        if (output <= 0) {
+            alert('⚠️ عذراً، يجب إدخال الوزن النهائي للقطعة.');
+            return;
+        }
+
+        // Custom implementation to handle success message
+        const fd = new FormData();
+        fd.append('action', 'complete_order');
+        fd.append('order_id', currentOrderId);
+        fd.append('output_weight', output);
+
+        try {
+            const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'success') {
+                    // Show Barcode Info
+                    alert(`✅ تم إتمام الأمر بنجاح!\n\n📦 الصنف: ${data.item_name}\n🏷️ الباركود: ${data.barcode}\n\nسيتم، الآن تحديث الصفحة...`);
+                    location.reload();
+                } else {
+                    location.reload(); // Fallback
+                }
+            } else {
+                const data = await res.json();
+                alert('خطأ: ' + (data.message || res.statusText));
+            }
+        } catch (e) {
+            console.error(e);
+            alert('حدث خطأ أثناء الاتصال بالنظام');
+        }
+    };
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        document.addEventListener('click', e => {
+            const card = e.target.closest('.order-card, .draft-card');
+            if (card) { window.selectOrder(card); return; }
+
+            const fab = e.target.closest('#fabNewOrder');
+            if (fab) { e.preventDefault(); window.openNewOrderModal(); return; }
+
+            const worker = e.target.closest('.worker-card, .workshop-column');
+            if (worker && currentOrderId) {
+                // Click-to-assign logic (not drag) - no revert needed as it didn't move
+                currentWorkshopId = worker.dataset.id || worker.dataset.workshopId;
+                const name = worker.dataset.name || worker.querySelector('.col-name')?.textContent;
+                document.getElementById('assignWorkerName').textContent = name;
+                document.getElementById('moveWorkshopList').value = currentWorkshopId;
+                document.getElementById('assignModal').classList.add('active');
+                return;
+            }
+
+            const stone = e.target.closest('.stone-card');
+            if (stone) { window.addStoneToTray(stone.dataset.id, stone.dataset.name); return; }
+
+            // Close overlay click
+            if (e.target.classList.contains('modal-overlay')) { window.closeModals(); }
+        });
+
+        document.addEventListener('dblclick', e => {
+            const card = e.target.closest('.order-card, .draft-card');
+            if (card && card.dataset.orderId) { window.open(`/admin/manufacturing/manufacturingorder/${card.dataset.orderId}/change/`, '_blank'); }
+        });
+
+        if (typeof Sortable !== 'undefined') {
+            // Drag Stones into Tray
+            new Sortable(document.querySelector('.stones-section'), {
+                group: { name: 'stones', pull: 'clone', put: false },
+                draggable: '.stone-card',
+                animation: 150,
+                sort: false,
+                onStart: function (evt) {
+                    document.getElementById('actionPad').classList.add('active');
+                },
+                onEnd: function (evt) {
+                    if (evt.to.id === 'stoneTray') {
+                        const id = evt.item.dataset.id;
+                        const name = evt.item.dataset.name;
+                        window.addStoneToTray(id, name);
+                        evt.item.remove(); // Remove the clone
+                    } else {
+                        if (!currentOrderId) {
+                            // ...
+                        }
+                    }
+                }
+            });
+
+            new Sortable(document.getElementById('stoneTray'), {
+                group: {
+                    name: 'stones',
+                    put: ['stones', 'orders']
+                },
+                animation: 150,
+                onAdd: function (evt) {
+                    if (evt.from.classList.contains('orders-list') || evt.from.id === 'draftsRow') {
+                        const orderId = evt.item.dataset.orderId;
+                        window.showToast('جاري ركن الطلب في الصينية...');
+                        window.submitHold(orderId);
+                        evt.item.remove();
+                    } else {
+                        const id = evt.item.dataset.id;
+                        const name = evt.item.dataset.name;
+                        window.addStoneToTray(id, name);
+                        evt.item.remove();
+                    }
+                }
+            });
+
+            document.querySelectorAll('.orders-list, .drafts-row').forEach(list => {
+                new Sortable(list, {
+                    group: 'orders', animation: 150, delay: 0,
+                    onEnd: function (evt) {
+                        if (evt.from !== evt.to) {
+                            currentOrderId = evt.item.dataset.orderId;
+
+                            // SET PENDING DRAG for Revert
+                            pendingDrag = { item: evt.item, from: evt.from };
+
+                            // Check if dropped into a valid workshop list
+                            if (evt.to.classList.contains('orders-list')) {
+                                currentWorkshopId = evt.to.dataset.workshopId;
+                                const workshopName = evt.to.closest('.workshop-column')?.querySelector('.col-name')?.textContent || '';
+
+                                // 1. From Drafts -> Workshop = ASSIGN
+                                if (evt.from.classList.contains('drafts-row')) {
+                                    document.getElementById('assignWorkerName').textContent = workshopName;
+                                    document.getElementById('assignModal').classList.add('active');
+                                }
+                                // 2. From Workshop -> Workshop = MOVE
+                                else {
+                                    document.getElementById('moveWorkerName').textContent = workshopName;
+                                    document.getElementById('moveWorkshopList').value = currentWorkshopId;
+                                    document.getElementById('moveModal').classList.add('active');
+                                }
+                            }
+                            else if (evt.to.id === 'draftsRow') {
+                                // Dragged back to drafts (Hold)
+                                // Immediate action, no modal, so no drag revert needed (action happens)
+                                pendingDrag = null;
+                                window.submitHold(currentOrderId);
+                            }
+                            else {
+                                // Dropped somewhere else (invalid?), revert immediately
+                                // Actually Sortable usually handles reverts if 'pull' is not correct, but here group is same 'orders'
+                                // If dropped in same list (reorder), pendingDrag might cause revert on close? 
+                                // But reorder doesn't open modal, so closeModals won't be called.
+                                // NOTE: We only want pendingDrag if a MODAL opens.
+                                // If no modal opens, we should clear it.
+                                // In the 'if' blocks above, we opened modals.
+                                // What if we just dropped it in a blank space? Sortable reverts automatically usually.
+                            }
+                        }
+                    }
+                });
+            });
+
+            const holdZone = document.getElementById('holdZone');
+            if (holdZone) {
+                new Sortable(holdZone, {
+                    group: 'orders', delay: 150,
+                    onAdd: function (evt) {
+                        currentOrderId = evt.item.dataset.orderId;
+                        window.submitHold(currentOrderId);
+                        evt.item.remove();
+                    }
+                });
+            }
+
+            const actionPad = document.getElementById('actionPad');
+            new Sortable(actionPad, {
+                group: 'orders', delay: 150,
+                onAdd: function (evt) {
+                    window.selectOrder(evt.item);
+                    location.reload();
+                }
+            });
+
+            const completeZone = document.getElementById('completeZone');
+            if (completeZone) {
+                new Sortable(completeZone, {
+                    group: 'orders', delay: 150,
+                    onAdd: function (evt) {
+                        currentOrderId = evt.item.dataset.orderId;
+                        pendingDrag = { item: evt.item, from: evt.from }; // Track completion drag
+                        document.getElementById('completeModal').classList.add('active');
+                        // Note: We remove evt.item in the original code? 
+                        // The original code had `evt.item.remove()`. 
+                        // If we remove it, we can't 'revert' it easily by appending `pendingDrag.item`.
+                        // But `evt.item` is the DOM element. Even if removed from DOM, the reference exists.
+                        // So appending it back should work!
+                        evt.item.remove();
+                    }
+                });
+            }
+
+            // WORKSHOP COLUMNS REORDERING
+            const boardArea = document.getElementById('boardArea');
+            if (boardArea) {
+                new Sortable(boardArea, {
+                    animation: 150,
+                    handle: '.column-header', // Drag by header only
+                    onEnd: async function (evt) {
+                        const newOrder = [];
+                        document.querySelectorAll('.workshop-column').forEach(col => {
+                            newOrder.push(col.dataset.workshopId);
+                        });
+
+                        // Send new order to backend
+                        const fd = new FormData();
+                        fd.append('action', 'reorder_workshops');
+                        fd.append('order_json', JSON.stringify(newOrder));
+
+                        try {
+                            const res = await fetch(window.location.href, { method: 'POST', body: fd, headers: { 'X-CSRFToken': window.getCookie('csrftoken') } });
+                            if (res.ok) {
+                                window.showToast('✅ تم حفظ ترتيب الورش');
+                            } else {
+                                window.showToast('❌ حدث خطأ في حفظ الترتيب');
+                            }
+                        } catch (e) {
+                            console.error(e);
+                        }
+                    }
+                });
+            }
+        }
+    }); // End DOMContentLoaded
 </script>
+
 {% endblock %}

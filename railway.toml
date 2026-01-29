@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python manage.py migrate && python populate_diamond_data.py && python populate_stones_inventory.py && gunicorn backend.wsgi:application"
+startCommand = "python manage.py migrate && python populate_diamond_data.py && python populate_stones_inventory.py && python create_admin_railway.py && gunicorn backend.wsgi:application"
 healthCheckPath = "/"
 restartPolicyType = "on_failure"
 
